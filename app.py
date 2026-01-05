@@ -10,6 +10,9 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
+import tempfile
+import random
+import traceback
 
 from core import ETLProcessor, ParquetStorage, RiskForecaster
 
@@ -77,8 +80,7 @@ def show_etl_page():
             with st.spinner("Processing files..."):
                 try:
                     # Save uploaded files temporarily
-                    temp_dir = Path("/tmp/uploads")
-                    temp_dir.mkdir(exist_ok=True)
+                    temp_dir = Path(tempfile.mkdtemp())
                     
                     file_paths = []
                     for file in uploaded_files:
@@ -480,15 +482,11 @@ def show_forecasting_page():
                 
             except Exception as e:
                 st.error(f"❌ Error generating forecast: {str(e)}")
-                import traceback
                 st.code(traceback.format_exc())
 
 
 def generate_sample_data(num_records=1000):
     """Generate sample claim data for testing"""
-    import random
-    from datetime import timedelta
-    
     claim_types = ['Medical', 'Auto', 'Property', 'Life', 'Travel', 'Disability', 'Dental', 'Vision']
     statuses = ['PENDING', 'APPROVED', 'REJECTED', 'PAID', 'APPEALED', 'CANCELLED']
     
