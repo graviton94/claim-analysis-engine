@@ -13,6 +13,7 @@ from pathlib import Path
 import tempfile
 import random
 import traceback
+import shutil
 
 from core import ETLProcessor, ParquetStorage, RiskForecaster
 
@@ -78,6 +79,7 @@ def show_etl_page():
         
         if st.button("Process Files", type="primary"):
             with st.spinner("Processing files..."):
+                temp_dir = None
                 try:
                     # Save uploaded files temporarily
                     temp_dir = Path(tempfile.mkdtemp())
@@ -111,6 +113,10 @@ def show_etl_page():
                     
                 except Exception as e:
                     st.error(f"❌ Error processing files: {str(e)}")
+                finally:
+                    # Clean up temporary files
+                    if temp_dir and temp_dir.exists():
+                        shutil.rmtree(temp_dir, ignore_errors=True)
     
     # Show existing data
     st.markdown("---")
