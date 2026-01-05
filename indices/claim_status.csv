@@ -1,0 +1,7 @@
+status_code,status_name,description
+PENDING,Pending Review,Claim is under review
+APPROVED,Approved,Claim has been approved for payment
+REJECTED,Rejected,Claim has been rejected
+PAID,Paid,Claim payment has been processed
+APPEALED,Under Appeal,Claim is under appeal process
+CANCELLED,Cancelled,Claim has been cancelled

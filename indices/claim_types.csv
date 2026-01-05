@@ -1,0 +1,9 @@
+claim_type,description,risk_category
+Medical,Medical and healthcare claims,High
+Auto,Automobile insurance claims,Medium
+Property,Property damage claims,Medium
+Life,Life insurance claims,High
+Travel,Travel insurance claims,Low
+Disability,Disability claims,High
+Dental,Dental insurance claims,Low
+Vision,Vision care claims,Low
