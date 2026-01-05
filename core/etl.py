@@ -48,7 +48,7 @@ class ETLProcessor:
     
     def create_standard_schema(self, fields: List[str] = None) -> Dict[str, Dict]:
         """
-        Convert 80-field CSV header to standardized schema with type definitions
+        Convert field headers to standardized schema with Korean keyword support
         
         Args:
             fields: List of field names (if None, reads from input_header.csv)
@@ -62,18 +62,32 @@ class ETLProcessor:
         # Define schema with field types and processing rules
         schema = {}
         
-        # Categorize fields by type
-        date_fields = [f for f in fields if 'date' in f.lower()]
-        amount_fields = [f for f in fields if 'amount' in f.lower() or 'premium' in f.lower() 
-                        or 'value' in f.lower() or 'deductible' in f.lower() or 'limit' in f.lower()]
-        id_fields = [f for f in fields if f.endswith('_id') or f.endswith('_number')]
-        text_fields = [f for f in fields if 'name' in f.lower() or 'description' in f.lower() 
-                      or 'address' in f.lower() or 'notes' in f.lower()]
-        code_fields = [f for f in fields if 'code' in f.lower() or 'status' in f.lower() 
-                      or 'type' in f.lower() or 'category' in f.lower()]
-        contact_fields = [f for f in fields if 'email' in f.lower() or 'phone' in f.lower()]
-        location_fields = [f for f in fields if any(x in f.lower() for x in ['city', 'state', 'zip', 'country'])]
-        score_fields = [f for f in fields if 'score' in f.lower() or 'indicator' in f.lower()]
+        # Korean keyword-based categorization
+        # Date fields: 일자, 일, 기한, 완료일, 신고일, date
+        date_keywords = ['일자', '일', '기한', '완료일', '신고일', 'date', '년', '월']
+        date_fields = [f for f in fields if any(kw in f for kw in date_keywords)]
+        
+        # Numeric fields: 액, 금액, 비용, 수량, 연령, 만족도, amount, premium, value, deductible, limit, score
+        numeric_keywords = ['액', '금액', '비용', '수량', '연령', '만족도', 'amount', 'premium', 'value', 'deductible', 'limit', 'score', 'indicator']
+        amount_fields = [f for f in fields if any(kw in f for kw in numeric_keywords)]
+        
+        # Category fields: 부문, 구분, 유형, 분류, 상태, 여부, code, status, type, category
+        category_keywords = ['부문', '구분', '유형', '분류', '상태', '여부', 'code', 'status', 'type', 'category']
+        code_fields = [f for f in fields if any(kw in f for kw in category_keywords)]
+        
+        # ID fields
+        id_fields = [f for f in fields if f.endswith('_id') or f.endswith('_number') or 'id' in f.lower()]
+        
+        # Contact fields
+        contact_fields = [f for f in fields if 'email' in f.lower() or 'phone' in f.lower() or '전화' in f or '이메일' in f]
+        
+        # Location fields
+        location_keywords = ['city', 'state', 'zip', 'country', '시', '도', '구', '동', '주소']
+        location_fields = [f for f in fields if any(kw in f for kw in location_keywords)]
+        
+        # Text fields
+        text_keywords = ['name', 'description', 'address', 'notes', '이름', '명', '설명', '비고', '주소']
+        text_fields = [f for f in fields if any(kw in f for kw in text_keywords)]
         
         # Build schema with type definitions
         for field in fields:
@@ -83,21 +97,25 @@ class ETLProcessor:
                 schema[field] = {'type': 'float64', 'nullable': True, 'fill_strategy': 0.0}
             elif field in id_fields:
                 schema[field] = {'type': 'str', 'nullable': False, 'fill_strategy': 'UNKNOWN'}
-            elif field in score_fields:
-                schema[field] = {'type': 'float64', 'nullable': True, 'fill_strategy': 0.0}
+            elif field in code_fields:
+                schema[field] = {'type': 'category', 'nullable': True, 'fill_strategy': 'Unknown'}
             elif field in contact_fields:
                 schema[field] = {'type': 'str', 'nullable': True, 'fill_strategy': ''}
             elif field in location_fields:
                 schema[field] = {'type': 'str', 'nullable': True, 'fill_strategy': 'Unknown'}
-            elif field in code_fields:
-                schema[field] = {'type': 'category', 'nullable': True, 'fill_strategy': 'Unknown'}
             elif field in text_fields:
                 schema[field] = {'type': 'str', 'nullable': True, 'fill_strategy': ''}
             else:
                 schema[field] = {'type': 'str', 'nullable': True, 'fill_strategy': 'Unknown'}
         
         self.standard_schema = schema
-        print(f"✓ Created standard schema for {len(schema)} fields")
+        print(f"✓ Created Korean-aware schema for {len(schema)} fields")
+        print(f"  - Date fields: {len(date_fields)}")
+        print(f"  - Numeric fields: {len(amount_fields)}")
+        print(f"  - Category fields: {len(code_fields)}")
+        print(f"  - ID fields: {len(id_fields)}")
+        
+        return schema
         print(f"  - Date fields: {len(date_fields)}")
         print(f"  - Amount fields: {len(amount_fields)}")
         print(f"  - ID fields: {len(id_fields)}")
@@ -107,19 +125,22 @@ class ETLProcessor:
     
     def apply_standard_schema(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Apply the standard schema to a DataFrame with 80 fields
+        Apply the standard schema to a DataFrame with Korean data cleansing
         
         Args:
             df: Input DataFrame
             
         Returns:
-            DataFrame with standardized types and filled missing values
+            DataFrame with standardized types and cleansed missing values
         """
         if self.standard_schema is None:
             # Auto-detect from DataFrame columns
             self.create_standard_schema(list(df.columns))
         
         df = df.copy()
+        
+        # Define Korean exception words to convert to Blank (NaN/NaT)
+        exception_values = ['미상', '모름', '?', '제조일모름', '알수없음', 'N/A', 'n/a', '']
         
         # Apply type conversions and fill strategies
         for field, spec in self.standard_schema.items():
@@ -131,18 +152,47 @@ class ETLProcessor:
             
             try:
                 if field_type == 'datetime64[ns]':
+                    # Replace exception values with NaN before conversion
+                    df[field] = df[field].replace(exception_values, pd.NA)
+                    # Convert to datetime with errors='coerce' to handle invalid dates
                     df[field] = pd.to_datetime(df[field], errors='coerce')
                 elif field_type == 'float64':
+                    # Replace exception values with NaN before conversion
+                    df[field] = df[field].replace(exception_values, pd.NA)
+                    # Convert to numeric with errors='coerce'
                     df[field] = pd.to_numeric(df[field], errors='coerce')
-                    if fill_value is not None:
+                    if fill_value is not None and fill_value != 'null':
                         df[field] = df[field].fillna(fill_value)
                 elif field_type == 'category':
                     df[field] = df[field].astype('str').replace('nan', fill_value)
+                    df[field] = df[field].replace(exception_values, fill_value)
                     df[field] = df[field].astype('category')
                 elif field_type == 'str':
                     df[field] = df[field].astype('str').replace('nan', fill_value)
+                    # Don't replace exception values for general string fields to preserve data
             except Exception as e:
                 print(f"Warning: Error processing field '{field}': {str(e)}")
+        
+        # Create derived 접수일시 (receipt datetime) if component fields exist
+        year_field = next((f for f in df.columns if '접수년' in f or '접수연도' in f), None)
+        month_field = next((f for f in df.columns if '접수월' in f), None)
+        day_field = next((f for f in df.columns if '접수일' in f and '접수일시' not in f), None)
+        time_field = next((f for f in df.columns if '접수시간' in f or '접수시' in f), None)
+        
+        if year_field and month_field and day_field:
+            try:
+                # Combine year, month, day (and optionally time) into 접수일시
+                df['접수일시'] = pd.to_datetime(
+                    df[year_field].astype(str) + '-' + 
+                    df[month_field].astype(str).str.zfill(2) + '-' + 
+                    df[day_field].astype(str).str.zfill(2) +
+                    (' ' + df[time_field].astype(str) if time_field else ''),
+                    errors='coerce'
+                )
+                print(f"✓ Created derived column '접수일시' from {year_field}, {month_field}, {day_field}" + 
+                      (f", {time_field}" if time_field else ""))
+            except Exception as e:
+                print(f"Warning: Could not create 접수일시: {str(e)}")
         
         return df
     
@@ -192,7 +242,7 @@ class ETLProcessor:
         
     def read_file(self, file_path: str) -> pd.DataFrame:
         """
-        Read data from CSV, XLSX, or JSON file
+        Read data from CSV, XLSX, or JSON file with Korean encoding support
         
         Args:
             file_path: Path to the input file
@@ -203,7 +253,18 @@ class ETLProcessor:
         file_ext = Path(file_path).suffix.lower()
         
         if file_ext == '.csv':
-            return pd.read_csv(file_path)
+            # Try UTF-8-sig first, then fall back to cp949 for Korean text
+            try:
+                df = pd.read_csv(file_path, encoding='utf-8-sig')
+                print(f"✓ Loaded CSV with UTF-8-sig encoding")
+                return df
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(file_path, encoding='cp949')
+                    print(f"✓ Loaded CSV with CP949 encoding (fallback)")
+                    return df
+                except Exception as e:
+                    raise ValueError(f"Failed to read CSV with UTF-8-sig or CP949: {str(e)}")
         elif file_ext in ['.xlsx', '.xls']:
             return pd.read_excel(file_path)
         elif file_ext == '.json':
