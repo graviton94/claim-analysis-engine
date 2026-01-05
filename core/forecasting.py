@@ -106,7 +106,7 @@ class RiskForecaster:
         """
         if len(ts_data) < 7:
             # Not enough data, return simple average
-            avg_value = ts_data[value_col].mean()
+            avg_value = ts_data[value_col].mean() if not ts_data[value_col].isna().all() else 0
             last_date = ts_data.iloc[-1][ts_data.columns[0]]
             
             forecast_dates = pd.date_range(

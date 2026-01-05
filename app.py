@@ -82,7 +82,7 @@ def show_etl_page():
                 temp_dir = None
                 try:
                     # Save uploaded files temporarily
-                    temp_dir = Path(tempfile.mkdtemp())
+                    temp_dir = Path(tempfile.mkdtemp(prefix='claim_etl_'))
                     
                     file_paths = []
                     for file in uploaded_files:
