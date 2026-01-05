@@ -63,7 +63,7 @@ class RiskForecaster:
         values = ts_data[value_col].values
         
         # Simple autocorrelation-based seasonality detection
-        # Check for weekly (7) and monthly (30) patterns
+        # Check for weekly (7-day) and 30-day patterns
         seasonal_info = {
             "has_seasonality": False,
             "period": None,
@@ -153,7 +153,8 @@ class RiskForecaster:
         for i in range(periods):
             # Combine moving average with trend
             forecast_val = last_ma + trend * (i + 1)
-            forecasts.append(max(0, forecast_val))  # Ensure non-negative
+            # Ensure non-negative (claim amounts cannot be negative)
+            forecasts.append(max(0, forecast_val))
         
         # Add uncertainty bounds
         std_dev = ts_data[value_col].std()

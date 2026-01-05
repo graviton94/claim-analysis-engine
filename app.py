@@ -493,8 +493,18 @@ def show_forecasting_page():
 
 def generate_sample_data(num_records=1000):
     """Generate sample claim data for testing"""
-    claim_types = ['Medical', 'Auto', 'Property', 'Life', 'Travel', 'Disability', 'Dental', 'Vision']
-    statuses = ['PENDING', 'APPROVED', 'REJECTED', 'PAID', 'APPEALED', 'CANCELLED']
+    # Read claim types and statuses from indices directory
+    try:
+        types_df = pd.read_csv('indices/claim_types.csv')
+        claim_types = types_df['claim_type'].tolist()
+    except Exception:
+        claim_types = ['Medical', 'Auto', 'Property', 'Life', 'Travel', 'Disability', 'Dental', 'Vision']
+    
+    try:
+        status_df = pd.read_csv('indices/claim_status.csv')
+        statuses = status_df['status_code'].tolist()
+    except Exception:
+        statuses = ['PENDING', 'APPROVED', 'REJECTED', 'PAID', 'APPEALED', 'CANCELLED']
     
     start_date = datetime.now() - timedelta(days=365)
     

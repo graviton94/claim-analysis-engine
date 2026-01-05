@@ -173,7 +173,6 @@ Defined in `indices/claim_status.csv`:
 - **openpyxl**: Excel file reading
 - **scikit-learn**: Machine learning utilities
 - **plotly**: Interactive visualizations
-- **prophet**: Time series forecasting (optional)
 
 ## 🎯 Use Cases
 
