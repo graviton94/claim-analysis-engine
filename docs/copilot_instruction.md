@@ -1,25 +1,22 @@
-# 🤖 Copilot Instruction (Task Order)
+# 🤖 Copilot Instruction (Task Order v2.0)
 
-너는 'Advanced Claim Prediction System'의 수석 AI 개발자다. 
-HQ의 변경된 요구사항을 반영하여 아래 원칙대로 코드를 작성하라.
+너는 이 시스템의 수석 AI 개발자다. 아래 원칙을 반드시 준수하라.
 
-## 0. 작업 환경 (Git)
-- **Branch**: 현재 작업은 무조건 **`main` 브랜치**에서 수행되어야 한다. 
-- 파일 생성/수정 시 경로가 `main` 브랜치에 맞는지 확인하라.
+## 1. 개발 환경 및 브랜치
+- **Branch**: 무조건 `main` 브랜치에서 작업한다.
+- **Encoding**: 한글 깨짐 방지를 위해 `utf-8-sig` 인코딩을 모든 파일 입출력에 적용한다.
 
-## 1. 데이터 처리 원칙 (Partitioning & Extraction)
-- **파티셔닝 저장**: `core/storage.py`에서 데이터를 저장할 때 반드시 `partition_cols=['접수년', '접수월']`을 사용하여 물리 폴더를 분리하라.
-- **54개 필드 준수**: Raw 데이터 로드 시 `reindex(columns=TARGET_54_COLS)`를 사용하여 없는 컬럼은 NaN 처리하고, 1행=1건 원칙을 유지하라.
+## 2. 핵심 로직 제약
+- **Data Load**: `core/storage.py`를 통해 파티셔닝된 데이터를 읽을 때, `astype(int)`로 연/월 컬럼의 타입을 강제하여 비교 에러를 방지한다.
+- **Prediction**: 
+  - 모델 학습은 `플랜트 | 대분류` 단위로만 수행하고 저장한다.
+  - 하위 항목 배분은 `predict_with_seasonal_allocation` 함수를 사용한다.
+- **UI Interaction**: P6에서 설정된 규칙은 `st.session_state`나 별도 JSON으로 관리되어 P2와 실시간 연동되어야 한다.
 
-## 2. 매출 관리 및 피벗 UI 구현 (핵심 변경사항)
-- **매출 관리 페이지**: `st.data_editor`를 사용하여 사용자가 직접 엑셀처럼 수치를 입력하고 수정할 수 있게 하라. 데이터는 `data/sales/` 폴더에 별도 저장한다.
-- **플랜트 분석 페이지**: 
-  - **고정된 차트를 그리지 마라.** 사용자가 '보고 싶은 항목(Columns)'을 선택하면 그때 `df.groupby(['접수년', '접수월'] + selected_cols).size()`를 수행하여 동적으로 테이블을 생성하라.
-  - 행(Index)은 무조건 `['접수년', '접수월']`을 포함하여 시계열성을 유지하라.
-
-## 3. 예측 모델링 (ML/DL)
-- **Optuna 필수**: 하이퍼파라미터 튜닝 없이 기본 모델만 돌리는 것은 금지한다.
-- **Feature 확장**: `sales` 데이터가 존재하면 이를 Join하여 모델의 Input Feature로 활용하라.
+## 3. UI/UX 원칙
+- 모든 페이지 상단에 현재 선택된 `플랜트` 정보를 명시한다.
+- 복잡한 필터는 `st.expander`를 사용하여 화면을 깔끔하게 유지한다.
+- 도움말이 필요한 기능(예: 실적만 보기)에는 `help` 파라미터를 사용하여 툴팁을 제공한다.
 
 ## 4. 코드 품질
 - **한글 주석**: 모든 설명은 한국어로 작성.
