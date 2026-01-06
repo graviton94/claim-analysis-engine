@@ -88,10 +88,11 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("**Phase 3: ML/DL Engine** (준비중)")
+    st.subheader("**Phase 3: ML/DL Engine & Optuna** ✅")
+    st.write("완료 - Optuna 자동 튜닝 & 챔피언 모델 예측")
     st.markdown(
         """
-        - `4_예측_시뮬레이션`: Optuna 튜닝 & 챔피언 모델
+        - `4_예측_시뮬레이션`: Optuna × 3모델 + 6개월 예측
         """
     )
     
