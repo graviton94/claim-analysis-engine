@@ -10,12 +10,120 @@ from typing import Dict, Tuple, List, Optional
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
+from pathlib import Path
+import joblib
 
 import optuna
 from optuna.samplers import TPESampler
 from sklearn.metrics import mean_squared_error
 
 from core.engine.models import SARIMAXModel, CatBoostModel, LSTMModel, BaseModel
+
+
+# ============================================================================
+# 0. 계절성 기반 배분 로직 (Seasonal Allocation)
+# ============================================================================
+
+def predict_with_seasonal_allocation(
+    plant: str,
+    major_category: str,
+    future_months: List[int],
+    sub_dimensions_df: pd.DataFrame,
+    model_dir: str = 'data/models'
+) -> pd.DataFrame:
+    """
+    계절성 기반 Top-down 예측 배분.
+    
+    동작:
+    1. 챔피언 모델로 대분류의 미래 총량 예측 (Top-down)
+    2. 과거 데이터에서 예측 월과 동일한 '과거의 월' 데이터 필터링
+    3. 각 하위 항목(피벗 행)별 평균 점유율(Ratio) 계산
+    4. 총예측값 × 점유율 = 하위항목 예측값 (Bottom-up Allocation)
+    5. 신규 항목(과거 데이터 없음)은 최근 3개월 평균 비중 사용
+    
+    Args:
+        plant: 플랜트명
+        major_category: 대분류
+        future_months: 예측할 월 리스트 [예: [8, 9, 10]]
+        sub_dimensions_df: 과거 데이터 (columns: 접수년, 접수월, 소분류, 건수 등)
+        model_dir: 모델 저장 디렉토리
+    
+    Returns:
+        pd.DataFrame: 예측 결과 (소분류별 월별 예측값)
+    """
+    
+    # 1. 챔피언 모델 로드
+    selector = ChampionSelector({})
+    champion = selector.load_champion(plant, major_category, model_dir)
+    
+    if champion is None:
+        print(f"[WARNING] {plant}_{major_category} 모델을 찾을 수 없습니다.")
+        return pd.DataFrame()
+    
+    # 대분류의 시계열 데이터 준비
+    if sub_dimensions_df.empty:
+        return pd.DataFrame()
+    
+    # 연월 기반 시계열 생성
+    sub_dimensions_df = sub_dimensions_df.copy()
+    sub_dimensions_df['연월'] = sub_dimensions_df['접수년'] * 100 + sub_dimensions_df['접수월']
+    
+    # 대분류별 월간 총 건수 집계
+    total_by_month = sub_dimensions_df.groupby('접수월')['건수'].sum().reset_index()
+    total_by_month = total_by_month.sort_values('접수월')
+    
+    # 2. Top-down 예측: 미래 3개월 총량 예측
+    if len(total_by_month) < 3:
+        print(f"[WARNING] 데이터가 충분하지 않습니다 ({len(total_by_month)} 개월)")
+        return pd.DataFrame()
+    
+    # 시계열 값
+    y_series = pd.Series(total_by_month['건수'].values, index=total_by_month['접수월'].values)
+    
+    try:
+        # 챔피온 모델로 예측
+        future_predictions = champion.predict(steps=len(future_months), exog=None)
+        if isinstance(future_predictions, np.ndarray):
+            future_predictions = future_predictions.flatten()
+    except Exception as e:
+        print(f"[ERROR] 예측 실패: {str(e)}")
+        # Fallback: 최근 3개월 평균
+        future_predictions = np.full(len(future_months), total_by_month['건수'].tail(3).mean())
+    
+    # 3. Seasonal Ratio 계산: 과거 동월 데이터에서 각 하위항목의 점유율
+    allocation_results = []
+    
+    for future_month, predicted_total in zip(future_months, future_predictions):
+        # 과거 데이터에서 동월(예: 8월) 필터링
+        historical_same_month = sub_dimensions_df[sub_dimensions_df['접수월'] == future_month]
+        
+        if historical_same_month.empty:
+            # Fallback: 최근 3개월 평균 비중 사용
+            print(f"[INFO] 월 {future_month}의 과거 데이터 없음. 최근 3개월 평균 사용")
+            recent_3months = sub_dimensions_df.groupby('소분류')['건수'].sum().reset_index()
+            recent_3months['ratio'] = recent_3months['건수'] / recent_3months['건수'].sum()
+        else:
+            # 과거 동월 데이터에서 각 하위항목별 평균 점유율
+            recent_3months = historical_same_month.groupby('소분류')['건수'].mean().reset_index()
+            recent_3months['ratio'] = recent_3months['건수'] / recent_3months['건수'].sum()
+        
+        # 4. Allocation: 총예측값 × 점유율
+        for _, row in recent_3months.iterrows():
+            sub_category = row['소분류']
+            ratio = row['ratio']
+            allocated_value = predicted_total * ratio
+            
+            allocation_results.append({
+                '플랜트': plant,
+                '대분류': major_category,
+                '소분류': sub_category,
+                '접수월': future_month,
+                '예측_건수': allocated_value,
+                '점유율': ratio
+            })
+    
+    result_df = pd.DataFrame(allocation_results)
+    return result_df
 
 
 # ============================================================================
@@ -470,3 +578,69 @@ class ChampionSelector:
         if self.leaderboard is not None:
             return self.leaderboard.iloc[0].to_dict()
         return {}
+    
+    def save_champion(
+        self,
+        plant: str,
+        major_category: str,
+        model_dir: str = 'data/models'
+    ) -> Path:
+        """
+        챔피언 모델을 저장.
+        
+        저장 경로: {model_dir}/{plant}_{major_category}/champion.pkl
+        
+        Args:
+            plant: 플랜트명
+            major_category: 대분류
+            model_dir: 모델 저장 디렉토리
+        
+        Returns:
+            Path: 저장된 모델 파일 경로
+        """
+        if self.champion is None:
+            raise ValueError("챔피언 모델이 선정되지 않음")
+        
+        # 디렉토리 생성
+        model_path = Path(model_dir) / f"{plant}_{major_category}"
+        model_path.mkdir(parents=True, exist_ok=True)
+        
+        # 모델 저장
+        model_file = model_path / "champion.pkl"
+        joblib.dump(self.champion, str(model_file))
+        
+        print(f"[CHAMPION] 모델 저장: {model_file}")
+        return model_file
+    
+    def load_champion(
+        self,
+        plant: str,
+        major_category: str,
+        model_dir: str = 'data/models'
+    ) -> Optional[BaseModel]:
+        """
+        저장된 챔피언 모델을 로드.
+        
+        로드 경로: {model_dir}/{plant}_{major_category}/champion.pkl
+        
+        Args:
+            plant: 플랜트명
+            major_category: 대분류
+            model_dir: 모델 저장 디렉토리
+        
+        Returns:
+            BaseModel: 로드된 모델 (없으면 None)
+        """
+        model_file = Path(model_dir) / f"{plant}_{major_category}" / "champion.pkl"
+        
+        if not model_file.exists():
+            print(f"[CHAMPION] 모델 파일 없음: {model_file}")
+            return None
+        
+        try:
+            self.champion = joblib.load(str(model_file))
+            print(f"[CHAMPION] 모델 로드: {model_file}")
+            return self.champion
+        except Exception as e:
+            print(f"[CHAMPION] 모델 로드 실패: {str(e)}")
+            return None
