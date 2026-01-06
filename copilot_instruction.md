@@ -3,6 +3,10 @@
 너는 'Advanced Claim Prediction System'의 수석 AI 개발자다. 
 HQ의 변경된 요구사항을 반영하여 아래 원칙대로 코드를 작성하라.
 
+## 0. 작업 환경 (Git)
+- **Branch**: 현재 작업은 무조건 **`main` 브랜치**에서 수행되어야 한다. 
+- 파일 생성/수정 시 경로가 `main` 브랜치에 맞는지 확인하라.
+
 ## 1. 데이터 처리 원칙 (Partitioning & Extraction)
 - **파티셔닝 저장**: `core/storage.py`에서 데이터를 저장할 때 반드시 `partition_cols=['접수년', '접수월']`을 사용하여 물리 폴더를 분리하라.
 - **54개 필드 준수**: Raw 데이터 로드 시 `reindex(columns=TARGET_54_COLS)`를 사용하여 없는 컬럼은 NaN 처리하고, 1행=1건 원칙을 유지하라.
