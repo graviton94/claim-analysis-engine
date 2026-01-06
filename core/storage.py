@@ -173,6 +173,7 @@ def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
     동작:
         - data/hub/ 파티셔닝 폴더 스캔
         - 파티션 메타데이터에서 연/월 정보 추출
+        - None/NaN 값 제외 후 타입 안전성 확보
         - 각 행마다 플랜트 컬럼 추가
     
     Args:
@@ -180,6 +181,10 @@ def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
     
     Returns:
         pd.DataFrame: {플랜트, 접수년, 접수월} 컬럼의 유니크 조합
+    
+    주의:
+        - None/NaN 값은 dropna()로 자동 제외
+        - 모든 컬럼을 str로 형변환 후 sorted() 수행 (Type Safety)
     """
     path = Path(path)
     
@@ -191,11 +196,24 @@ def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
         df = pd.read_parquet(path)
         
         # [플랜트, 접수년, 접수월] 유니크 조합 추출
-        claim_keys = df[['플랜트', '접수년', '접수월']].drop_duplicates().sort_values(
-            ['플랜트', '접수년', '접수월']
+        # ★ Step 1: None/NaN 값 제외 (dropna)
+        claim_keys = df[['플랜트', '접수년', '접수월']].dropna()
+        
+        # ★ Step 2: 모든 컬럼을 str로 형변환하여 Type Safety 확보
+        claim_keys['플랜트'] = claim_keys['플랜트'].astype(str)
+        claim_keys['접수년'] = claim_keys['접수년'].astype(str)
+        claim_keys['접수월'] = claim_keys['접수월'].astype(str)
+        
+        # ★ Step 3: 유니크 조합 추출 및 정렬 (이제 모든 값이 str이므로 TypeError 없음)
+        claim_keys = claim_keys.drop_duplicates()
+        
+        # str 정렬 수행 (타입 호환성 완벽)
+        claim_keys = claim_keys.sort_values(
+            ['플랜트', '접수년', '접수월'],
+            key=lambda x: x.astype(str)
         ).reset_index(drop=True)
         
-        print(f"[STORAGE] 클레임 키 추출 완료: {len(claim_keys)} 행")
+        print(f"[STORAGE] 클레임 키 추출 완료: {len(claim_keys)} 행 (None/NaN 제외 완료)")
         return claim_keys
     
     except Exception as e:
@@ -245,10 +263,14 @@ def load_sales_with_estimation(
     df['is_estimated'] = False
     
     # 플랜트별로 순차 처리
-    plants = df['플랜트'].unique()
+    # ★ None/NaN 플랜트 제외
+    plants = df['플랜트'].dropna().unique()
     
     for plant in plants:
         plant_df = df[df['플랜트'] == plant].copy()
+        # ★ 인덱스 정렬 시 타입 안전성: 먼저 형변환 후 정렬
+        plant_df['년'] = pd.to_numeric(plant_df['년'], errors='coerce').fillna(0).astype(int)
+        plant_df['월'] = pd.to_numeric(plant_df['월'], errors='coerce').fillna(0).astype(int)
         plant_df = plant_df.sort_values(['년', '월']).reset_index(drop=True)
         
         # NaN 또는 0인 행 찾기

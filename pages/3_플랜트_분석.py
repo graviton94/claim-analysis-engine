@@ -145,15 +145,25 @@ if 'sales_data' not in st.session_state:
 st.subheader("🔍 Step 1: 플랜트 선택 (필수)")
 
 # 사용 가능한 플랜트 목록 로드
+# ★ 변경: get_claim_keys()를 사용하여 Type Safe한 로드
 try:
-    claim_keys = pd.read_parquet(DATA_HUB_PATH) if Path(DATA_HUB_PATH).exists() else pd.DataFrame()
-    available_plants = sorted(claim_keys['플랜트'].unique().tolist()) if not claim_keys.empty else []
+    from core.storage import get_claim_keys
+    claim_keys = get_claim_keys(DATA_HUB_PATH)
+    
+    # ★ 변경: None/NaN 제외 후 dropna() 완료된 상태이므로 안전한 정렬 가능
+    available_plants = []
+    if not claim_keys.empty and '플랜트' in claim_keys.columns:
+        available_plants = sorted(claim_keys['플랜트'].dropna().unique().tolist())
 except Exception as e:
-    st.error(f"❌ 클레임 데이터 로드 실패: {str(e)}")
+    print(f"[ERROR] 플랜트 목록 로드 실패: {str(e)}")
     available_plants = []
 
+# ★ 변경: Traceback 대신 명확한 경고 메시지 표시
 if not available_plants:
-    st.warning("⚠️ 사용 가능한 플랜트가 없습니다. '데이터 업로드' 페이지에서 먼저 데이터를 업로드하세요.")
+    st.warning(
+        "⚠️ 분석할 데이터가 없습니다.\n\n"
+        "**[데이터 업로드]** 메뉴에서 CSV/Excel 파일을 등록해주세요."
+    )
     st.stop()
 
 # 플랜트 선택 (라디오 버튼)
