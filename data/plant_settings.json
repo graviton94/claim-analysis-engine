@@ -1,0 +1,48 @@
+{
+  "논산1공장": {
+    "filter_business": [
+      "B2B식품",
+      "식품"
+    ],
+    "filter_reason": [
+      "고객불만족",
+      "구매불만",
+      "제조불만"
+    ],
+    "filter_grade": [
+      "일반"
+    ],
+    "filter_major_category": [
+      "포장",
+      "관능"
+    ],
+    "saved_pivot_rows": [
+      "중분류"
+    ]
+  },
+  "ABRIL": {
+    "filter_business": [
+      "식품",
+      "외부몰(B2C)",
+      "더마켓"
+    ],
+    "filter_reason": [
+      "고객불만족",
+      "구매불만",
+      "제조불만",
+      "단순불만",
+      "물류",
+      "설계기술",
+      "영업서비스"
+    ],
+    "filter_grade": [
+      "일반"
+    ],
+    "filter_major_category": [
+      "포장"
+    ],
+    "saved_pivot_rows": [
+      "제품명"
+    ]
+  }
+}

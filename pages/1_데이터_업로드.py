@@ -73,7 +73,7 @@ if st.session_state.processed_df is not None:
     # 데이터 테이블 표시
     st.dataframe(
         st.session_state.processed_df.head(10),
-        use_container_width=True,
+        width='stretch',
         height=300
     )
     
@@ -85,7 +85,7 @@ if st.session_state.processed_df is not None:
             'NaN 비율 (%)': null_ratio.values.round(2)
         }).sort_values('NaN 비율 (%)', ascending=False)
         
-        st.dataframe(null_df, use_container_width=True, hide_index=True)
+        st.dataframe(null_df, width='stretch', hide_index=True)
 
 
 # ============================================================================
@@ -104,7 +104,7 @@ if st.session_state.processed_df is not None:
         )
     
     with col2:
-        if st.button("💾 저장", key="save_partitioned", use_container_width=True):
+        if st.button("💾 저장", key="save_partitioned", width='stretch'):
             try:
                 # 필수 컬럼 확인
                 if '접수년' not in st.session_state.processed_df.columns or \
@@ -126,7 +126,7 @@ if st.session_state.processed_df is not None and 'save_complete' in st.session_s
     try:
         periods = get_available_periods(DATA_HUB_PATH)
         if not periods.empty:
-            st.dataframe(periods, use_container_width=True, hide_index=True)
+            st.dataframe(periods, width='stretch', hide_index=True)
             st.success(f"총 {len(periods)} 개의 년/월 조합이 저장되었습니다.")
         else:
             st.info("저장된 기간 정보 없음")

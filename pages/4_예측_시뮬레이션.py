@@ -24,14 +24,14 @@ st.set_page_config(page_title="예측 시뮬레이션", page_icon="🔮", layout
 st.title("🔮 예측 시뮬레이션 (Optuna Champion Model)")
 st.markdown(
     "CatBoost, SARIMAX, LSTM 3개 모델을 Optuna로 자동 튜닝하고, "
-    "우승 모델의 6개월 예측 결과를 시각화합니다."
+    "우승 모델의 3개월 예측 결과를 시각화합니다."
 )
 
 # ============================================================================
 # 기본 설정
 # ============================================================================
 SALES_PATH = Path(DATA_SALES_PATH) / SALES_FILENAME
-FORECAST_MONTHS = 6
+FORECAST_MONTHS = 3
 
 
 # ============================================================================
@@ -173,10 +173,10 @@ with col_tune:
     n_trials = st.number_input("Optuna 시행 횟수", min_value=5, max_value=100, value=20, step=5)
 
 with col_forecast:
-    forecast_months = st.number_input("예측 기간 (개월)", min_value=1, max_value=12, value=6)
+    forecast_months = st.number_input("예측 기간 (개월)", min_value=1, max_value=12, value=3)
 
 # 학습/예측 시작 버튼
-if st.button("▶️ 학습 및 예측 시작", use_container_width=True, key="run_prediction"):
+if st.button("▶️ 학습 및 예측 시작", width='stretch', key="run_prediction"):
     
     # Progress 표시
     progress_bar = st.progress(0)
@@ -221,8 +221,8 @@ if st.button("▶️ 학습 및 예측 시작", use_container_width=True, key="r
         
         progress_bar.progress(85)
         
-        # Step 4: 6개월 예측
-        status_text.info("📈 6개월 예측 중...")
+        # Step 4: 3개월 예측
+        status_text.info("📈 3개월 예측 중...")
         progress_bar.progress(95)
         
         # 미래 외생변수 준비 (매출 없으면 NaN)
@@ -291,7 +291,7 @@ if st.session_state.leaderboard is not None and st.session_state.selector is not
     
     st.dataframe(
         leaderboard_display,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config={
             'Rank': st.column_config.NumberColumn('순위', format='%d'),
@@ -301,7 +301,7 @@ if st.session_state.leaderboard is not None and st.session_state.selector is not
     )
     
     # 4-2. 예측 차트 (신뢰구간 포함)
-    st.write("#### 📈 시계열 예측 (신뢰구간)")
+    st.write("#### 📈 시계열 예측 (3개월 신뢰구간)")
     
     if st.session_state.forecast is not None:
         
@@ -380,7 +380,7 @@ if st.session_state.leaderboard is not None and st.session_state.selector is not
         ))
         
         fig.update_layout(
-            title=f"{description} - {champion_name} 모델 6개월 예측",
+            title=f"{description} - {champion_name} 모델 3개월 예측",
             xaxis_title="기간",
             yaxis_title="클레임 건수",
             hovermode='x unified',
@@ -388,7 +388,7 @@ if st.session_state.leaderboard is not None and st.session_state.selector is not
             template='plotly_white'
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # 예측값 테이블
         st.write("#### 📋 예측값 상세")
@@ -402,7 +402,7 @@ if st.session_state.leaderboard is not None and st.session_state.selector is not
         
         st.dataframe(
             forecast_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 '기간': st.column_config.TextColumn('예측 기간'),

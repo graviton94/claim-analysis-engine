@@ -262,7 +262,7 @@ st.markdown(
 # 피벗 테이블 에디터
 edited_pivot = st.data_editor(
     st.session_state.sales_pivot_df,
-    use_container_width=True,
+    width='stretch',
     height=400,
     num_rows="fixed",  # 행 추가/삭제 불가 (클레임 기준)
     key="pivot_editor"
@@ -296,7 +296,7 @@ with col_stats3:
 col_save1, col_save2 = st.columns([1, 4])
 
 with col_save1:
-    if st.button("💾 저장", key="save_sales", use_container_width=True):
+    if st.button("💾 저장", key="save_sales", width='stretch'):
         if not st.session_state.sales_long_df.empty:
             save_sales_data(st.session_state.sales_long_df)
         else:
@@ -311,7 +311,7 @@ if not st.session_state.sales_long_df.empty:
         st.markdown("피벗 테이블은 **Long 형식**으로 변환되어 저장됩니다.")
         st.dataframe(
             st.session_state.sales_long_df.head(50),
-            use_container_width=True,
+            width='stretch',
             height=250
         )
     
@@ -321,4 +321,4 @@ if not st.session_state.sales_long_df.empty:
             '매출수량': ['sum', 'mean', 'count']
         }).round(2)
         plant_stats.columns = ['합계', '평균', '개수']
-        st.dataframe(plant_stats, use_container_width=True)
+        st.dataframe(plant_stats, width='stretch')
