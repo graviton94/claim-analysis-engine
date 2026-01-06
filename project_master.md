@@ -1,5 +1,9 @@
 # 🏛 Project Master Blueprint
 
+## 0. Git Branch Policy
+- **Target**: `https://github.com/graviton94/claim-analysis-engine/tree/main`
+- **Rule**: 모든 코드 변경사항은 `main` 브랜치에 직접 커밋하거나, `main`으로 향하는 PR이어야 한다.
+
 ## 1. Data Pipeline Strategy
 
 ### 1.1 Robust Extraction & Partitioning
