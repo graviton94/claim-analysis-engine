@@ -1,24 +1,30 @@
 # ============================================================================
-# 페이지: 매출수량 관리
+# 페이지: 매출수량 관리 (피벗 테이블 형태)
 # ============================================================================
-# 설명: st.data_editor를 사용하여 플랜트별 년/월 매출수량을 입력/수정하고
-#      data/sales/sales_history.parquet에 저장합니다.
-#      Smart Sync 로직으로 클레임 데이터와 자동 동기화합니다.
+# 설명: 엑셀 스타일 피벗 테이블로 플랜트별 년/월 매출수량을 관리합니다.
+#      행: 플랜트명
+#      열: [년-월] 조합 (멀티인덱스 헤더)
+#      값: 매출수량
 
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
-from core.config import DATA_SALES_PATH, SALES_FILENAME
+from core.config import DATA_SALES_PATH, SALES_FILENAME, DATA_HUB_PATH
 from core.storage import get_claim_keys
 
 # ============================================================================
 # 페이지 레이아웃 설정
 # ============================================================================
 st.set_page_config(page_title="매출수량 관리", page_icon="💰", layout="wide")
-st.title("💰 매출수량 관리")
-st.markdown("플랜트별 년/월 매출수량을 엑셀 형식으로 입력/수정합니다.")
+st.title("💰 매출수량 관리 (피벗 테이블)")
+st.markdown(
+    "엑셀 스타일 피벗 테이블로 플랜트별 년/월 매출수량을 관리합니다.\n\n"
+    "- **행**: 플랜트명 (클레임 데이터 기준 자동 추출)\n"
+    "- **열**: 년-월 조합 (클레임 데이터 기준 자동 생성)\n"
+    "- **값**: 매출수량 (직접 입력)"
+)
 
 # ============================================================================
 # 기본 설정
@@ -115,13 +121,110 @@ def sync_with_claims() -> pd.DataFrame:
         return load_sales_data()
 
 
+def get_period_columns_from_claims() -> Tuple[list, list]:
+    """
+    클레임 데이터에서 [년, 월] 조합 추출.
+    
+    Returns:
+        Tuple[list, list]: (년도 리스트, 월 리스트) - 정렬된 유니크 값
+    """
+    try:
+        claim_keys = get_claim_keys()
+        if claim_keys.empty:
+            return [], []
+        
+        # 년/월을 숫자로 변환 (정렬 위해)
+        claim_keys['접수년'] = pd.to_numeric(claim_keys['접수년'], errors='coerce')
+        claim_keys['접수월'] = pd.to_numeric(claim_keys['접수월'], errors='coerce')
+        
+        # 유니크한 년/월 조합 추출
+        periods = claim_keys[['접수년', '접수월']].drop_duplicates().sort_values(['접수년', '접수월'])
+        
+        years = periods['접수년'].astype(int).tolist()
+        months = periods['접수월'].astype(int).tolist()
+        
+        return years, months
+    
+    except Exception as e:
+        print(f"[ERROR] 기간 추출 실패: {str(e)}")
+        return [], []
+
+
+def long_to_pivot(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Long 형식 → Pivot 형식 변환.
+    
+    Args:
+        df: {플랜트, 년, 월, 매출수량} Long 형식 데이터
+    
+    Returns:
+        pd.DataFrame: 피벗 테이블 (행: 플랜트, 열: 년-월)
+    """
+    if df.empty:
+        return pd.DataFrame()
+    
+    # 년/월을 문자열로 변환하여 컬럼명 생성 (예: "2025-01")
+    df = df.copy()
+    df['년'] = pd.to_numeric(df['년'], errors='coerce').fillna(0).astype(int)
+    df['월'] = pd.to_numeric(df['월'], errors='coerce').fillna(0).astype(int)
+    df['년월'] = df['년'].astype(str) + '-' + df['월'].astype(str).str.zfill(2)
+    
+    # 피벗 테이블 생성
+    pivot = df.pivot_table(
+        index='플랜트',
+        columns='년월',
+        values='매출수량',
+        aggfunc='sum',
+        fill_value=0
+    )
+    
+    # 컬럼 정렬 (년-월 순서대로)
+    pivot = pivot.reindex(sorted(pivot.columns), axis=1)
+    
+    return pivot
+
+
+def pivot_to_long(pivot_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Pivot 형식 → Long 형식 변환.
+    
+    Args:
+        pivot_df: 피벗 테이블 (행: 플랜트, 열: 년-월)
+    
+    Returns:
+        pd.DataFrame: {플랜트, 년, 월, 매출수량} Long 형식
+    """
+    if pivot_df.empty:
+        return pd.DataFrame(columns=['플랜트', '년', '월', '매출수량'])
+    
+    # Pivot을 Long 형식으로 변환
+    long_df = pivot_df.reset_index().melt(
+        id_vars='플랜트',
+        var_name='년월',
+        value_name='매출수량'
+    )
+    
+    # 년월 컬럼 분리 (예: "2025-01" → 년=2025, 월=1)
+    long_df[['년', '월']] = long_df['년월'].str.split('-', expand=True)
+    long_df['년'] = pd.to_numeric(long_df['년'], errors='coerce').fillna(0).astype(int)
+    long_df['월'] = pd.to_numeric(long_df['월'], errors='coerce').fillna(0).astype(int)
+    
+    # 년월 컬럼 제거
+    long_df = long_df[['플랜트', '년', '월', '매출수량']]
+    
+    # is_estimated 컬럼 추가 (기본값 False)
+    long_df['is_estimated'] = False
+    
+    return long_df.sort_values(['플랜트', '년', '월']).reset_index(drop=True)
+
+
 # ============================================================================
 # 세션 상태 초기화
 # ============================================================================
-if 'sales_df' not in st.session_state:
-    st.session_state.sales_df = sync_with_claims()  # Smart Sync 적용
-if 'edited_sales' not in st.session_state:
-    st.session_state.edited_sales = False
+if 'sales_long_df' not in st.session_state:
+    st.session_state.sales_long_df = sync_with_claims()  # Long 형식
+if 'sales_pivot_df' not in st.session_state:
+    st.session_state.sales_pivot_df = long_to_pivot(st.session_state.sales_long_df)  # Pivot 형식
 
 
 # ============================================================================
@@ -129,132 +232,93 @@ if 'edited_sales' not in st.session_state:
 # ============================================================================
 with st.container():
     st.info(
-        "🔄 **Smart Sync 활성화**: 클레임 데이터와 자동 동기화됩니다. "
-        "클레임은 있는데 매출이 없는 항목이 자동으로 추가됩니다.",
+        "🔄 **Smart Sync 활성화**: 클레임 데이터의 [플랜트, 년, 월] 조합을 자동으로 테이블에 반영합니다.\n\n"
+        "- **행(플랜트)**: 업로드된 CSV의 플랜트 unique 값\n"
+        "- **열(년-월)**: 클레임 데이터의 년월 조합 (자동 정렬)",
         icon="ℹ️"
     )
 
 
 # ============================================================================
-# 영역 2: 새 데이터 추가
+# 영역 2: 피벗 테이블 편집
 # ============================================================================
-st.subheader("➕ 새 항목 추가 (선택사항)")
+st.subheader("📊 매출수량 피벗 테이블 (엑셀 스타일)")
 
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    new_plant = st.text_input("플랜트명", key="new_plant")
-with col2:
-    new_year = st.number_input("년", min_value=2000, max_value=2099, value=2026, key="new_year")
-with col3:
-    new_month = st.number_input("월", min_value=1, max_value=12, value=1, key="new_month")
-with col4:
-    new_sales = st.number_input("매출수량", min_value=0, value=0, key="new_sales")
-
-col_btn1, col_btn2 = st.columns([1, 4])
-with col_btn1:
-    if st.button("➕ 추가", key="add_row", use_container_width=True):
-        if new_plant:
-            new_row = pd.DataFrame({
-                '플랜트': [new_plant],
-                '년': [int(new_year)],
-                '월': [int(new_month)],
-                '매출수량': [int(new_sales)]
-            })
-            st.session_state.sales_df = pd.concat(
-                [st.session_state.sales_df, new_row],
-                ignore_index=True
-            ).drop_duplicates(subset=['플랜트', '년', '월'], keep='last').sort_values(['플랜트', '년', '월']).reset_index(drop=True)
-            st.rerun()
-        else:
-            st.error("❌ 플랜트명을 입력하세요.")
-
-
-# ============================================================================
-# 영역 3: 데이터 편집 (st.data_editor)
-# ============================================================================
-st.subheader("✏️ 매출수량 입력/수정")
+# 클레임 데이터가 없는 경우
+if st.session_state.sales_pivot_df.empty:
+    st.warning(
+        "⚠️ 클레임 데이터가 없습니다.\n\n"
+        "**[데이터 업로드]** 메뉴에서 먼저 CSV 파일을 업로드하세요."
+    )
+    st.stop()
 
 st.markdown(
-    "아래 테이블에서 직접 값을 입력/수정할 수 있습니다. "
-    "빈 행의 매출수량을 입력하거나 기존 값을 수정하세요. "
-    "(우측 🗑️ 버튼으로 행 삭제 가능)"
+    "아래 테이블에서 매출수량을 직접 입력/수정할 수 있습니다.\n\n"
+    "- **행**: 플랜트명\n"
+    "- **열**: 년-월 (예: 2025-01, 2025-02, ...)\n"
+    "- **값**: 매출수량 (0 = 미입력)"
 )
 
-# 데이터 에디터 - is_estimated 컬럼 표시
-display_cols = ['플랜트', '년', '월', '매출수량', 'is_estimated']
-display_df = st.session_state.sales_df[display_cols].copy() if all(col in st.session_state.sales_df.columns for col in display_cols) else st.session_state.sales_df
-
-edited_df = st.data_editor(
-    display_df,
+# 피벗 테이블 에디터
+edited_pivot = st.data_editor(
+    st.session_state.sales_pivot_df,
     use_container_width=True,
-    height=350,
-    num_rows="dynamic",  # 동적 행 추가/삭제 허용
-    disabled=['is_estimated'],  # is_estimated 는 읽기 전용
-    key="sales_editor"
+    height=400,
+    num_rows="fixed",  # 행 추가/삭제 불가 (클레임 기준)
+    key="pivot_editor"
 )
 
-# 변경사항 감지 및 저장
-if edited_df is not None and not edited_df.equals(st.session_state.sales_df[display_cols] if all(col in st.session_state.sales_df.columns for col in display_cols) else st.session_state.sales_df):
-    st.session_state.sales_df = edited_df.reset_index(drop=True)
+# 변경사항 자동 반영
+if edited_pivot is not None and not edited_pivot.equals(st.session_state.sales_pivot_df):
+    st.session_state.sales_pivot_df = edited_pivot
+    # Pivot → Long 변환
+    st.session_state.sales_long_df = pivot_to_long(edited_pivot)
 
 # ============================================================================
-# 영역 4: 저장 및 통계
+# 영역 3: 저장 및 통계
 # ============================================================================
 st.subheader("💾 저장 및 통계")
 
 col_stats1, col_stats2, col_stats3 = st.columns(3)
 
 with col_stats1:
-    st.metric("총 행 수", len(st.session_state.sales_df))
+    st.metric("플랜트 수", len(st.session_state.sales_pivot_df))
 
 with col_stats2:
-    unique_plants = st.session_state.sales_df['플랜트'].nunique() if not st.session_state.sales_df.empty else 0
-    st.metric("플랜트 수", unique_plants)
+    period_count = len(st.session_state.sales_pivot_df.columns) if not st.session_state.sales_pivot_df.empty else 0
+    st.metric("년-월 기간 수", period_count)
 
 with col_stats3:
-    total_sales = st.session_state.sales_df['매출수량'].sum() if not st.session_state.sales_df.empty else 0
+    total_sales = st.session_state.sales_pivot_df.sum().sum() if not st.session_state.sales_pivot_df.empty else 0
     st.metric("총 매출수량", f"{int(total_sales):,}")
-
-# 예상치 개수 표시
-if not st.session_state.sales_df.empty and 'is_estimated' in st.session_state.sales_df.columns:
-    estimated_count = st.session_state.sales_df['is_estimated'].sum()
-    if estimated_count > 0:
-        st.warning(f"⚠️ {estimated_count}개 행이 추정치입니다 (직전 3개월 평균값)")
 
 # 저장 버튼
 col_save1, col_save2 = st.columns([1, 4])
 
 with col_save1:
     if st.button("💾 저장", key="save_sales", use_container_width=True):
-        if not st.session_state.sales_df.empty:
-            # 데이터 검증
-            required_cols = ['플랜트', '년', '월', '매출수량']
-            if all(col in st.session_state.sales_df.columns for col in required_cols):
-                save_sales_data(st.session_state.sales_df)
-                st.session_state.edited_sales = False
-            else:
-                st.error(f"❌ 필수 컬럼 부재: {required_cols}")
+        if not st.session_state.sales_long_df.empty:
+            save_sales_data(st.session_state.sales_long_df)
         else:
             st.error("❌ 저장할 데이터가 없습니다.")
 
 
 # ============================================================================
-# 영역 5: 데이터 미리보기
+# 영역 4: 데이터 미리보기 (Long 형식)
 # ============================================================================
-if not st.session_state.sales_df.empty:
+if not st.session_state.sales_long_df.empty:
+    with st.expander("📋 Long 형식 데이터 미리보기 (저장 형식)", expanded=False):
+        st.markdown("피벗 테이블은 **Long 형식**으로 변환되어 저장됩니다.")
+        st.dataframe(
+            st.session_state.sales_long_df.head(50),
+            use_container_width=True,
+            height=250
+        )
+    
     with st.expander("📊 플랜트별 통계", expanded=False):
         # 플랜트별 통계
-        plant_stats = st.session_state.sales_df.groupby('플랜트').agg({
+        plant_stats = st.session_state.sales_long_df.groupby('플랜트').agg({
             '매출수량': ['sum', 'mean', 'count']
         }).round(2)
         plant_stats.columns = ['합계', '평균', '개수']
         st.dataframe(plant_stats, use_container_width=True)
-    
-    with st.expander("📅 년/월별 통계", expanded=False):
-        # 년/월별 통계
-        period_stats = st.session_state.sales_df.groupby(['년', '월']).agg({
-            '매출수량': ['sum', 'count']
-        }).round(2)
-        period_stats.columns = ['합계', '플랜트_수']
-        st.dataframe(period_stats, use_container_width=True)
