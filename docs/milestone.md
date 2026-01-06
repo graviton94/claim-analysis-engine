@@ -1,21 +1,24 @@
-# 📅 Development Milestone
+# 📅 Development Milestone (v2.0)
 
-## Phase 1: Data Foundation & Sales Integration (D+1~2)
-- [ ] `core/storage.py`: `save_partitioned(df, ['접수년', '접수월'])` 함수 구현.
-- [ ] `core/etl.py`: 54개 필드 강제 추출 및 인코딩(`utf-8-sig`) 처리.
-- [ ] `pages/1_데이터_업로드.py`: 대용량 파일 청크 처리 및 파티션 저장.
-- [ ] `pages/2_매출수량_관리.py`: **[신규]** 플랜트/년/월별 매출수량 CRUD(Create, Read, Update, Delete) UI 구현.
+## Phase 1: Foundation (✅ 완료)
+- [x] 54개 필드 표준화 및 연/월 파티셔닝 저장.
+- [x] 매출 수량 관리 UI 및 데이터 연동.
 
-## Phase 2: Pivot Dashboard Implementation (D+3~4)
-- [ ] `pages/3_플랜트_분석.py`: 
-  - [ ] **플랜트 필터** 최상단 배치.
-  - [ ] **Dynamic Pivot**: `groupby` 대상을 사용자가 선택(`st.multiselect`)하는 로직 구현.
-  - [ ] 매출 데이터 연동: `클레임건수 / 매출수량` 자동 계산 로직 추가.
+## Phase 2: Deep Dive Analysis (D+1~2)
+- [ ] **P3 플랜트 분석** 고도화: 동적 피벗 UI 재구축.
+- [ ] **이상치 감지** 로직: 테이블 내 튀는 값 하이라이트.
+- [ ] **Lag 분석**: 제조~접수 시차 분포 차트 구현.
 
-## Phase 3: ML/DL Engine & Optuna (D+5~6)
-- [ ] `core/engine/models.py`: CatBoost, LSTM, SARIMAX 모델링.
-- [ ] `core/engine/trainer.py`: Optuna 하이퍼파라미터 튜닝 (매출수량 피처 포함).
-- [ ] `pages/4_예측_시뮬레이션.py`: 챔피언 모델 선정 결과 및 향후 6개월 예측 시각화.
+## Phase 3: Rule & Summary (D+3~4)
+- [ ] **P6 감지 대상 관리**: 사용자 정의 규칙 설정 및 저장 로직.
+- [ ] **P2 통합 요약**: 최신 현황 요약 및 P6 규칙 기반 고위험 리스트 출력.
+- [ ] **요약 레포트**: 리스트 클릭 시 상세 정보 팝업 구현.
 
-## Phase 4: Integration (D+7)
-- [ ] 전체 데이터 파이프라인(업로드 → 매출입력 → 피벗분석 → 예측) 통합 테스트.
+## Phase 4: ML Intelligence (D+5~6)
+- [ ] **P4 예측 페이지**: 시리즈 분절 배치 스캔 엔진 (`batch.py`).
+- [ ] **리스크 스캐너**: 챔피언 모델 선정 및 계절성 배분 로직 완성.
+- [ ] **Warning Marking**: 예측 기반 위험 등급 산출 및 `alerts.json` 저장.
+
+## Phase 5: Final Optimization (D+7)
+- [ ] 업로드 시 증분 업데이트 트리거 연결.
+- [ ] 전사 통합 테스트 및 UI/UX 비주얼 고도화.
