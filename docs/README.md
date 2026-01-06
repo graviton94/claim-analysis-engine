@@ -1,40 +1,38 @@
-# 🏆 Advanced Claim Prediction System (ML/DL/Optuna)
-> **⚠️ 작업 브랜치 주의**: 모든 개발 및 커밋은 반드시 **[Main Branch](https://github.com/graviton94/claim-analysis-engine/tree/main)**에서 수행해야 합니다.
-> **"Global ML/DL 챔피언 모델 기반, 플랜트 중심 정밀 분석 시스템"**
-> 단순 통계나 EWS를 넘어, Optuna로 튜닝된 최적의 모델(CatBoost, LSTM, SARIMAX)을 경쟁시켜 미래 리스크를 예측합니다.
+# 🏆 Advanced Claim Analysis & Early Warning System (v2.0)
 
-## 🎯 Project Goal
-1. **Hyper-Model**: 머신러닝(ML)과 딥러닝(DL) 모델을 Optuna로 자동 튜닝하고, 성능이 가장 좋은 'Champion Model'을 선정하여 예측.
-2. **Plant-Centric & Pivot**: **'플랜트'**를 최상위 기준으로 하되, 사용자가 엑셀 피벗테이블처럼 **보고 싶은 열(Column)을 자유롭게 구성**하는 유연한 대시보드.
-3. **Sales Management**: 단순 건수 분석을 넘어, **매출 수량 대비 클레임율(PPM)**을 분석하기 위한 매출 데이터 통합 관리.
-4. **Robust ETL**: Input 데이터가 100개든 200개든 상관없이, **핵심 54개 필드**만 추출하여 연/월 단위로 파티셔닝 적재.
+> **⚠️ 작업 브랜치**: 모든 작업은 반드시 **[main 브랜치](https://github.com/graviton94/claim-analysis-engine/tree/main)**에서 수행합니다.
 
-## 🏗 Tech Stack
-- **Core**: Python 3.10+
-- **ML/DL**: `CatBoost`, `PyTorch` (LSTM), `Statsmodels` (SARIMAX), `Optuna` (AutoML)
-- **Data**: Pandas, Pyarrow (Parquet Partitioning)
-- **UI**: Streamlit (Data Editor, Pivot Table UI)
-- **Viz**: Plotly Express / Graph Objects
+## 🎯 Project Vision
+단순한 통계 조회를 넘어, **비즈니스 규칙(Rule)**과 **인공지능(ML)**이 결합된 하이브리드 조기 경보 시스템을 구축합니다. 수만 개의 데이터 조합을 스스로 감시하고 이상 징후를 선제적으로 보고합니다.
+
+## 🖥️ Page Navigation
+1. **수동 업로드**: CSV/Excel 표준화 적재 및 연/월 파티셔닝.
+2. **통합 요약 (Summary)**: 전사 추이 및 고위험 클레임 감지 리스트(Rule+ML).
+3. **플랜트별 상세 분석**: 동적 피벗, **이상치(Outlier) 감지**, **Lag(제조~접수 시차) 분석**.
+4. **예측 엔진 관리**: 전수 시리즈 스캔, 챔피언 모델 업데이트 및 정확도 레포트.
+5. **매출 수량 관리**: PPM 산출을 위한 플랜트별 매출 데이터 관리.
+6. **감지 대상 관리**: 사용자 정의 위험 조건(Rule) 설정 및 P2 연동.
 
 ## 📂 Directory Structure
 ```bash
 claim-prediction-system/
-├── app.py                  # 메인 엔트리
 ├── core/
-│   ├── config.py           # 54개 필드 정의
-│   ├── etl.py              # 필드 추출 및 1행=1건 처리
-│   ├── storage.py          # Parquet 파티셔닝 입출력
-│   └── engine/             # 예측 엔진 패키지
+│   ├── engine/           # ML 모델 및 배치 엔진 (SARIMAX, CatBoost, LSTM)
+│   ├── etl.py            # 54개 필드 추출 및 정제
+│   └── storage.py        # Parquet 파티셔닝 및 시리즈 분절 저장
 ├── pages/
-│   ├── 1_데이터_업로드.py    # 클레임 데이터 적재
-│   ├── 2_매출수량_관리.py    # [NEW] 플랜트별 매출 입력/수정
-│   ├── 3_플랜트_분석.py      # [UPDATE] 피벗 스타일 대시보드
-│   └── 4_예측_시뮬레이션.py  # 챔피언 모델 학습 및 예측
+│   ├── 1_데이터_업로드.py
+│   ├── 2_통합_요약.py     # New: Executive Summary
+│   ├── 3_플랜트_분석.py   # Update: Outlier & Lag 분석 추가
+│   ├── 4_예측_페이지.py    # New: 엔진 관리 및 리스크 스캐너
+│   ├── 5_매출_관리.py
+│   └── 6_감지_대상_관리.py # New: 사용자 정의 규칙 설정
 ├── data/
-│   ├── hub/                # 클레임 데이터 (접수년/월 파티셔닝)
-│   ├── sales/              # [NEW] 매출 데이터 저장소
-│   └── models/             # 학습된 모델 저장소
-└── docs/                   # 설계 문서
+│   ├── hub/              # Raw 파티션
+│   ├── series/           # 분절된 시계열 데이터 마트 (JSON/Parquet)
+│   └── results/          # 최종 리스크 마킹 결과 (alerts.json)
+└── docs/                 # 설계 문서
+
 ```
 
 ## 📂 Field def
