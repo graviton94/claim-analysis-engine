@@ -67,8 +67,8 @@ st.divider()
 with st.sidebar:
     st.header("📍 네비게이션")
     
-    st.subheader("**Phase 1: Data Foundation**")
-    st.write("✅ 완료")
+    st.subheader("**Phase 1: Data Foundation** ✅")
+    st.write("완료 - 데이터 ETL & 매출 기본 관리")
     st.markdown(
         """
         - `1_데이터_업로드`: 클레임 데이터 파티셔닝 적재
@@ -78,10 +78,11 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("**Phase 2: Pivot Dashboard** (준비중)")
+    st.subheader("**Phase 2: Adaptive PPM Dashboard** ✅")
+    st.write("완료 - 동적 피벗 & 스마트 매출 추정")
     st.markdown(
         """
-        - `3_플랜트_분석`: 동적 피벗 테이블
+        - `3_플랜트_분석`: 동적 피벗 + PPM 계산 + 시각화
         """
     )
     
@@ -90,7 +91,7 @@ with st.sidebar:
     st.subheader("**Phase 3: ML/DL Engine** (준비중)")
     st.markdown(
         """
-        - `4_예측_시뮬레이션`: 챔피언 모델 학습 & 예측
+        - `4_예측_시뮬레이션`: Optuna 튜닝 & 챔피언 모델
         """
     )
     
@@ -101,7 +102,8 @@ with st.sidebar:
         ---
         **프로젝트 설정**
         - 🌿 Branch: `main`
-        - 📂 Data: `data/hub/` (파티셔닝), `data/sales/`
+        - 📂 Data: `data/hub/` (파티셔닝)
+        - 💰 Sales: `data/sales/` (Smart Sync)
         - 📊 Models: `data/models/`
         """
     )
@@ -136,12 +138,18 @@ with st.expander("2️⃣ Step 2: 매출 데이터 입력 (권장)", expanded=Tr
         """
     )
 
-with st.expander("3️⃣ Step 3: 피벗 분석 (준비중)", expanded=False):
+with st.expander("3️⃣ Step 3: 피벗 분석 (완료)", expanded=False):
     st.markdown(
         """
-        - 플랜트별 클레임 트렌드 분석
-        - 사용자 정의 피벗 테이블
-        - 보상액, 건수, PPM 등 다양한 지표
+        1. 좌측 네비게이션에서 **`3_플랜트_분석`** 페이지로 이동
+        2. 분석할 플랜트 선택 (필수)
+        3. 기간 필터 설정 (선택)
+        4. 피벗 열 선택 (multiselect)
+        5. 지표 선택 (건수 / PPM)
+        6. 동적 피벗 테이블 & 시계열 차트 조회
+        
+        💡 PPM = (클레임건수 / 매출수량) × 1,000,000 자동 계산
+        ⚠️ 매출이 없는 행은 직전 3개월 평균값 자동 추정
         """
     )
 
@@ -169,7 +177,7 @@ with col_info1:
     
 with col_info2:
     st.write("**Current Phase**")
-    st.write("Phase 1: Data Foundation & Sales Integration ✅")
+    st.write("Phase 2: Adaptive PPM Dashboard ✅")
 
 st.write("")
 st.caption("© 2026 Advanced Claim Prediction System | Branch: main")

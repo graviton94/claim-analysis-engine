@@ -160,3 +160,137 @@ def clear_partitioned_data(
         import shutil
         shutil.rmtree(path)
         print(f"[STORAGE] 데이터 초기화 완료: {path}")
+
+
+# ============================================================================
+# Phase 2: 고도화 함수
+# ============================================================================
+
+def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
+    """
+    클레임 데이터의 [플랜트, 접수년, 접수월] 유니크 조합 추출.
+    
+    동작:
+        - data/hub/ 파티셔닝 폴더 스캔
+        - 파티션 메타데이터에서 연/월 정보 추출
+        - 각 행마다 플랜트 컬럼 추가
+    
+    Args:
+        path: 저장 경로 (기본값: 'data/hub')
+    
+    Returns:
+        pd.DataFrame: {플랜트, 접수년, 접수월} 컬럼의 유니크 조합
+    """
+    path = Path(path)
+    
+    if not path.exists() or not list(path.glob('접수년=*')):
+        return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
+    
+    try:
+        # 전체 클레임 데이터 로드
+        df = pd.read_parquet(path)
+        
+        # [플랜트, 접수년, 접수월] 유니크 조합 추출
+        claim_keys = df[['플랜트', '접수년', '접수월']].drop_duplicates().sort_values(
+            ['플랜트', '접수년', '접수월']
+        ).reset_index(drop=True)
+        
+        print(f"[STORAGE] 클레임 키 추출 완료: {len(claim_keys)} 행")
+        return claim_keys
+    
+    except Exception as e:
+        print(f"[WARNING] 클레임 키 추출 실패: {str(e)}")
+        return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
+
+
+def load_sales_with_estimation(
+    sales_path: Union[str, Path],
+    lookback_months: int = 3
+) -> pd.DataFrame:
+    """
+    매출 데이터 로드 및 스마트 추정 값 채우기.
+    
+    동작:
+        1. 매출 데이터 로드
+        2. 값이 없거나 0인 행에 대해 동일 플랜트의 직전 N개월 평균값으로 채우기
+        3. is_estimated (Boolean) 컬럼 추가하여 실적/추정 구분
+    
+    Args:
+        sales_path: 매출 데이터 저장 경로
+        lookback_months: 평균 계산 시 참고할 과거 개월 수 (기본값: 3)
+    
+    Returns:
+        pd.DataFrame: {플랜트, 년, 월, 매출수량, is_estimated} 스키마
+    """
+    sales_path = Path(sales_path)
+    
+    # 매출 데이터 로드
+    if not sales_path.exists():
+        print("[INFO] 저장된 매출 데이터 없음")
+        return pd.DataFrame(columns=['플랜트', '년', '월', '매출수량', 'is_estimated'])
+    
+    try:
+        df = pd.read_parquet(sales_path)
+    except Exception as e:
+        print(f"[WARNING] 매출 데이터 로드 실패: {str(e)}")
+        return pd.DataFrame(columns=['플랜트', '년', '월', '매출수량', 'is_estimated'])
+    
+    # 기본 전처리
+    df = df.copy()
+    df['년'] = pd.to_numeric(df['년'], errors='coerce').astype('Int64')
+    df['월'] = pd.to_numeric(df['월'], errors='coerce').astype('Int64')
+    df['매출수량'] = pd.to_numeric(df['매출수량'], errors='coerce')
+    
+    # is_estimated 컬럼 초기화 (실적 = False)
+    df['is_estimated'] = False
+    
+    # 플랜트별로 순차 처리
+    plants = df['플랜트'].unique()
+    
+    for plant in plants:
+        plant_df = df[df['플랜트'] == plant].copy()
+        plant_df = plant_df.sort_values(['년', '월']).reset_index(drop=True)
+        
+        # NaN 또는 0인 행 찾기
+        missing_mask = (plant_df['매출수량'].isna()) | (plant_df['매출수량'] == 0)
+        
+        for idx in plant_df[missing_mask].index:
+            current_year = plant_df.loc[idx, '년']
+            current_month = plant_df.loc[idx, '월']
+            
+            # 직전 3개월 평균값 계산
+            lookback_values = []
+            for back_month in range(1, lookback_months + 1):
+                # 과거 달 계산 (월 순환)
+                past_year = current_year
+                past_month = current_month - back_month
+                
+                if past_month <= 0:
+                    past_year -= 1
+                    past_month += 12
+                
+                # 과거 달 데이터 조회
+                past_data = plant_df[
+                    (plant_df['년'] == past_year) & (plant_df['월'] == past_month)
+                ]
+                if not past_data.empty and not pd.isna(past_data['매출수량'].iloc[0]):
+                    lookback_values.append(past_data['매출수량'].iloc[0])
+            
+            # 평균값 계산 및 적용
+            if lookback_values:
+                avg_value = sum(lookback_values) / len(lookback_values)
+                df.loc[
+                    (df['플랜트'] == plant) & 
+                    (df['년'] == current_year) & 
+                    (df['월'] == current_month),
+                    '매출수량'
+                ] = avg_value
+                df.loc[
+                    (df['플랜트'] == plant) & 
+                    (df['년'] == current_year) & 
+                    (df['월'] == current_month),
+                    'is_estimated'
+                ] = True
+    
+    print(f"[STORAGE] 매출 데이터 추정치 채우기 완료: {df['is_estimated'].sum()} 행")
+    return df.sort_values(['플랜트', '년', '월']).reset_index(drop=True)
