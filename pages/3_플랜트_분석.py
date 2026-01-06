@@ -7,6 +7,7 @@
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from typing import List, Optional
 import plotly.graph_objects as go
@@ -99,31 +100,105 @@ def calculate_ppm(
 def create_pivot_table(
     df: pd.DataFrame,
     index_cols: List[str],
-    column_cols: List[str],
+    column_cols: List[str] = ['접수년', '접수월'],
     value_col: str = '건수'
 ) -> pd.DataFrame:
     """
-    동적 피벗 테이블 생성.
+    동적 피벗 테이블 생성 (열 = 최근 12개월 + 3개월 예측).
     
     Args:
         df: 소스 데이터
-        index_cols: 행(Index) 컬럼
-        column_cols: 열(Columns) 컬럼
+        index_cols: 행(Index) 컬럼 (사용자 선택)
+        column_cols: 열(Columns) 컬럼 (고정: ['접수년', '접수월'])
         value_col: 값(Values) 컬럼
     
     Returns:
-        pd.DataFrame: 피벗 테이블
+        pd.DataFrame: 피벗 테이블 (열 = 최근 12개월 + 3개월 예측 + 맨앞컬럼 소계)
     """
-    if not column_cols:
-        return df.groupby(index_cols)[value_col].sum().reset_index()
+    if not index_cols:
+        return pd.DataFrame()
     
+    df = df.copy()
+    
+    # 최근 12개월 데이터만 필터링
+    df['연월'] = df['접수년'] * 100 + df['접수월']
+    df = df.sort_values('연월')
+    
+    # 최근 12개월 추출
+    unique_periods = df[['접수년', '접수월', '연월']].drop_duplicates().sort_values('연월')
+    if len(unique_periods) > 12:
+        min_연월 = unique_periods['연월'].iloc[-12]
+        df = df[df['연월'] >= min_연월]
+    
+    # 년월 컬럼 생성 (예: "2024-01")
+    df['년월'] = df['접수년'].astype(str) + '-' + df['접수월'].astype(str).str.zfill(2)
+    
+    # 피벗 테이블 생성
     pivot = df.pivot_table(
         index=index_cols,
-        columns=column_cols,
+        columns='년월',
         values=value_col,
         aggfunc='sum',
         fill_value=0
     )
+    
+    # 미래 3개월 예측 컬럼 생성
+    # 현재 데이터의 최대 년월에서 다음 3개월 계산
+    if not df.empty:
+        max_year = int(df['접수년'].max())
+        max_month = int(df[df['접수년'] == max_year]['접수월'].max())
+        
+        future_months = []
+        current_year = max_year
+        current_month = max_month
+        
+        for i in range(1, 4):  # +1, +2, +3개월
+            current_month += 1
+            if current_month > 12:
+                current_month = 1
+                current_year += 1
+            future_col = f"{current_year}.{current_month:02d}(예측)"
+            future_months.append(future_col)
+            pivot[future_col] = 0  # placeholder
+    
+    # ★ 맨앞 컬럼(행 인덱스 첫번째)에 대한 소계 추가 + 전체 합계
+    if index_cols:
+        first_col = index_cols[0]
+        subtotal_df = pivot.reset_index()
+        
+        # 첫번째 컬럼으로 그룹화하여 각 그룹 끝에 소계 행 삽입
+        subtotal_data_list = []
+        numeric_cols = subtotal_df.select_dtypes(include=[np.number]).columns
+        
+        for group_name, group_data in subtotal_df.groupby(first_col, sort=False):
+            # 그룹 데이터 추가
+            subtotal_data_list.append(group_data)
+            
+            # 소계 행 추가
+            subtotal_row = {col: "" for col in subtotal_df.columns}
+            subtotal_row[first_col] = f"[소계] {group_name}"
+            
+            # 수치 컬럼만 합산
+            for col in numeric_cols:
+                if col not in index_cols:
+                    subtotal_row[col] = group_data[col].sum()
+            
+            subtotal_data_list.append(pd.DataFrame([subtotal_row]))
+        
+        # 전체 합계 행 추가
+        total_row = {col: "" for col in subtotal_df.columns}
+        total_row[first_col] = "[전체] 총 합계"
+        for col in numeric_cols:
+            if col not in index_cols:
+                total_row[col] = subtotal_df[col].sum()
+        
+        # 모든 데이터 결합 (그룹 + 소계 반복 + 전체 합계)
+        subtotal_df_result = pd.concat(
+            subtotal_data_list + [pd.DataFrame([total_row])],
+            ignore_index=True
+        )
+        
+        return subtotal_df_result
     
     return pivot.reset_index()
 
@@ -137,6 +212,8 @@ if 'claims_data' not in st.session_state:
     st.session_state.claims_data = None
 if 'sales_data' not in st.session_state:
     st.session_state.sales_data = None
+if 'saved_pivot_rows' not in st.session_state:
+    st.session_state.saved_pivot_rows = ['대분류', '중분류', '소분류']
 
 
 # ============================================================================
@@ -166,15 +243,18 @@ if not available_plants:
     )
     st.stop()
 
-# 플랜트 선택 (라디오 버튼)
-selected_plant = st.radio(
+# 플랜트 선택 (드롭다운)
+selected_plant = st.selectbox(
     "분석할 플랜트를 선택하세요:",
-    available_plants,
-    key="plant_radio",
-    horizontal=False
+    ["선택하세요..."] + available_plants,
+    key="plant_dropdown"
 )
 
-st.session_state.selected_plant = selected_plant
+if selected_plant and selected_plant != "선택하세요...":
+    st.session_state.selected_plant = selected_plant
+else:
+    st.info("💡 위 드롭다운에서 플랜트를 선택해주세요.")
+    st.stop()
 
 # 플랜트 선택 시 데이터 로드
 if selected_plant:
@@ -191,50 +271,65 @@ if selected_plant:
         st.stop()
 
 # ============================================================================
-# 영역 2: 기간 필터 (선택사항)
+# 영역 2: 분석 기간 표시 (자동)
 # ============================================================================
-st.subheader("📅 Step 2: 기간 선택 (선택사항)")
+st.subheader("📅 Step 2: 분석 기간 (자동 추출)")
 
-col_period1, col_period2 = st.columns(2)
-
-with col_period1:
-    start_year = st.number_input("시작 연도", value=2024, min_value=2000, max_value=2099)
-
-with col_period2:
-    start_month = st.number_input("시작 월", value=1, min_value=1, max_value=12)
-
-# 기간 필터링
+# 기간 필터링 (플랜트의 모든 데이터)
 if st.session_state.claims_data is not None:
-    filtered_claims = st.session_state.claims_data[
-        (st.session_state.claims_data['접수년'] >= start_year) &
-        ~((st.session_state.claims_data['접수년'] == start_year) & 
-          (st.session_state.claims_data['접수월'] < start_month))
-    ].copy()
+    # ★ Categorical 타입 에러 해결: 숫자형으로 변환
+    df_temp = st.session_state.claims_data.copy()
+    df_temp['접수년'] = pd.to_numeric(df_temp['접수년'], errors='coerce')
+    df_temp['접수월'] = pd.to_numeric(df_temp['접수월'], errors='coerce')
     
-    st.info(f"📊 조회 기간: {start_year}-{start_month:02d} 이후 ({len(filtered_claims)} 건)")
+    # 플랜트 필터링
+    filtered_claims = df_temp[df_temp['플랜트'] == selected_plant].copy()
+    
+    # 기간 추출
+    if not filtered_claims.empty:
+        min_year = int(filtered_claims['접수년'].min())
+        min_month = int(filtered_claims[filtered_claims['접수년'] == min_year]['접수월'].min())
+        max_year = int(filtered_claims['접수년'].max())
+        max_month = int(filtered_claims[filtered_claims['접수년'] == max_year]['접수월'].max())
+        
+        st.info(f"📊 분석기간: {min_year}.{min_month:02d} ~ {max_year}.{max_month:02d} ({len(filtered_claims)} 건)")
+    else:
+        st.warning(f"⚠️ {selected_plant}의 클레임 데이터가 없습니다.")
+        st.stop()
 else:
     filtered_claims = pd.DataFrame()
+    st.stop()
 
 # ============================================================================
 # 영역 3: 동적 피벗 설정
 # ============================================================================
 st.subheader("📊 Step 3: 피벗 설정")
 
-st.write("**행(Index)**: `접수년`, `접수월` (고정)")
-st.write("**열(Columns)**: 아래에서 선택")
+st.write("★ **열(Columns)**: `접수년`, `접수월` + `3개월 예측` (고정)")
+st.write("★ **행(Index)**: 아래에서 선택")
 
-# 선택 가능한 컬럼 (제품군, 불만원인, 대분류 등)
-available_columns = [col for col in filtered_claims.columns 
+# 선택 가능한 행 컬럼
+available_row_columns = [col for col in filtered_claims.columns 
                     if col not in ['접수년', '접수월', '접수일', '플랜트', '상담번호', 
                                   '제목', '분석결과', '요구사항', '주소1'] 
                     and filtered_claims[col].dtype == 'object']
 
-selected_pivot_cols = st.multiselect(
-    "피벗 열로 사용할 컬럼 선택 (없으면 시간 시계열만):",
-    available_columns,
-    default=['제품군'],
-    key="pivot_cols"
-)
+col_pivot, col_save = st.columns([3, 1])
+
+with col_pivot:
+    selected_pivot_rows = st.multiselect(
+        "피벗 행으로 사용할 컬럼 선택:",
+        available_row_columns,
+        default=st.session_state.saved_pivot_rows if all(col in available_row_columns for col in st.session_state.saved_pivot_rows) else ['대분류', '중분류', '소분류'],
+        key="pivot_rows"
+    )
+
+with col_save:
+    st.write("")  # 정렬용 공백
+    st.write("")  # 정렬용 공백
+    if st.button("💾 설정 기억하기", key="save_pivot_settings"):
+        st.session_state.saved_pivot_rows = selected_pivot_rows
+        st.success("✅ 피벗 설정이 저장되었습니다!")
 
 # ============================================================================
 # 영역 4: 지표 선택 및 피벗 테이블 생성
@@ -259,7 +354,7 @@ if selected_plant and st.session_state.claims_data is not None:
         filtered_claims,
         st.session_state.sales_data if st.session_state.sales_data is not None else pd.DataFrame(),
         selected_plant,
-        selected_pivot_cols
+        selected_pivot_rows  # ★ 변경: 행 컬럼 사용
     )
     
     if ppm_data.empty:
@@ -267,11 +362,10 @@ if selected_plant and st.session_state.claims_data is not None:
     else:
         # 건수 피벗
         if show_count:
-            st.write("#### 건수")
+            st.write("#### 건수 (월별 + 3개월 예측)")
             count_pivot = create_pivot_table(
                 ppm_data,
-                index_cols=['접수년', '접수월'],
-                column_cols=selected_pivot_cols,
+                index_cols=selected_pivot_rows,  # ★ 변경: 사용자 선택 행
                 value_col='건수'
             )
             st.dataframe(count_pivot, use_container_width=True)
@@ -281,8 +375,7 @@ if selected_plant and st.session_state.claims_data is not None:
             st.write("#### PPM (Parts Per Million)")
             ppm_pivot = create_pivot_table(
                 ppm_data,
-                index_cols=['접수년', '접수월'],
-                column_cols=selected_pivot_cols,
+                index_cols=selected_pivot_rows,  # ★ 변경: 사용자 선택 행
                 value_col='PPM'
             )
             st.dataframe(ppm_pivot, use_container_width=True)
