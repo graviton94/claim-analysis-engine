@@ -35,6 +35,7 @@ claim-prediction-system/
 │   ├── sales/              # [NEW] 매출 데이터 저장소
 │   └── models/             # 학습된 모델 저장소
 └── docs/                   # 설계 문서
+```
 
 ## 📂 Field def
 > **Target Fields**:
