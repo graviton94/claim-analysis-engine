@@ -1,0 +1,115 @@
+{
+  "key": "인천3공장_업소전용유_이물",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.16666666666666666,
+      "std": 0.408248290463863,
+      "slope": 0.0,
+      "avg_lag_days": 389.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2022-01",
+        "count": 2
+      },
+      {
+        "date": "2022-02",
+        "count": 0
+      },
+      {
+        "date": "2022-03",
+        "count": 0
+      },
+      {
+        "date": "2022-04",
+        "count": 0
+      },
+      {
+        "date": "2022-05",
+        "count": 0
+      },
+      {
+        "date": "2022-06",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "공정이물류",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2022-01",
+          "count": 1
+        },
+        {
+          "date": "2022-02",
+          "count": 0
+        },
+        {
+          "date": "2022-03",
+          "count": 0
+        },
+        {
+          "date": "2022-04",
+          "count": 0
+        },
+        {
+          "date": "2022-05",
+          "count": 0
+        },
+        {
+          "date": "2022-06",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "기타이물류",
+      "stats": {
+        "mean": 0.16666666666666666,
+        "std": 0.408248290463863,
+        "slope": 0.0,
+        "avg_lag_days": 389.0
+      },
+      "history": [
+        {
+          "date": "2022-01",
+          "count": 1
+        },
+        {
+          "date": "2022-02",
+          "count": 0
+        },
+        {
+          "date": "2022-03",
+          "count": 0
+        },
+        {
+          "date": "2022-04",
+          "count": 0
+        },
+        {
+          "date": "2022-05",
+          "count": 0
+        },
+        {
+          "date": "2022-06",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

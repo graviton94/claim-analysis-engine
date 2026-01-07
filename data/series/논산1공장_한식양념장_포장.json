@@ -1,0 +1,102 @@
+{
+  "key": "논산1공장_한식양념장_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 1.6666666666666667,
+      "std": 2.8867513459481287,
+      "slope": -2.5000000000000013,
+      "avg_lag_days": 39.6
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 6
+      },
+      {
+        "date": "2023-11",
+        "count": 1
+      },
+      {
+        "date": "2023-12",
+        "count": 3
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "제품파손",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "sub_key": "편의",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": -1.0000000000000004,
+        "avg_lag_days": 44.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 2
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.7320508075688772,
+        "slope": -1.5000000000000002,
+        "avg_lag_days": 36.3
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 4
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

@@ -103,6 +103,7 @@ PARTITION_COLS = ["접수년", "접수월"]
 DATA_HUB_PATH = "data/hub"
 DATA_SALES_PATH = "data/sales"
 MODELS_PATH = "data/models"
+DATA_SERIES_PATH = "data/series"
 
 # 매출 파일명
 SALES_FILENAME = "sales_history.parquet"

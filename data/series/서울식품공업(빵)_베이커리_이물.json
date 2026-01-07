@@ -1,0 +1,56 @@
+{
+  "key": "서울식품공업(빵)_베이커리_이물",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": -6.551713670883651e-18,
+      "avg_lag_days": 299.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2022-10",
+        "count": 0
+      },
+      {
+        "date": "2022-11",
+        "count": 1
+      },
+      {
+        "date": "2022-12",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "금속류",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -6.551713670883651e-18,
+        "avg_lag_days": 299.0
+      },
+      "history": [
+        {
+          "date": "2022-10",
+          "count": 0
+        },
+        {
+          "date": "2022-11",
+          "count": 1
+        },
+        {
+          "date": "2022-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

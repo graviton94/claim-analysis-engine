@@ -1,0 +1,125 @@
+{
+  "key": "두메_하선정찬류_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 12.0,
+      "std": 3.605551275463989,
+      "slope": -1.0000000000000016,
+      "avg_lag_days": 34.1
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 12
+      },
+      {
+        "date": "2023-11",
+        "count": 19
+      },
+      {
+        "date": "2023-12",
+        "count": 11
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "기타",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -0.5000000000000002,
+        "avg_lag_days": 20.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "제품파손",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "중량수량미달",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 11.666666666666666,
+        "std": 3.7859388972001824,
+        "slope": -0.5000000000000019,
+        "avg_lag_days": 34.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 10
+        },
+        {
+          "date": "2023-11",
+          "count": 18
+        },
+        {
+          "date": "2023-12",
+          "count": 10
+        }
+      ]
+    }
+  ]
+}

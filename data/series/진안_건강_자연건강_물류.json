@@ -1,0 +1,56 @@
+{
+  "key": "진안_건강_자연건강_물류",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": -0.5000000000000002,
+      "avg_lag_days": 212.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-01",
+        "count": 2
+      },
+      {
+        "date": "2023-02",
+        "count": 0
+      },
+      {
+        "date": "2023-03",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "제품",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -0.5000000000000002,
+        "avg_lag_days": 212.0
+      },
+      "history": [
+        {
+          "date": "2023-01",
+          "count": 2
+        },
+        {
+          "date": "2023-02",
+          "count": 0
+        },
+        {
+          "date": "2023-03",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

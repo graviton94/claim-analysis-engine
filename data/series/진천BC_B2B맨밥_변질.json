@@ -1,0 +1,79 @@
+{
+  "key": "진천BC_B2B맨밥_변질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 3.0,
+      "std": 1.0,
+      "slope": -1.0000000000000007,
+      "avg_lag_days": 107.1
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 4
+      },
+      {
+        "date": "2023-11",
+        "count": 3
+      },
+      {
+        "date": "2023-12",
+        "count": 2
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "곰팡이",
+      "stats": {
+        "mean": 2.0,
+        "std": 2.0,
+        "slope": -2.000000000000001,
+        "avg_lag_days": 67.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 4
+        },
+        {
+          "date": "2023-11",
+          "count": 2
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": 1.0000000000000002,
+        "avg_lag_days": 186.3
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 2
+        }
+      ]
+    }
+  ]
+}

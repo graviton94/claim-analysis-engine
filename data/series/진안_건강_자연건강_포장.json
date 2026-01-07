@@ -1,0 +1,79 @@
+{
+  "key": "진안_건강_자연건강_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.6666666666666666,
+      "std": 1.1547005383792517,
+      "slope": -1.0000000000000004,
+      "avg_lag_days": 264.5
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 3
+      },
+      {
+        "date": "2023-11",
+        "count": 0
+      },
+      {
+        "date": "2023-12",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "오포장",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": -1.0000000000000004,
+        "avg_lag_days": 264.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 2
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

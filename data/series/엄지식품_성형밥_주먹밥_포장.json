@@ -1,0 +1,56 @@
+{
+  "key": "엄지식품_성형밥_주먹밥_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 1.3333333333333333,
+      "std": 0.5773502691896257,
+      "slope": 0.49999999999999983,
+      "avg_lag_days": 35.8
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-04",
+        "count": 1
+      },
+      {
+        "date": "2023-05",
+        "count": 1
+      },
+      {
+        "date": "2023-06",
+        "count": 2
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 1.3333333333333333,
+        "std": 0.5773502691896257,
+        "slope": 0.49999999999999983,
+        "avg_lag_days": 35.8
+      },
+      "history": [
+        {
+          "date": "2023-04",
+          "count": 1
+        },
+        {
+          "date": "2023-05",
+          "count": 1
+        },
+        {
+          "date": "2023-06",
+          "count": 2
+        }
+      ]
+    }
+  ]
+}

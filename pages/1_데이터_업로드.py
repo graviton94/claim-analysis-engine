@@ -8,9 +8,9 @@ import pandas as pd
 from pathlib import Path
 from io import BytesIO
 
-from core.etl import process_claim_data
-from core.storage import save_partitioned, get_available_periods
-from core.config import DATA_HUB_PATH
+from core.etl import process_claim_data, preprocess_data
+from core.storage import save_partitioned_parquet, get_available_periods, generate_nested_series
+from core.config import DATA_HUB_PATH, DATA_SERIES_PATH
 
 # ============================================================================
 # 페이지 레이아웃 설정
@@ -92,28 +92,39 @@ if st.session_state.processed_df is not None:
 # 파티셔닝 저장
 # ============================================================================
 if st.session_state.processed_df is not None:
-    st.subheader("💾 Step 3: 파티셔닝 저장")
+    st.subheader("💾 Step 3: 데이터 저장")
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
         st.info(
-            f"📍 저장 경로: `{DATA_HUB_PATH}`\n\n"
-            f"구조: `접수년=YYYY/접수월=MM/part-0.parquet`",
+            f"📍 Hub DB 경로: `{DATA_HUB_PATH}`\n"
+            f"📍 상세 DB 경로: `{DATA_SERIES_PATH}`",
             icon="ℹ️"
         )
     
     with col2:
         if st.button("💾 저장", key="save_partitioned", width='stretch'):
             try:
-                # 필수 컬럼 확인
-                if '접수년' not in st.session_state.processed_df.columns or \
-                   '접수월' not in st.session_state.processed_df.columns:
-                    st.error("❌ 접수년/접수월 컬럼이 없습니다.")
-                else:
-                    save_partitioned(st.session_state.processed_df, output_path=DATA_HUB_PATH)
-                    st.success("✅ 파티셔닝 저장 완료!")
-                    st.session_state.save_complete = True
+                # 1) 데이터 전처리 강화
+                enhanced_df = preprocess_data(st.session_state.processed_df)
+
+                # 2) Parquet 허브 저장 (Lag_Days, Lag_Valid 포함)
+                save_partitioned_parquet(enhanced_df, output_path=DATA_HUB_PATH)
+
+                # 3) Nested Series JSON 생성
+                created = generate_nested_series(enhanced_df, output_dir=DATA_SERIES_PATH)
+
+                # 4) 완료 메시지
+                st.success(f"✅ Parquet 저장 및 {created}개 Series JSON 생성 완료")
+                st.session_state.save_complete = True
+
+                # 5) 전체 캐시 무효화 (다른 페이지의 @st.cache_data 재로딩 유도)
+                try:
+                    st.cache_data.clear()
+                    st.toast("캐시 초기화 완료 – 분석 페이지에서 최신 데이터 반영", icon="✅")
+                except Exception:
+                    pass
             except Exception as e:
                 st.error(f"❌ 저장 실패: {str(e)}")
 
@@ -121,14 +132,18 @@ if st.session_state.processed_df is not None:
 # ============================================================================
 # 저장 완료 후 사용 가능한 기간 표시
 # ============================================================================
-if st.session_state.processed_df is not None and 'save_complete' in st.session_state and st.session_state.save_complete:
-    st.subheader("📅 저장된 기간 목록")
+if 'save_complete' in st.session_state and st.session_state.save_complete:
+    st.subheader("📅 저장된 기간별 데이터 현황")
     try:
-        periods = get_available_periods(DATA_HUB_PATH)
-        if not periods.empty:
-            st.dataframe(periods, width='stretch', hide_index=True)
-            st.success(f"총 {len(periods)} 개의 년/월 조합이 저장되었습니다.")
+        periods_df = get_available_periods(DATA_HUB_PATH)
+        if not periods_df.empty:
+            st.dataframe(periods_df, width='stretch', hide_index=True)
+            
+            total_records = periods_df['건수'].sum()
+            total_periods = len(periods_df)
+            
+            st.success(f"총 {total_periods}개 기간에 걸쳐 {total_records: ,}건의 데이터가 저장되었습니다.")
         else:
-            st.info("저장된 기간 정보 없음")
+            st.info("현재 Hub DB에 저장된 데이터가 없습니다.")
     except Exception as e:
-        st.warning(f"기간 목록 조회 실패: {str(e)}")
+        st.warning(f"저장된 기간 목록을 불러오는 데 실패했습니다: {e}")

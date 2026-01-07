@@ -1,0 +1,56 @@
+{
+  "key": "씨푸드_이천_김단독_이물",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": -0.5000000000000002,
+      "avg_lag_days": 106.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 1
+      },
+      {
+        "date": "2023-11",
+        "count": 0
+      },
+      {
+        "date": "2023-12",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "금속류",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -0.5000000000000002,
+        "avg_lag_days": 106.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "key": "부산공장_일반국밥_변질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 12.0,
+      "std": 4.358898943540674,
+      "slope": -4.000000000000003,
+      "avg_lag_days": 122.9
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 20
+      },
+      {
+        "date": "2023-11",
+        "count": 17
+      },
+      {
+        "date": "2023-12",
+        "count": 8
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "곰팡이",
+      "stats": {
+        "mean": 11.333333333333334,
+        "std": 4.041451884327381,
+        "slope": -4.000000000000002,
+        "avg_lag_days": 120.1
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 20
+        },
+        {
+          "date": "2023-11",
+          "count": 15
+        },
+        {
+          "date": "2023-12",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": -1.3103427341767302e-17,
+        "avg_lag_days": 170.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 2
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "key": "진천BC_주먹밥_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 2.6666666666666665,
+      "std": 0.5773502691896258,
+      "slope": -6.458528780892442e-16,
+      "avg_lag_days": 79.6
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 3
+      },
+      {
+        "date": "2023-11",
+        "count": 3
+      },
+      {
+        "date": "2023-12",
+        "count": 3
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "오포장",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "중량수량미달",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": 1.0000000000000002,
+        "avg_lag_days": 86.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": -1.0000000000000004,
+        "avg_lag_days": 55.7
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 2
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "포장오류",
+      "stats": {
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": -2.2509407688337802e-17,
+        "avg_lag_days": 99.3
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

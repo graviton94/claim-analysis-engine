@@ -1,0 +1,56 @@
+{
+  "key": "진천BC_일반 한식반찬[X]_변질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": 0.5000000000000001,
+      "avg_lag_days": 175.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2022-10",
+        "count": 0
+      },
+      {
+        "date": "2022-11",
+        "count": 0
+      },
+      {
+        "date": "2022-12",
+        "count": 1
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": 0.5000000000000001,
+        "avg_lag_days": 175.0
+      },
+      "history": [
+        {
+          "date": "2022-10",
+          "count": 0
+        },
+        {
+          "date": "2022-11",
+          "count": 0
+        },
+        {
+          "date": "2022-12",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

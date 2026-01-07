@@ -1,0 +1,79 @@
+{
+  "key": "상신(2공장_튀김)_치킨_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 1.3333333333333333,
+      "std": 2.3094010767585034,
+      "slope": -2.000000000000001,
+      "avg_lag_days": 27.8
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 5
+      },
+      {
+        "date": "2023-11",
+        "count": 1
+      },
+      {
+        "date": "2023-12",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 1.3333333333333333,
+        "std": 2.3094010767585034,
+        "slope": -2.000000000000001,
+        "avg_lag_days": 27.8
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 4
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "포장오류",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

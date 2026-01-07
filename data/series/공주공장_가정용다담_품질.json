@@ -1,0 +1,56 @@
+{
+  "key": "공주공장_가정용다담_품질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.6666666666666666,
+      "std": 1.1547005383792517,
+      "slope": -1.0000000000000004,
+      "avg_lag_days": 84.5
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-07",
+        "count": 2
+      },
+      {
+        "date": "2023-08",
+        "count": 0
+      },
+      {
+        "date": "2023-09",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "부주의",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": -1.0000000000000004,
+        "avg_lag_days": 84.5
+      },
+      "history": [
+        {
+          "date": "2023-07",
+          "count": 2
+        },
+        {
+          "date": "2023-08",
+          "count": 0
+        },
+        {
+          "date": "2023-09",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

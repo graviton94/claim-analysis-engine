@@ -1,0 +1,148 @@
+{
+  "key": "ABRIL_요리유_포장",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 3.3333333333333335,
+      "std": 2.5166114784235836,
+      "slope": 2.5,
+      "avg_lag_days": 510.4
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 5
+      },
+      {
+        "date": "2023-11",
+        "count": 4
+      },
+      {
+        "date": "2023-12",
+        "count": 8
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "오포장",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 2
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "제품파손",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "편의",
+      "stats": {
+        "mean": 1.3333333333333333,
+        "std": 1.5275252316519468,
+        "slope": 0.9999999999999999,
+        "avg_lag_days": 436.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 2.0,
+        "std": 1.7320508075688772,
+        "slope": 1.5,
+        "avg_lag_days": 559.7
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 4
+        },
+        {
+          "date": "2023-12",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "sub_key": "포장서비스",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

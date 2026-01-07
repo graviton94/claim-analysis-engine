@@ -1,0 +1,56 @@
+{
+  "key": "부산공장_다시다 대물_이물",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.6666666666666666,
+      "std": 1.1547005383792517,
+      "slope": -1.0000000000000004,
+      "avg_lag_days": 309.5
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 2
+      },
+      {
+        "date": "2023-11",
+        "count": 0
+      },
+      {
+        "date": "2023-12",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "기타이물류",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": -1.0000000000000004,
+        "avg_lag_days": 309.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 2
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

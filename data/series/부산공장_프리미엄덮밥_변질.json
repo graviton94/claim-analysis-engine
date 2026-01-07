@@ -1,0 +1,79 @@
+{
+  "key": "부산공장_프리미엄덮밥_변질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 30.666666666666668,
+      "std": 15.821925715074423,
+      "slope": -15.50000000000001,
+      "avg_lag_days": 119.9
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 51
+      },
+      {
+        "date": "2023-11",
+        "count": 30
+      },
+      {
+        "date": "2023-12",
+        "count": 19
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "곰팡이",
+      "stats": {
+        "mean": 29.0,
+        "std": 14.422205101855956,
+        "slope": -14.000000000000012,
+        "avg_lag_days": 121.4
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 48
+        },
+        {
+          "date": "2023-11",
+          "count": 27
+        },
+        {
+          "date": "2023-12",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 1.6666666666666667,
+        "std": 1.5275252316519468,
+        "slope": -1.5000000000000004,
+        "avg_lag_days": 94.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 3
+        },
+        {
+          "date": "2023-11",
+          "count": 3
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

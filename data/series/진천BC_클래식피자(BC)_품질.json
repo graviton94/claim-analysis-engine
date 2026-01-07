@@ -1,0 +1,56 @@
+{
+  "key": "진천BC_클래식피자(BC)_품질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 1.3333333333333333,
+      "std": 1.1547005383792517,
+      "slope": -1.0000000000000004,
+      "avg_lag_days": 65.5
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-04",
+        "count": 2
+      },
+      {
+        "date": "2023-05",
+        "count": 2
+      },
+      {
+        "date": "2023-06",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "기타",
+      "stats": {
+        "mean": 1.3333333333333333,
+        "std": 1.1547005383792517,
+        "slope": -1.0000000000000004,
+        "avg_lag_days": 65.5
+      },
+      "history": [
+        {
+          "date": "2023-04",
+          "count": 2
+        },
+        {
+          "date": "2023-05",
+          "count": 2
+        },
+        {
+          "date": "2023-06",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "key": "청수_콩나물_품질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 7.666666666666667,
+      "std": 1.1547005383792517,
+      "slope": 0.9999999999999993,
+      "avg_lag_days": 4.3
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 7
+      },
+      {
+        "date": "2023-11",
+        "count": 8
+      },
+      {
+        "date": "2023-12",
+        "count": 9
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "성분",
+      "stats": {
+        "mean": 7.666666666666667,
+        "std": 1.1547005383792517,
+        "slope": 0.9999999999999993,
+        "avg_lag_days": 4.3
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 7
+        },
+        {
+          "date": "2023-11",
+          "count": 8
+        },
+        {
+          "date": "2023-12",
+          "count": 9
+        }
+      ]
+    }
+  ]
+}

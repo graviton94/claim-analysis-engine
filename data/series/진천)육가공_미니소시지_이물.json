@@ -1,0 +1,56 @@
+{
+  "key": "진천)육가공_미니소시지_이물",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.6666666666666666,
+      "std": 0.5773502691896258,
+      "slope": 0.5000000000000001,
+      "avg_lag_days": 53.5
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 0
+      },
+      {
+        "date": "2023-11",
+        "count": 1
+      },
+      {
+        "date": "2023-12",
+        "count": 1
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "합성수지류",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 0.5773502691896258,
+        "slope": 0.5000000000000001,
+        "avg_lag_days": 53.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

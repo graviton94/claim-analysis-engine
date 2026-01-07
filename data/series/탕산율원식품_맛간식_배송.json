@@ -1,0 +1,79 @@
+{
+  "key": "탕산율원식품_맛간식_배송",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 0.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 2
+      },
+      {
+        "date": "2023-11",
+        "count": 0
+      },
+      {
+        "date": "2023-12",
+        "count": 4
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "배송서비스",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "sub_key": "배송지연",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 2
+        }
+      ]
+    }
+  ]
+}

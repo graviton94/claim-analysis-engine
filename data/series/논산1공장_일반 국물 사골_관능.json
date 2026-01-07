@@ -1,0 +1,79 @@
+{
+  "key": "논산1공장_일반 국물 사골_관능",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 3.0,
+      "std": 3.4641016151377544,
+      "slope": 2.9999999999999996,
+      "avg_lag_days": 74.4
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 1
+      },
+      {
+        "date": "2023-11",
+        "count": 1
+      },
+      {
+        "date": "2023-12",
+        "count": 7
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "맛",
+      "stats": {
+        "mean": 1.3333333333333333,
+        "std": 1.5275252316519468,
+        "slope": 0.9999999999999999,
+        "avg_lag_days": 66.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "sub_key": "향(냄새)",
+      "stats": {
+        "mean": 1.6666666666666667,
+        "std": 2.0816659994661326,
+        "slope": 1.9999999999999998,
+        "avg_lag_days": 80.8
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 4
+        }
+      ]
+    }
+  ]
+}

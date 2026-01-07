@@ -1,0 +1,79 @@
+{
+  "key": "진천)육가공_B2C 스팸번들기획_변질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 2.6666666666666665,
+      "std": 1.5275252316519465,
+      "slope": 0.49999999999999983,
+      "avg_lag_days": 408.5
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 3
+      },
+      {
+        "date": "2023-11",
+        "count": 1
+      },
+      {
+        "date": "2023-12",
+        "count": 5
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": -0.5000000000000004,
+        "avg_lag_days": 456.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 2
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "변색",
+      "stats": {
+        "mean": 1.6666666666666667,
+        "std": 1.1547005383792517,
+        "slope": 0.9999999999999997,
+        "avg_lag_days": 380.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 4
+        }
+      ]
+    }
+  ]
+}

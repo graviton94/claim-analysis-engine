@@ -1,0 +1,56 @@
+{
+  "key": "삼해상사(부안1)_국판 씨푸드김_관능",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": -6.551713670883651e-18,
+      "avg_lag_days": 115.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2022-01",
+        "count": 0
+      },
+      {
+        "date": "2022-02",
+        "count": 1
+      },
+      {
+        "date": "2022-03",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "식감",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -6.551713670883651e-18,
+        "avg_lag_days": 115.0
+      },
+      "history": [
+        {
+          "date": "2022-01",
+          "count": 0
+        },
+        {
+          "date": "2022-02",
+          "count": 1
+        },
+        {
+          "date": "2022-03",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "key": "진천BC_죽(용기)_품질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 37.0,
+      "std": 62.36184731067546,
+      "slope": 54.50000000000001,
+      "avg_lag_days": 110.6
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 0
+      },
+      {
+        "date": "2023-11",
+        "count": 2
+      },
+      {
+        "date": "2023-12",
+        "count": 118
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "기타",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": 0.5000000000000001,
+        "avg_lag_days": 100.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "sub_key": "성분",
+      "stats": {
+        "mean": 36.666666666666664,
+        "std": 61.784571968520865,
+        "slope": 54.000000000000014,
+        "avg_lag_days": 110.7
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 2
+        },
+        {
+          "date": "2023-12",
+          "count": 116
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "key": "남원공장_우동_품질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 0.6666666666666666,
+      "std": 1.1547005383792517,
+      "slope": -1.3103427341767302e-17,
+      "avg_lag_days": 85.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 1
+      },
+      {
+        "date": "2023-11",
+        "count": 3
+      },
+      {
+        "date": "2023-12",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "성분",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": -1.3103427341767302e-17,
+        "avg_lag_days": 85.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 3
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "key": "부산공장_BIG컵반(컵)_변질",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 8.0,
+      "std": 3.0,
+      "slope": 1.499999999999999,
+      "avg_lag_days": 144.9
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2023-10",
+        "count": 8
+      },
+      {
+        "date": "2023-11",
+        "count": 9
+      },
+      {
+        "date": "2023-12",
+        "count": 11
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "곰팡이",
+      "stats": {
+        "mean": 7.0,
+        "std": 3.0,
+        "slope": 1.4999999999999993,
+        "avg_lag_days": 142.3
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 7
+        },
+        {
+          "date": "2023-11",
+          "count": 8
+        },
+        {
+          "date": "2023-12",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 0.6666666666666666,
+        "std": 0.5773502691896258,
+        "slope": -0.5000000000000002,
+        "avg_lag_days": 145.5
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 1
+        },
+        {
+          "date": "2023-11",
+          "count": 1
+        },
+        {
+          "date": "2023-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "미생물",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": 0.5000000000000001,
+        "avg_lag_days": 198.0
+      },
+      "history": [
+        {
+          "date": "2023-10",
+          "count": 0
+        },
+        {
+          "date": "2023-11",
+          "count": 0
+        },
+        {
+          "date": "2023-12",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}
