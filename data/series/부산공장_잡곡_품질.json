@@ -5,96 +5,96 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 12.0,
-      "std": 5.196152422706632,
-      "slope": -4.500000000000002,
-      "avg_lag_days": 91.8
+      "mean": 8.333333333333334,
+      "std": 3.7859388972001824,
+      "slope": -0.5000000000000016,
+      "avg_lag_days": 86.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 17
+        "date": "2024-01",
+        "count": 11
       },
       {
-        "date": "2023-11",
-        "count": 15
+        "date": "2024-02",
+        "count": 4
       },
       {
-        "date": "2023-12",
-        "count": 7
+        "date": "2024-03",
+        "count": 11
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "변화",
-      "stats": {
-        "mean": 10.0,
-        "std": 4.0,
-        "slope": -2.0000000000000013,
-        "avg_lag_days": 89.6
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 11
-        },
-        {
-          "date": "2023-11",
-          "count": 14
-        },
-        {
-          "date": "2023-12",
-          "count": 7
-        }
-      ]
-    },
-    {
-      "sub_key": "부주의",
+      "sub_key": "기타",
       "stats": {
         "mean": 0.3333333333333333,
         "std": 0.5773502691896258,
         "slope": -0.5000000000000002,
-        "avg_lag_days": 61.0
+        "avg_lag_days": 59.0
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
           "count": 1
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 0
         },
         {
-          "date": "2023-12",
+          "date": "2024-03",
           "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "변화",
+      "stats": {
+        "mean": 7.0,
+        "std": 3.605551275463989,
+        "slope": -1.000000000000002,
+        "avg_lag_days": 90.0
+      },
+      "history": [
+        {
+          "date": "2024-01",
+          "count": 10
+        },
+        {
+          "date": "2024-02",
+          "count": 3
+        },
+        {
+          "date": "2024-03",
+          "count": 9
         }
       ]
     },
     {
       "sub_key": "성분",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 2.0816659994661326,
-        "slope": -2.000000000000001,
-        "avg_lag_days": 111.0
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": 1.0000000000000002,
+        "avg_lag_days": 67.0
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 5
+          "date": "2024-01",
+          "count": 0
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 1
         },
         {
-          "date": "2023-12",
-          "count": 0
+          "date": "2024-03",
+          "count": 2
         }
       ]
     }

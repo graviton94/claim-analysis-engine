@@ -5,25 +5,25 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.0,
-      "std": 2.0,
-      "slope": 1.0,
-      "avg_lag_days": 38.5
+      "mean": 1.0,
+      "std": 0.0,
+      "slope": -2.2509407688337802e-17,
+      "avg_lag_days": 87.3
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
+        "date": "2024-01",
+        "count": 2
+      },
+      {
+        "date": "2024-02",
         "count": 1
       },
       {
-        "date": "2023-11",
-        "count": 5
-      },
-      {
-        "date": "2023-12",
-        "count": 2
+        "date": "2024-03",
+        "count": 1
       }
     ],
     "forecast": []
@@ -32,46 +32,23 @@
     {
       "sub_key": "포장불량",
       "stats": {
-        "mean": 2.0,
-        "std": 2.0,
-        "slope": 1.0,
-        "avg_lag_days": 38.5
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 0
-        },
-        {
-          "date": "2023-11",
-          "count": 5
-        },
-        {
-          "date": "2023-12",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "표시사항",
-      "stats": {
-        "mean": 0.0,
+        "mean": 1.0,
         "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
+        "slope": -2.2509407688337802e-17,
+        "avg_lag_days": 87.3
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
+          "count": 2
+        },
+        {
+          "date": "2024-02",
           "count": 1
         },
         {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 0
+          "date": "2024-03",
+          "count": 1
         }
       ]
     }

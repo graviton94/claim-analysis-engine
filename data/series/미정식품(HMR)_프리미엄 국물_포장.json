@@ -5,24 +5,24 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.6666666666666666,
-      "std": 0.5773502691896258,
-      "slope": -1.6146321952231105e-16,
-      "avg_lag_days": 103.5
+      "mean": 0.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 0.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
+        "date": "2024-01",
         "count": 1
       },
       {
-        "date": "2023-11",
+        "date": "2024-02",
         "count": 0
       },
       {
-        "date": "2023-12",
+        "date": "2024-03",
         "count": 1
       }
     ],
@@ -30,48 +30,48 @@
   },
   "children": [
     {
-      "sub_key": "포장불량",
+      "sub_key": "제품파손",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 62.0
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
+          "count": 0
+        },
+        {
+          "date": "2024-02",
+          "count": 0
+        },
+        {
+          "date": "2024-03",
           "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 0
         }
       ]
     },
     {
-      "sub_key": "표시사항",
+      "sub_key": "편의",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 145.0
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 0
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
+          "date": "2024-01",
           "count": 1
+        },
+        {
+          "date": "2024-02",
+          "count": 0
+        },
+        {
+          "date": "2024-03",
+          "count": 0
         }
       ]
     }

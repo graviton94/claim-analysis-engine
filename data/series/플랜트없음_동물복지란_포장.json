@@ -14,21 +14,90 @@
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 2
+        "date": "2024-01",
+        "count": 11
       },
       {
-        "date": "2023-11",
-        "count": 2
+        "date": "2024-02",
+        "count": 5
       },
       {
-        "date": "2023-12",
-        "count": 4
+        "date": "2024-03",
+        "count": 5
       }
     ],
     "forecast": []
   },
   "children": [
+    {
+      "sub_key": "냉동",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2024-01",
+          "count": 0
+        },
+        {
+          "date": "2024-02",
+          "count": 0
+        },
+        {
+          "date": "2024-03",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "오포장",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2024-01",
+          "count": 2
+        },
+        {
+          "date": "2024-02",
+          "count": 0
+        },
+        {
+          "date": "2024-03",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "유통기한",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2024-01",
+          "count": 0
+        },
+        {
+          "date": "2024-02",
+          "count": 0
+        },
+        {
+          "date": "2024-03",
+          "count": 1
+        }
+      ]
+    },
     {
       "sub_key": "제품파손",
       "stats": {
@@ -39,16 +108,16 @@
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 2
+          "date": "2024-01",
+          "count": 9
         },
         {
-          "date": "2023-11",
-          "count": 2
+          "date": "2024-02",
+          "count": 5
         },
         {
-          "date": "2023-12",
-          "count": 4
+          "date": "2024-03",
+          "count": 3
         }
       ]
     }

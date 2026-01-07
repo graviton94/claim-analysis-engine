@@ -5,73 +5,73 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.0,
-      "std": 1.0,
-      "slope": 0.4999999999999998,
-      "avg_lag_days": 275.2
+      "mean": 0.6666666666666666,
+      "std": 0.5773502691896258,
+      "slope": 0.5000000000000001,
+      "avg_lag_days": 250.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
+        "date": "2024-01",
+        "count": 0
+      },
+      {
+        "date": "2024-02",
         "count": 1
       },
       {
-        "date": "2023-11",
-        "count": 3
-      },
-      {
-        "date": "2023-12",
-        "count": 2
+        "date": "2024-03",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "기타",
+      "sub_key": "변화",
       "stats": {
         "mean": 0.3333333333333333,
         "std": 0.5773502691896258,
         "slope": 0.5000000000000001,
-        "avg_lag_days": 7.0
+        "avg_lag_days": 490.0
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
           "count": 0
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 0
         },
         {
-          "date": "2023-12",
+          "date": "2024-03",
           "count": 1
         }
       ]
     },
     {
-      "sub_key": "변화",
+      "sub_key": "성분",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 1.1547005383792517,
-        "slope": -4.648018717737731e-16,
-        "avg_lag_days": 328.8
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -6.551713670883651e-18,
+        "avg_lag_days": 10.0
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
+          "count": 0
+        },
+        {
+          "date": "2024-02",
           "count": 1
         },
         {
-          "date": "2023-11",
-          "count": 3
-        },
-        {
-          "date": "2023-12",
-          "count": 1
+          "date": "2024-03",
+          "count": 0
         }
       ]
     }

@@ -14,16 +14,16 @@
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 1
+        "date": "2024-01",
+        "count": 3
       },
       {
-        "date": "2023-11",
-        "count": 1
+        "date": "2024-02",
+        "count": 2
       },
       {
-        "date": "2023-12",
-        "count": 1
+        "date": "2024-03",
+        "count": 2
       }
     ],
     "forecast": []
@@ -39,16 +39,39 @@
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
+          "count": 3
+        },
+        {
+          "date": "2024-02",
           "count": 1
         },
         {
-          "date": "2023-11",
+          "date": "2024-03",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "sub_key": "제품파손",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2024-01",
+          "count": 0
+        },
+        {
+          "date": "2024-02",
           "count": 1
         },
         {
-          "date": "2023-12",
-          "count": 1
+          "date": "2024-03",
+          "count": 0
         }
       ]
     }

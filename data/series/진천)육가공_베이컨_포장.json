@@ -5,49 +5,49 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 4.0,
-      "std": 3.0,
-      "slope": 3.0,
-      "avg_lag_days": 12.2
+      "mean": 4.333333333333333,
+      "std": 3.055050463303893,
+      "slope": -3.0000000000000013,
+      "avg_lag_days": 11.1
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 2
+        "date": "2024-01",
+        "count": 7
       },
       {
-        "date": "2023-11",
-        "count": 4
+        "date": "2024-02",
+        "count": 5
       },
       {
-        "date": "2023-12",
-        "count": 8
+        "date": "2024-03",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "오포장",
+      "sub_key": "제품파손",
       "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": 0.5000000000000001,
+        "avg_lag_days": 7.0
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
+          "date": "2024-01",
           "count": 0
         },
         {
-          "date": "2023-12",
+          "date": "2024-02",
+          "count": 0
+        },
+        {
+          "date": "2024-03",
           "count": 1
         }
       ]
@@ -56,22 +56,22 @@
       "sub_key": "포장불량",
       "stats": {
         "mean": 4.0,
-        "std": 3.0,
-        "slope": 3.0,
-        "avg_lag_days": 12.2
+        "std": 3.605551275463989,
+        "slope": -3.5000000000000004,
+        "avg_lag_days": 11.4
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 4
-        },
-        {
-          "date": "2023-12",
+          "date": "2024-01",
           "count": 7
+        },
+        {
+          "date": "2024-02",
+          "count": 5
+        },
+        {
+          "date": "2024-03",
+          "count": 0
         }
       ]
     }

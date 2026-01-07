@@ -5,118 +5,49 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.0,
-      "std": 1.7320508075688772,
-      "slope": -4.2144592950315945e-16,
-      "avg_lag_days": 93.8
+      "mean": 1.0,
+      "std": 1.0,
+      "slope": -0.5000000000000003,
+      "avg_lag_days": 157.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 3
-      },
-      {
-        "date": "2023-11",
-        "count": 5
-      },
-      {
-        "date": "2023-12",
+        "date": "2024-01",
         "count": 1
+      },
+      {
+        "date": "2024-02",
+        "count": 2
+      },
+      {
+        "date": "2024-03",
+        "count": 0
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "오포장",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "제품파손",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 0
-        }
-      ]
-    },
-    {
       "sub_key": "중량수량미달",
       "stats": {
         "mean": 1.0,
-        "std": 0.0,
-        "slope": -2.2509407688337802e-17,
-        "avg_lag_days": 70.3
+        "std": 1.0,
+        "slope": -0.5000000000000003,
+        "avg_lag_days": 157.0
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
           "count": 1
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 2
         },
         {
-          "date": "2023-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "포장불량",
-      "stats": {
-        "mean": 1.0,
-        "std": 1.7320508075688772,
-        "slope": 1.436217513088323e-17,
-        "avg_lag_days": 117.3
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 0
-        },
-        {
-          "date": "2023-11",
-          "count": 3
-        },
-        {
-          "date": "2023-12",
+          "date": "2024-03",
           "count": 0
         }
       ]

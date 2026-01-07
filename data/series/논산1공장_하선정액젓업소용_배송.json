@@ -14,44 +14,21 @@
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 5
+        "date": "2024-01",
+        "count": 2
       },
       {
-        "date": "2023-11",
-        "count": 15
+        "date": "2024-02",
+        "count": 2
       },
       {
-        "date": "2023-12",
-        "count": 7
+        "date": "2024-03",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
-    {
-      "sub_key": "배송지연",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 2
-        },
-        {
-          "date": "2023-12",
-          "count": 0
-        }
-      ]
-    },
     {
       "sub_key": "택배박스 외관",
       "stats": {
@@ -62,16 +39,16 @@
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 4
+          "date": "2024-01",
+          "count": 2
         },
         {
-          "date": "2023-11",
-          "count": 13
+          "date": "2024-02",
+          "count": 2
         },
         {
-          "date": "2023-12",
-          "count": 7
+          "date": "2024-03",
+          "count": 1
         }
       ]
     }

@@ -5,142 +5,73 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 4.333333333333333,
-      "std": 1.5275252316519465,
-      "slope": 0.9999999999999992,
-      "avg_lag_days": 28.9
+      "mean": 3.0,
+      "std": 2.6457513110645907,
+      "slope": 2.4999999999999996,
+      "avg_lag_days": 20.9
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 8
+        "date": "2024-01",
+        "count": 2
       },
       {
-        "date": "2023-11",
-        "count": 4
+        "date": "2024-02",
+        "count": 3
       },
       {
-        "date": "2023-12",
-        "count": 9
+        "date": "2024-03",
+        "count": 7
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "공정이물류",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 1
-        },
-        {
-          "date": "2023-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "기타이물류",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": -1.6146321952231105e-16,
-        "avg_lag_days": 23.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 1
-        }
-      ]
-    },
-    {
       "sub_key": "동물성이물",
       "stats": {
-        "mean": 2.6666666666666665,
-        "std": 1.5275252316519465,
-        "slope": 0.49999999999999983,
-        "avg_lag_days": 30.5
+        "mean": 2.0,
+        "std": 3.4641016151377544,
+        "slope": 3.0000000000000004,
+        "avg_lag_days": 19.0
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 4
-        },
-        {
-          "date": "2023-11",
+          "date": "2024-01",
           "count": 1
         },
         {
-          "date": "2023-12",
-          "count": 6
+          "date": "2024-02",
+          "count": 1
+        },
+        {
+          "date": "2024-03",
+          "count": 7
         }
       ]
     },
     {
       "sub_key": "인체이물류",
       "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "합성수지류",
-      "stats": {
         "mean": 1.0,
         "std": 1.0,
-        "slope": 0.5,
-        "avg_lag_days": 28.7
+        "slope": -0.5000000000000003,
+        "avg_lag_days": 24.7
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
           "count": 1
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 2
         },
         {
-          "date": "2023-12",
-          "count": 1
+          "date": "2024-03",
+          "count": 0
         }
       ]
     }

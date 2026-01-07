@@ -5,24 +5,24 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.6666666666666666,
-      "std": 0.5773502691896258,
-      "slope": -1.6146321952231105e-16,
-      "avg_lag_days": 569.0
+      "mean": 0.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 0.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 1
-      },
-      {
-        "date": "2023-11",
+        "date": "2024-01",
         "count": 0
       },
       {
-        "date": "2023-12",
+        "date": "2024-02",
+        "count": 0
+      },
+      {
+        "date": "2024-03",
         "count": 1
       }
     ],
@@ -30,48 +30,25 @@
   },
   "children": [
     {
-      "sub_key": "식물성이물",
+      "sub_key": "기타이물류",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 160.0
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
           "count": 0
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 0
         },
         {
-          "date": "2023-12",
+          "date": "2024-03",
           "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "합성수지류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 978.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 0
-        },
-        {
-          "date": "2023-12",
-          "count": 0
         }
       ]
     }

@@ -1,0 +1,56 @@
+{
+  "key": "원일F&amp;F(식품)_붕어빵_물류",
+  "meta": {
+    "last_updated": "2026-01-07",
+    "warning_level": 0,
+    "champion_model": null,
+    "parent_stats": {
+      "mean": 1.0,
+      "std": 1.7320508075688772,
+      "slope": 1.436217513088323e-17,
+      "avg_lag_days": 33.0
+    }
+  },
+  "data": {
+    "history": [
+      {
+        "date": "2024-01",
+        "count": 0
+      },
+      {
+        "date": "2024-02",
+        "count": 3
+      },
+      {
+        "date": "2024-03",
+        "count": 0
+      }
+    ],
+    "forecast": []
+  },
+  "children": [
+    {
+      "sub_key": "제품",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.7320508075688772,
+        "slope": 1.436217513088323e-17,
+        "avg_lag_days": 33.0
+      },
+      "history": [
+        {
+          "date": "2024-01",
+          "count": 0
+        },
+        {
+          "date": "2024-02",
+          "count": 3
+        },
+        {
+          "date": "2024-03",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}

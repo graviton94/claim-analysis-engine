@@ -3,8 +3,9 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 from datetime import datetime, date
-from core.storage import load_partitioned
+from core.storage import load_partitioned, DATA_HUB_PATH  # DATA_HUB_PATH 임포트 추가
 from core.analytics import detect_outliers_iqr, calculate_lag_stats
+import pyarrow.dataset as ds  # [필수] 파티션 인식을 위해 추가
 
 # --- 0. 설정 및 상수 정의 ---
 st.set_page_config(page_title="플랜트 분석", layout="wide")
@@ -18,18 +19,26 @@ GENERAL_GRADES = ['일반']
 PERFORMANCE_REASONS = ['제조불만', '고객불만족', '구매불만']
 TARGET_BUSINESS_UNITS = ['식품', 'B2B식품']
 
-# --- 1. 데이터 로드 ---
-@st.cache_data
+# --- 1. 데이터 로드 (캐시 제거: 항상 최신 로드) ---
+# @st.cache_data  <-- 캐시 제거 (Hotfix)
 def load_master_data():
     try:
-        return load_partitioned()
-    except FileNotFoundError:
+        # [핵심 수정] partitioning="hive" 옵션을 강제하여 폴더 구조를 정확히 인식시킴
+        # storage.py의 load_partitioned를 직접 호출하는 대신, 여기서 명시적으로 로드
+        if not DATA_HUB_PATH: # 경로가 비어있으면 None 반환
+             return None
+             
+        dataset = ds.dataset(DATA_HUB_PATH, partitioning="hive", format="parquet")
+        return dataset.to_table().to_pandas()
+    except Exception as e:
+        # 데이터가 없거나 경로가 없을 때
         return None
 
 master_df = load_master_data()
 
 if master_df is None or master_df.empty:
-    st.error("⚠️ 데이터가 없습니다. 먼저 데이터를 업로드해주세요.")
+    st.error("⚠️ 데이터가 없습니다. 먼저 '데이터 업로드' 페이지에서 파일을 저장해주세요.")
+    st.info("💡 팁: 데이터 업로드 후 바로 이 페이지로 넘어오시면 됩니다.")
     st.stop()
 
 # 날짜 컬럼 보장
@@ -48,9 +57,24 @@ col_s1_1, col_s1_2, col_s1_3 = st.columns([1, 1, 1])
 with col_s1_1:
     selected_plant = st.selectbox("🏭플랜트 선택", all_plants)
 
-# 기본 날짜 설정 (전체 데이터 기준)
-min_date = master_df['접수일자'].min().date()
-max_date = master_df['접수일자'].max().date()
+# [수정] 선택된 플랜트의 데이터 범위 자동 감지 (월단위 한정)
+plant_specific_data = master_df[master_df['플랜트'] == selected_plant]
+if not plant_specific_data.empty:
+    # 선택한 플랜트의 min/max 날짜 범위 (datetime 객체로 유지)
+    min_dt = plant_specific_data['접수일자'].min()
+    max_dt = plant_specific_data['접수일자'].max()
+    # 월 단위로 시작/종료일 조정 (해당 월의 첫째 날과 마지막 날)
+    min_date = min_dt.replace(day=1).date()  # 시작월의 첫째 날
+    # 종료월의 마지막 날 (다음 달 1일에서 1일을 빼기)
+    if max_dt.month == 12:
+        next_month = max_dt.replace(year=max_dt.year + 1, month=1, day=1)
+    else:
+        next_month = max_dt.replace(month=max_dt.month + 1, day=1)
+    max_date = (next_month - pd.Timedelta(days=1)).date()
+else:
+    # 폴백: 플랜트에 데이터가 없으면 전체 범위 사용 (일반적이지 않음)
+    min_date = master_df['접수일자'].min().date()
+    max_date = master_df['접수일자'].max().date()
 
 with col_s1_2:
     start_date = st.date_input("📅시작일 (Start)", value=min_date, min_value=min_date, max_value=max_date)
@@ -138,6 +162,7 @@ with col_step3:
     grade_mode = st.radio(
         "분석할 등급을 선택하세요:",
         ("중대 (중대+위험+사고)", "일반 (일반)", "전체 (All)"),
+        index=2,
         horizontal=True
     )
 
@@ -163,7 +188,8 @@ col_p1, col_p2 = st.columns([3, 1])
 with col_p1:
     # 피벗 인덱스 설정
     pivot_candidates = ['제품범주1', '제품범주2', '제품범주3', '대분류', '중분류', '소분류', '등급기준', '불만원인']
-    pivot_candidates = [c for c in pivot_candidates if c in filtered_df_step3.columns and filtered_df_step3[c].notna().any()]
+    # pivot_candidates = [c for c in pivot_candidates if c in filtered_df_step3.columns and filtered_df_step3[c].notna().any()] # notna 조건 완화
+    pivot_candidates = [c for c in pivot_candidates if c in filtered_df_step3.columns]
     
     default_indices = [c for c in ['등급기준', '대분류', '중분류'] if c in pivot_candidates]
     
@@ -206,7 +232,9 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             if len(indices) < 2:
                 pivot_with_margin = pd.pivot_table(df, index=indices, columns=columns, values=values, aggfunc=aggfunc, fill_value=0, margins=True, margins_name='Total')
                 # 모든 월 포함하도록 reindex
-                pivot_reindexed = pivot_with_margin.reindex(columns=all_months + ['Total'], fill_value=0)
+                # margins=True로 인해 Total 컬럼이 이미 생겼을 수 있음. 중복 방지 위해 columns list 조정
+                reindex_cols = all_months + ['Total']
+                pivot_reindexed = pivot_with_margin.reindex(columns=reindex_cols, fill_value=0)
                 return pivot_reindexed
 
             # 2. 기본 피벗 생성
@@ -215,7 +243,9 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             pivot_base = pivot_base.reindex(columns=all_months, fill_value=0)
             
             if pivot_base.empty:
-                return pivot_base
+                # 빈 데이터프레임 처리 (구조만 유지)
+                empty_idx = pd.MultiIndex.from_tuples([], names=indices)
+                return pd.DataFrame(0, index=empty_idx, columns=all_months + ['Total'])
 
             all_parts = []
             
@@ -226,14 +256,15 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                     # L2 소계: ('L1 값', 'L2 값', '소계', '', ..)
                     subtotal_l2_row = l2_group.sum().to_frame().T
                     template_idx = list(l2_group.index[0])
-                    idx_tuple = template_idx[:2] + ['소계'] + [''] * (len(indices) - 3)
+                    # 인덱스 길이 안전하게 처리
+                    idx_tuple = template_idx[:2] + ['소계'] + [''] * max(0, len(indices) - 3)
                     subtotal_l2_row.index = pd.MultiIndex.from_tuples([tuple(idx_tuple)], names=indices)
                     all_parts.append(subtotal_l2_row)
                 
                 # L1 총계: ('L1 값', '전체 합계', '', ..)
                 total_l1_row = l1_group.sum().to_frame().T
                 template_idx = list(l1_group.index[0])
-                idx_tuple = [template_idx[0]] + ['전체 합계'] + [''] * (len(indices) - 2)
+                idx_tuple = [template_idx[0]] + ['전체 합계'] + [''] * max(0, len(indices) - 2)
                 total_l1_row.index = pd.MultiIndex.from_tuples([tuple(idx_tuple)], names=indices)
                 all_parts.append(total_l1_row)
             
@@ -241,7 +272,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             
             # 4. 전체 총계 (Grand Total) 추가
             grand_total_row = pivot_base.sum().to_frame('Total').T
-            idx_tuple = ['Total'] + [''] * (len(indices) - 1)
+            idx_tuple = ['Total'] + [''] * max(0, len(indices) - 1)
             grand_total_row.index = pd.MultiIndex.from_tuples([tuple(idx_tuple)], names=indices)
             final_pivot = pd.concat([final_pivot, grand_total_row])
             
@@ -261,7 +292,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
 
     except Exception as e:
         st.error(f"피벗 테이블 생성 중 오류 발생: {e}")
-        st.exception(e) # 디버깅을 위한 상세 오류
+        # st.exception(e) # 사용자에게는 너무 상세한 오류일 수 있어 주석 처리
         st.stop()
 
     # --- 결과 시각화 ---
@@ -318,7 +349,11 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
         if lag_stats and lag_stats['count'] > 0:
             c1, c2, c3 = st.columns(3)
             c1.metric("평균 Lag", f"{lag_stats['mean']:.1f} 일")
-            c2.metric("중앙값 Lag", f"{lag_stats['p50']:.1f} 일")
+            # Lag_Valid=True인 경우의 Lag_Days 컬럼의 중앙값(p50) 사용
+            # calculate_lag_stats의 반환값에 p50이 있다고 가정 (통상적인 통계 함수)
+            # 만약 키가 'median'이라면 'median'으로 변경
+            median_val = lag_stats.get('median', lag_stats.get('p50', 0))
+            c2.metric("중앙값 Lag", f"{median_val:.1f} 일")
             c3.metric("대상 건수", f"{lag_stats['count']:,} 건")
             
             valid_lag_df = filtered_df_step3[filtered_df_step3['Lag_Valid'] == True]

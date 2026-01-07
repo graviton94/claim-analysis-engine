@@ -5,73 +5,50 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.0,
-      "std": 1.7320508075688772,
-      "slope": -4.2144592950315945e-16,
-      "avg_lag_days": 74.0
+      "mean": 1.3333333333333333,
+      "std": 1.5275252316519465,
+      "slope": -1.0000000000000009,
+      "avg_lag_days": 112.8
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
+        "date": "2024-01",
         "count": 3
       },
       {
-        "date": "2023-11",
-        "count": 1
+        "date": "2024-02",
+        "count": 0
       },
       {
-        "date": "2023-12",
-        "count": 4
+        "date": "2024-03",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "곰팡이",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 0
-        },
-        {
-          "date": "2023-11",
-          "count": 1
-        },
-        {
-          "date": "2023-12",
-          "count": 0
-        }
-      ]
-    },
-    {
       "sub_key": "기타변질",
       "stats": {
-        "mean": 2.0,
-        "std": 1.7320508075688772,
-        "slope": -4.2144592950315945e-16,
-        "avg_lag_days": 74.0
+        "mean": 1.3333333333333333,
+        "std": 1.5275252316519465,
+        "slope": -1.0000000000000009,
+        "avg_lag_days": 112.8
       },
       "history": [
         {
-          "date": "2023-10",
+          "date": "2024-01",
           "count": 3
         },
         {
-          "date": "2023-11",
+          "date": "2024-02",
           "count": 0
         },
         {
-          "date": "2023-12",
-          "count": 4
+          "date": "2024-03",
+          "count": 1
         }
       ]
     }

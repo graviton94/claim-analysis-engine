@@ -5,25 +5,25 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.6666666666666667,
-      "std": 1.1547005383792517,
-      "slope": -1.0000000000000004,
-      "avg_lag_days": 96.0
+      "mean": 5.666666666666667,
+      "std": 2.8867513459481287,
+      "slope": 2.5,
+      "avg_lag_days": 98.9
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 3
+        "date": "2024-01",
+        "count": 4
       },
       {
-        "date": "2023-11",
-        "count": 2
+        "date": "2024-02",
+        "count": 4
       },
       {
-        "date": "2023-12",
-        "count": 1
+        "date": "2024-03",
+        "count": 9
       }
     ],
     "forecast": []
@@ -32,46 +32,23 @@
     {
       "sub_key": "변화",
       "stats": {
-        "mean": 1.0,
-        "std": 1.0,
-        "slope": -0.5000000000000004,
-        "avg_lag_days": 105.0
+        "mean": 5.666666666666667,
+        "std": 2.8867513459481287,
+        "slope": 2.5,
+        "avg_lag_days": 98.9
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 2
+          "date": "2024-01",
+          "count": 4
         },
         {
-          "date": "2023-11",
-          "count": 1
+          "date": "2024-02",
+          "count": 4
         },
         {
-          "date": "2023-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "형태",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 82.5
-      },
-      "history": [
-        {
-          "date": "2023-10",
-          "count": 1
-        },
-        {
-          "date": "2023-11",
-          "count": 1
-        },
-        {
-          "date": "2023-12",
-          "count": 0
+          "date": "2024-03",
+          "count": 9
         }
       ]
     }
