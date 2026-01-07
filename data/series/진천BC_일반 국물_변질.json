@@ -5,24 +5,24 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.0,
-      "std": 0.0,
-      "slope": -2.2509407688337802e-17,
-      "avg_lag_days": 56.7
+      "mean": 2.0,
+      "std": 1.0,
+      "slope": -0.5000000000000007,
+      "avg_lag_days": 96.8
     }
   },
   "data": {
     "history": [
       {
-        "date": "2024-01",
+        "date": "2025-10",
         "count": 2
       },
       {
-        "date": "2024-02",
-        "count": 1
+        "date": "2025-11",
+        "count": 3
       },
       {
-        "date": "2024-03",
+        "date": "2025-12",
         "count": 1
       }
     ],
@@ -30,25 +30,71 @@
   },
   "children": [
     {
-      "sub_key": "기타변질",
+      "sub_key": "곰팡이",
       "stats": {
-        "mean": 1.0,
-        "std": 0.0,
-        "slope": -2.2509407688337802e-17,
-        "avg_lag_days": 56.7
+        "mean": 0.6666666666666666,
+        "std": 0.5773502691896258,
+        "slope": -1.6146321952231105e-16,
+        "avg_lag_days": 155.5
       },
       "history": [
         {
-          "date": "2024-01",
-          "count": 2
-        },
-        {
-          "date": "2024-02",
+          "date": "2025-10",
           "count": 1
         },
         {
-          "date": "2024-03",
+          "date": "2025-11",
+          "count": 0
+        },
+        {
+          "date": "2025-12",
           "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.7320508075688772,
+        "slope": 1.436217513088323e-17,
+        "avg_lag_days": 69.7
+      },
+      "history": [
+        {
+          "date": "2025-10",
+          "count": 0
+        },
+        {
+          "date": "2025-11",
+          "count": 3
+        },
+        {
+          "date": "2025-12",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "팽창",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": -0.5000000000000002,
+        "avg_lag_days": 61.0
+      },
+      "history": [
+        {
+          "date": "2025-10",
+          "count": 1
+        },
+        {
+          "date": "2025-11",
+          "count": 0
+        },
+        {
+          "date": "2025-12",
+          "count": 0
         }
       ]
     }

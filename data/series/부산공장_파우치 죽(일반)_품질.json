@@ -5,73 +5,50 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.6666666666666667,
-      "std": 0.5773502691896257,
-      "slope": -3.4611403802933817e-16,
-      "avg_lag_days": 78.8
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": -6.551713670883651e-18,
+      "avg_lag_days": 47.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2024-01",
-        "count": 2
+        "date": "2025-07",
+        "count": 0
       },
       {
-        "date": "2024-02",
+        "date": "2025-08",
         "count": 1
       },
       {
-        "date": "2024-03",
-        "count": 2
+        "date": "2025-09",
+        "count": 0
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "기타",
+      "sub_key": "부주의",
       "stats": {
-        "mean": 0.6666666666666666,
+        "mean": 0.3333333333333333,
         "std": 0.5773502691896258,
-        "slope": -1.6146321952231105e-16,
-        "avg_lag_days": 82.5
+        "slope": -6.551713670883651e-18,
+        "avg_lag_days": 47.0
       },
       "history": [
         {
-          "date": "2024-01",
-          "count": 1
-        },
-        {
-          "date": "2024-02",
+          "date": "2025-07",
           "count": 0
         },
         {
-          "date": "2024-03",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "성분",
-      "stats": {
-        "mean": 1.0,
-        "std": 0.0,
-        "slope": -2.2509407688337802e-17,
-        "avg_lag_days": 76.3
-      },
-      "history": [
-        {
-          "date": "2024-01",
+          "date": "2025-08",
           "count": 1
         },
         {
-          "date": "2024-02",
-          "count": 1
-        },
-        {
-          "date": "2024-03",
-          "count": 1
+          "date": "2025-09",
+          "count": 0
         }
       ]
     }

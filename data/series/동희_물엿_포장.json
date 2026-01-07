@@ -5,37 +5,25 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.16666666666666666,
-      "std": 0.408248290463863,
+      "mean": 0.0,
+      "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 215.0
+      "avg_lag_days": 0.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2022-01",
+        "date": "2025-04",
+        "count": 0
+      },
+      {
+        "date": "2025-05",
+        "count": 0
+      },
+      {
+        "date": "2025-06",
         "count": 1
-      },
-      {
-        "date": "2022-02",
-        "count": 0
-      },
-      {
-        "date": "2022-03",
-        "count": 0
-      },
-      {
-        "date": "2022-04",
-        "count": 0
-      },
-      {
-        "date": "2022-05",
-        "count": 1
-      },
-      {
-        "date": "2022-06",
-        "count": 0
       }
     ],
     "forecast": []
@@ -51,63 +39,16 @@
       },
       "history": [
         {
-          "date": "2022-01",
+          "date": "2025-04",
           "count": 0
         },
         {
-          "date": "2022-02",
+          "date": "2025-05",
           "count": 0
         },
         {
-          "date": "2022-03",
-          "count": 0
-        },
-        {
-          "date": "2022-04",
-          "count": 0
-        },
-        {
-          "date": "2022-05",
+          "date": "2025-06",
           "count": 1
-        },
-        {
-          "date": "2022-06",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "편의",
-      "stats": {
-        "mean": 0.16666666666666666,
-        "std": 0.408248290463863,
-        "slope": 0.0,
-        "avg_lag_days": 215.0
-      },
-      "history": [
-        {
-          "date": "2022-01",
-          "count": 1
-        },
-        {
-          "date": "2022-02",
-          "count": 0
-        },
-        {
-          "date": "2022-03",
-          "count": 0
-        },
-        {
-          "date": "2022-04",
-          "count": 0
-        },
-        {
-          "date": "2022-05",
-          "count": 0
-        },
-        {
-          "date": "2022-06",
-          "count": 0
         }
       ]
     }

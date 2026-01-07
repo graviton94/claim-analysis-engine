@@ -5,73 +5,73 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.6666666666666666,
-      "std": 0.5773502691896258,
-      "slope": -0.5000000000000002,
-      "avg_lag_days": 158.5
+      "mean": 6.0,
+      "std": 4.0,
+      "slope": -2.000000000000001,
+      "avg_lag_days": 154.6
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-04",
-        "count": 1
+        "date": "2025-10",
+        "count": 10
       },
       {
-        "date": "2023-05",
-        "count": 1
+        "date": "2025-11",
+        "count": 2
       },
       {
-        "date": "2023-06",
-        "count": 0
+        "date": "2025-12",
+        "count": 6
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "기타",
+      "sub_key": "변화",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 226.0
+        "mean": 5.0,
+        "std": 3.605551275463989,
+        "slope": -2.5000000000000013,
+        "avg_lag_days": 144.1
       },
       "history": [
         {
-          "date": "2023-04",
-          "count": 0
+          "date": "2025-10",
+          "count": 9
         },
         {
-          "date": "2023-05",
-          "count": 1
+          "date": "2025-11",
+          "count": 2
         },
         {
-          "date": "2023-06",
-          "count": 0
+          "date": "2025-12",
+          "count": 4
         }
       ]
     },
     {
-      "sub_key": "형태",
+      "sub_key": "성분",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 91.0
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": 0.4999999999999999,
+        "avg_lag_days": 207.0
       },
       "history": [
         {
-          "date": "2023-04",
+          "date": "2025-10",
           "count": 1
         },
         {
-          "date": "2023-05",
+          "date": "2025-11",
           "count": 0
         },
         {
-          "date": "2023-06",
-          "count": 0
+          "date": "2025-12",
+          "count": 2
         }
       ]
     }

@@ -5,50 +5,96 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.3333333333333333,
-      "std": 0.5773502691896258,
+      "mean": 1.6666666666666667,
+      "std": 1.5275252316519465,
       "slope": -0.5000000000000002,
-      "avg_lag_days": 279.0
+      "avg_lag_days": 134.4
     }
   },
   "data": {
     "history": [
       {
-        "date": "2024-01",
-        "count": 1
+        "date": "2025-10",
+        "count": 3
       },
       {
-        "date": "2024-02",
+        "date": "2025-11",
         "count": 0
       },
       {
-        "date": "2024-03",
-        "count": 0
+        "date": "2025-12",
+        "count": 2
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "포장불량",
+      "sub_key": "기타",
       "stats": {
         "mean": 0.3333333333333333,
         "std": 0.5773502691896258,
         "slope": -0.5000000000000002,
-        "avg_lag_days": 279.0
+        "avg_lag_days": 158.0
       },
       "history": [
         {
-          "date": "2024-01",
+          "date": "2025-10",
           "count": 1
         },
         {
-          "date": "2024-02",
+          "date": "2025-11",
           "count": 0
         },
         {
-          "date": "2024-03",
+          "date": "2025-12",
           "count": 0
+        }
+      ]
+    },
+    {
+      "sub_key": "중량수량미달",
+      "stats": {
+        "mean": 0.3333333333333333,
+        "std": 0.5773502691896258,
+        "slope": 0.5000000000000001,
+        "avg_lag_days": 135.0
+      },
+      "history": [
+        {
+          "date": "2025-10",
+          "count": 0
+        },
+        {
+          "date": "2025-11",
+          "count": 0
+        },
+        {
+          "date": "2025-12",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "포장불량",
+      "stats": {
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": -0.5000000000000004,
+        "avg_lag_days": 126.3
+      },
+      "history": [
+        {
+          "date": "2025-10",
+          "count": 2
+        },
+        {
+          "date": "2025-11",
+          "count": 0
+        },
+        {
+          "date": "2025-12",
+          "count": 1
         }
       ]
     }

@@ -14,16 +14,16 @@
   "data": {
     "history": [
       {
-        "date": "2024-01",
-        "count": 28
+        "date": "2025-01",
+        "count": 0
       },
       {
-        "date": "2024-02",
-        "count": 18
+        "date": "2025-02",
+        "count": 0
       },
       {
-        "date": "2024-03",
-        "count": 31
+        "date": "2025-03",
+        "count": 2
       }
     ],
     "forecast": []
@@ -39,16 +39,16 @@
       },
       "history": [
         {
-          "date": "2024-01",
-          "count": 13
+          "date": "2025-01",
+          "count": 0
         },
         {
-          "date": "2024-02",
-          "count": 7
+          "date": "2025-02",
+          "count": 0
         },
         {
-          "date": "2024-03",
-          "count": 8
+          "date": "2025-03",
+          "count": 1
         }
       ]
     },
@@ -62,39 +62,16 @@
       },
       "history": [
         {
-          "date": "2024-01",
-          "count": 14
+          "date": "2025-01",
+          "count": 0
         },
         {
-          "date": "2024-02",
-          "count": 10
+          "date": "2025-02",
+          "count": 0
         },
         {
-          "date": "2024-03",
-          "count": 21
-        }
-      ]
-    },
-    {
-      "sub_key": "해동",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2024-01",
+          "date": "2025-03",
           "count": 1
-        },
-        {
-          "date": "2024-02",
-          "count": 1
-        },
-        {
-          "date": "2024-03",
-          "count": 2
         }
       ]
     }

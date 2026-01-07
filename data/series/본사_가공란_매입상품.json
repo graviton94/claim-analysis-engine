@@ -5,25 +5,25 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.0,
-      "std": 0.0,
-      "slope": 0.0,
-      "avg_lag_days": 0.0
+      "mean": 0.6666666666666666,
+      "std": 1.1547005383792517,
+      "slope": 1.0000000000000002,
+      "avg_lag_days": 203.5
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-07",
+        "date": "2025-01",
         "count": 1
       },
       {
-        "date": "2023-08",
-        "count": 0
+        "date": "2025-02",
+        "count": 2
       },
       {
-        "date": "2023-09",
-        "count": 0
+        "date": "2025-03",
+        "count": 6
       }
     ],
     "forecast": []
@@ -32,23 +32,23 @@
     {
       "sub_key": "품질",
       "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
+        "mean": 0.6666666666666666,
+        "std": 1.1547005383792517,
+        "slope": 1.0000000000000002,
+        "avg_lag_days": 203.5
       },
       "history": [
         {
-          "date": "2023-07",
+          "date": "2025-01",
           "count": 1
         },
         {
-          "date": "2023-08",
-          "count": 0
+          "date": "2025-02",
+          "count": 2
         },
         {
-          "date": "2023-09",
-          "count": 0
+          "date": "2025-03",
+          "count": 6
         }
       ]
     }

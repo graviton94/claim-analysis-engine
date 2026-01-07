@@ -38,8 +38,11 @@ env/
 *~
 .DS_Store
 
-# Data (대용량 파일)
+# Data (대용량 파일, 커밋 금지)
+data/
 data/hub/
+data/series/
+data/sales/
 data/models/
 data/cache/
 

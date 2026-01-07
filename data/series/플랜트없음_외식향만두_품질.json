@@ -14,16 +14,16 @@
   "data": {
     "history": [
       {
-        "date": "2024-01",
+        "date": "2025-07",
+        "count": 2
+      },
+      {
+        "date": "2025-08",
         "count": 1
       },
       {
-        "date": "2024-02",
-        "count": 5
-      },
-      {
-        "date": "2024-03",
-        "count": 4
+        "date": "2025-09",
+        "count": 2
       }
     ],
     "forecast": []
@@ -39,38 +39,15 @@
       },
       "history": [
         {
-          "date": "2024-01",
+          "date": "2025-07",
+          "count": 2
+        },
+        {
+          "date": "2025-08",
           "count": 1
         },
         {
-          "date": "2024-02",
-          "count": 5
-        },
-        {
-          "date": "2024-03",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "nan",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2024-01",
-          "count": 0
-        },
-        {
-          "date": "2024-02",
-          "count": 0
-        },
-        {
-          "date": "2024-03",
+          "date": "2025-09",
           "count": 2
         }
       ]

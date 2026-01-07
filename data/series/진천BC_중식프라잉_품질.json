@@ -5,24 +5,24 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.3333333333333333,
-      "std": 0.5773502691896257,
-      "slope": -2.0423860530018709e-16,
-      "avg_lag_days": 187.5
+      "mean": 0.3333333333333333,
+      "std": 0.5773502691896258,
+      "slope": 0.5000000000000001,
+      "avg_lag_days": 53.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2024-01",
-        "count": 1
+        "date": "2025-10",
+        "count": 0
       },
       {
-        "date": "2024-02",
-        "count": 2
+        "date": "2025-11",
+        "count": 0
       },
       {
-        "date": "2024-03",
+        "date": "2025-12",
         "count": 1
       }
     ],
@@ -30,48 +30,25 @@
   },
   "children": [
     {
-      "sub_key": "기타",
+      "sub_key": "부주의",
       "stats": {
         "mean": 0.3333333333333333,
         "std": 0.5773502691896258,
         "slope": 0.5000000000000001,
-        "avg_lag_days": 24.0
+        "avg_lag_days": 53.0
       },
       "history": [
         {
-          "date": "2024-01",
+          "date": "2025-10",
           "count": 0
         },
         {
-          "date": "2024-02",
+          "date": "2025-11",
           "count": 0
         },
         {
-          "date": "2024-03",
+          "date": "2025-12",
           "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "변화",
-      "stats": {
-        "mean": 1.0,
-        "std": 1.0,
-        "slope": -0.5000000000000003,
-        "avg_lag_days": 242.0
-      },
-      "history": [
-        {
-          "date": "2024-01",
-          "count": 1
-        },
-        {
-          "date": "2024-02",
-          "count": 2
-        },
-        {
-          "date": "2024-03",
-          "count": 0
         }
       ]
     }

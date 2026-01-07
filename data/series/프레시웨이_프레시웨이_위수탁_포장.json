@@ -14,23 +14,23 @@
   "data": {
     "history": [
       {
-        "date": "2024-01",
-        "count": 1
-      },
-      {
-        "date": "2024-02",
+        "date": "2024-07",
         "count": 0
       },
       {
-        "date": "2024-03",
+        "date": "2024-08",
         "count": 0
+      },
+      {
+        "date": "2024-09",
+        "count": 2
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "오포장",
+      "sub_key": "제품파손",
       "stats": {
         "mean": 0.0,
         "std": 0.0,
@@ -39,16 +39,39 @@
       },
       "history": [
         {
-          "date": "2024-01",
+          "date": "2024-07",
+          "count": 0
+        },
+        {
+          "date": "2024-08",
+          "count": 0
+        },
+        {
+          "date": "2024-09",
           "count": 1
-        },
+        }
+      ]
+    },
+    {
+      "sub_key": "해동",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
         {
-          "date": "2024-02",
+          "date": "2024-07",
           "count": 0
         },
         {
-          "date": "2024-03",
+          "date": "2024-08",
           "count": 0
+        },
+        {
+          "date": "2024-09",
+          "count": 1
         }
       ]
     }

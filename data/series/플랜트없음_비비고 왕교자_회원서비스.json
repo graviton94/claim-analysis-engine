@@ -14,16 +14,16 @@
   "data": {
     "history": [
       {
-        "date": "2024-01",
+        "date": "2024-04",
+        "count": 1
+      },
+      {
+        "date": "2024-05",
         "count": 0
       },
       {
-        "date": "2024-02",
-        "count": 1
-      },
-      {
-        "date": "2024-03",
-        "count": 1
+        "date": "2024-06",
+        "count": 0
       }
     ],
     "forecast": []
@@ -39,39 +39,16 @@
       },
       "history": [
         {
-          "date": "2024-01",
-          "count": 0
-        },
-        {
-          "date": "2024-02",
+          "date": "2024-04",
           "count": 1
         },
         {
-          "date": "2024-03",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "프라임회원",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2024-01",
+          "date": "2024-05",
           "count": 0
         },
         {
-          "date": "2024-02",
+          "date": "2024-06",
           "count": 0
-        },
-        {
-          "date": "2024-03",
-          "count": 1
         }
       ]
     }

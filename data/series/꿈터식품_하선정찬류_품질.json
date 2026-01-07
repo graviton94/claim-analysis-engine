@@ -5,25 +5,25 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.6666666666666667,
-      "std": 0.5773502691896257,
-      "slope": -0.5000000000000004,
-      "avg_lag_days": 36.4
+      "mean": 3.0,
+      "std": 2.0,
+      "slope": 1.9999999999999998,
+      "avg_lag_days": 30.1
     }
   },
   "data": {
     "history": [
       {
-        "date": "2024-01",
-        "count": 2
+        "date": "2025-10",
+        "count": 1
       },
       {
-        "date": "2024-02",
+        "date": "2025-11",
         "count": 3
       },
       {
-        "date": "2024-03",
-        "count": 1
+        "date": "2025-12",
+        "count": 5
       }
     ],
     "forecast": []
@@ -32,23 +32,23 @@
     {
       "sub_key": "성분",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 0.5773502691896257,
-        "slope": -0.5000000000000004,
-        "avg_lag_days": 36.4
+        "mean": 3.0,
+        "std": 2.0,
+        "slope": 1.9999999999999998,
+        "avg_lag_days": 30.1
       },
       "history": [
         {
-          "date": "2024-01",
-          "count": 2
+          "date": "2025-10",
+          "count": 1
         },
         {
-          "date": "2024-02",
+          "date": "2025-11",
           "count": 3
         },
         {
-          "date": "2024-03",
-          "count": 1
+          "date": "2025-12",
+          "count": 5
         }
       ]
     }

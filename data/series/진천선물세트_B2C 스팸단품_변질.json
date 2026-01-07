@@ -5,50 +5,50 @@
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.3333333333333333,
-      "std": 0.5773502691896258,
-      "slope": -6.551713670883651e-18,
-      "avg_lag_days": 264.0
+      "mean": 1.0,
+      "std": 1.0,
+      "slope": 0.4999999999999999,
+      "avg_lag_days": 412.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2023-10",
-        "count": 0
-      },
-      {
-        "date": "2023-11",
+        "date": "2025-10",
         "count": 1
       },
       {
-        "date": "2023-12",
+        "date": "2025-11",
         "count": 0
+      },
+      {
+        "date": "2025-12",
+        "count": 2
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "곰팡이",
+      "sub_key": "변색",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 264.0
+        "mean": 1.0,
+        "std": 1.0,
+        "slope": 0.4999999999999999,
+        "avg_lag_days": 412.0
       },
       "history": [
         {
-          "date": "2023-10",
-          "count": 0
-        },
-        {
-          "date": "2023-11",
+          "date": "2025-10",
           "count": 1
         },
         {
-          "date": "2023-12",
+          "date": "2025-11",
           "count": 0
+        },
+        {
+          "date": "2025-12",
+          "count": 2
         }
       ]
     }

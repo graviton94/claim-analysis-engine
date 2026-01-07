@@ -14,21 +14,44 @@
   "data": {
     "history": [
       {
-        "date": "2024-01",
+        "date": "2025-10",
+        "count": 4
+      },
+      {
+        "date": "2025-11",
         "count": 0
       },
       {
-        "date": "2024-02",
+        "date": "2025-12",
         "count": 0
-      },
-      {
-        "date": "2024-03",
-        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
+    {
+      "sub_key": "배송서비스",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2025-10",
+          "count": 1
+        },
+        {
+          "date": "2025-11",
+          "count": 0
+        },
+        {
+          "date": "2025-12",
+          "count": 0
+        }
+      ]
+    },
     {
       "sub_key": "배송지연",
       "stats": {
@@ -39,16 +62,39 @@
       },
       "history": [
         {
-          "date": "2024-01",
+          "date": "2025-10",
+          "count": 2
+        },
+        {
+          "date": "2025-11",
           "count": 0
         },
         {
-          "date": "2024-02",
+          "date": "2025-12",
           "count": 0
-        },
+        }
+      ]
+    },
+    {
+      "sub_key": "파손",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
         {
-          "date": "2024-03",
+          "date": "2025-10",
           "count": 1
+        },
+        {
+          "date": "2025-11",
+          "count": 0
+        },
+        {
+          "date": "2025-12",
+          "count": 0
         }
       ]
     }
