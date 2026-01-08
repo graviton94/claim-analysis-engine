@@ -1,7 +1,7 @@
 {
   "key": "진천BC_비비고썰은김치_배송",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -14,16 +14,8 @@
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 18
-      },
-      {
-        "date": "2025-11",
-        "count": 15
-      },
-      {
-        "date": "2025-12",
-        "count": 15
+        "date": "2026-01",
+        "count": 2
       }
     ],
     "forecast": []
@@ -39,16 +31,8 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 4
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 10
+          "date": "2026-01",
+          "count": 1
         }
       ]
     },
@@ -62,16 +46,8 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 14
-        },
-        {
-          "date": "2025-11",
-          "count": 12
-        },
-        {
-          "date": "2025-12",
-          "count": 5
+          "date": "2026-01",
+          "count": 1
         }
       ]
     }

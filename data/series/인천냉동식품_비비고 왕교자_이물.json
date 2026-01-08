@@ -1,169 +1,68 @@
 {
   "key": "인천냉동식품_비비고 왕교자_이물",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 33.0,
-      "std": 2.0,
-      "slope": 0.9999999999999918,
-      "avg_lag_days": 62.3
+      "mean": 14.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 44.9
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 35
-      },
-      {
-        "date": "2025-11",
-        "count": 32
-      },
-      {
-        "date": "2025-12",
-        "count": 42
+        "date": "2026-01",
+        "count": 16
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "공정이물류",
-      "stats": {
-        "mean": 1.6666666666666667,
-        "std": 1.1547005383792517,
-        "slope": -1.0000000000000004,
-        "avg_lag_days": 38.8
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "금속류",
-      "stats": {
-        "mean": 4.0,
-        "std": 2.6457513110645907,
-        "slope": -2.0000000000000018,
-        "avg_lag_days": 56.7
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 7
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
       "sub_key": "기타이물류",
       "stats": {
-        "mean": 2.0,
-        "std": 1.0,
-        "slope": 0.4999999999999998,
-        "avg_lag_days": 59.3
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 8.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 2
         }
       ]
     },
     {
       "sub_key": "동물성이물",
       "stats": {
-        "mean": 7.666666666666667,
-        "std": 4.163331998932266,
-        "slope": 3.9999999999999996,
-        "avg_lag_days": 65.2
+        "mean": 6.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 44.7
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 9
-        },
-        {
-          "date": "2025-12",
-          "count": 15
+          "date": "2026-01",
+          "count": 7
         }
       ]
     },
     {
       "sub_key": "벌레류",
       "stats": {
-        "mean": 2.0,
-        "std": 1.7320508075688772,
-        "slope": -1.5000000000000002,
-        "avg_lag_days": 100.3
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 57.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 4
-        },
-        {
-          "date": "2025-11",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "식물성이물",
-      "stats": {
-        "mean": 4.0,
-        "std": 1.0,
-        "slope": -1.000000000000001,
-        "avg_lag_days": 46.9
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 6
-        },
-        {
-          "date": "2025-11",
-          "count": 4
-        },
-        {
-          "date": "2025-12",
-          "count": 3
         }
       ]
     },
@@ -171,68 +70,29 @@
       "sub_key": "인체이물류",
       "stats": {
         "mean": 3.0,
-        "std": 1.0,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 82.7
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 66.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 4
-        },
-        {
-          "date": "2025-11",
-          "count": 4
-        },
-        {
-          "date": "2025-12",
+          "date": "2026-01",
           "count": 3
-        }
-      ]
-    },
-    {
-      "sub_key": "토사류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 111.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
         }
       ]
     },
     {
       "sub_key": "합성수지류",
       "stats": {
-        "mean": 8.333333333333334,
-        "std": 2.3094010767585034,
-        "slope": 1.9999999999999996,
-        "avg_lag_days": 56.7
+        "mean": 3.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 32.7
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 7
-        },
-        {
-          "date": "2025-11",
-          "count": 8
-        },
-        {
-          "date": "2025-12",
-          "count": 12
+          "date": "2026-01",
+          "count": 4
         }
       ]
     }

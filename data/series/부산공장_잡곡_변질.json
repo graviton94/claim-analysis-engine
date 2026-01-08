@@ -1,29 +1,21 @@
 {
   "key": "부산공장_잡곡_변질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 100.0,
-      "std": 25.238858928247925,
-      "slope": -24.500000000000004,
-      "avg_lag_days": 114.7
+      "mean": 15.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 136.4
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 143
-      },
-      {
-        "date": "2025-11",
-        "count": 102
-      },
-      {
-        "date": "2025-12",
-        "count": 83
+        "date": "2026-01",
+        "count": 15
       }
     ],
     "forecast": []
@@ -32,92 +24,30 @@
     {
       "sub_key": "곰팡이",
       "stats": {
-        "mean": 86.33333333333333,
-        "std": 26.083200212652844,
-        "slope": -25.500000000000007,
-        "avg_lag_days": 115.4
+        "mean": 12.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 152.6
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 129
-        },
-        {
-          "date": "2025-11",
-          "count": 88
-        },
-        {
-          "date": "2025-12",
-          "count": 67
+          "date": "2026-01",
+          "count": 12
         }
       ]
     },
     {
       "sub_key": "기타변질",
       "stats": {
-        "mean": 12.333333333333334,
-        "std": 0.5773502691896257,
-        "slope": 0.4999999999999982,
-        "avg_lag_days": 105.2
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 13
-        },
-        {
-          "date": "2025-11",
-          "count": 13
-        },
-        {
-          "date": "2025-12",
-          "count": 14
-        }
-      ]
-    },
-    {
-      "sub_key": "미생물",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 177.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "팽창",
-      "stats": {
-        "mean": 1.0,
+        "mean": 3.0,
         "std": 0.0,
-        "slope": -2.2509407688337802e-17,
-        "avg_lag_days": 156.3
+        "slope": 0.0,
+        "avg_lag_days": 71.7
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
+          "date": "2026-01",
+          "count": 3
         }
       ]
     }

@@ -1,169 +1,38 @@
 {
   "key": "진천BC_주먹밥_포장",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.6666666666666665,
-      "std": 1.5275252316519465,
-      "slope": 1.4999999999999998,
-      "avg_lag_days": 134.4
+      "mean": 1.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 45.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 2
-      },
-      {
-        "date": "2025-11",
-        "count": 5
-      },
-      {
-        "date": "2025-12",
-        "count": 5
+        "date": "2026-01",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "오포장",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "제품파손",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 27.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "중량수량미달",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 161.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
       "sub_key": "포장불량",
       "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 93.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "포장오류",
-      "stats": {
-        "mean": 1.3333333333333333,
-        "std": 0.5773502691896257,
-        "slope": 0.49999999999999983,
-        "avg_lag_days": 175.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "해동",
-      "stats": {
-        "mean": 0.0,
+        "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 0.0
+        "avg_lag_days": 45.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     }

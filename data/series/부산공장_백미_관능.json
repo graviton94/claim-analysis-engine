@@ -1,29 +1,21 @@
 {
   "key": "부산공장_백미_관능",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 11.0,
-      "std": 5.5677643628300215,
-      "slope": 5.499999999999998,
-      "avg_lag_days": 70.7
+      "mean": 3.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 53.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 8
-      },
-      {
-        "date": "2025-11",
-        "count": 15
-      },
-      {
-        "date": "2025-12",
-        "count": 16
+        "date": "2026-01",
+        "count": 4
       }
     ],
     "forecast": []
@@ -32,69 +24,15 @@
     {
       "sub_key": "색상",
       "stats": {
-        "mean": 9.666666666666666,
-        "std": 5.033222956847166,
-        "slope": 5.0,
-        "avg_lag_days": 63.0
+        "mean": 3.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 53.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 7
-        },
-        {
-          "date": "2025-11",
-          "count": 12
-        },
-        {
-          "date": "2025-12",
-          "count": 15
-        }
-      ]
-    },
-    {
-      "sub_key": "식감",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 1.1547005383792517,
-        "slope": -1.3103427341767302e-17,
-        "avg_lag_days": 42.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "향(냄새)",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 210.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
+          "date": "2026-01",
+          "count": 4
         }
       ]
     }

@@ -1,29 +1,21 @@
 {
   "key": "부산공장_백미_변질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 125.0,
+      "mean": 27.0,
       "std": 0.0,
-      "slope": -1.8814748418526093e-14,
-      "avg_lag_days": 108.9
+      "slope": 0.0,
+      "avg_lag_days": 113.9
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 150
-      },
-      {
-        "date": "2025-11",
-        "count": 145
-      },
-      {
-        "date": "2025-12",
-        "count": 137
+        "date": "2026-01",
+        "count": 32
       }
     ],
     "forecast": []
@@ -32,115 +24,30 @@
     {
       "sub_key": "곰팡이",
       "stats": {
-        "mean": 96.66666666666667,
-        "std": 4.041451884327381,
-        "slope": 2.4999999999999827,
-        "avg_lag_days": 109.8
+        "mean": 18.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 114.1
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 117
-        },
-        {
-          "date": "2025-11",
-          "count": 109
-        },
-        {
-          "date": "2025-12",
-          "count": 110
+          "date": "2026-01",
+          "count": 23
         }
       ]
     },
     {
       "sub_key": "기타변질",
       "stats": {
-        "mean": 25.0,
-        "std": 7.0,
-        "slope": -5.500000000000004,
-        "avg_lag_days": 107.3
+        "mean": 9.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 113.4
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 31
-        },
-        {
-          "date": "2025-11",
-          "count": 33
-        },
-        {
-          "date": "2025-12",
-          "count": 20
-        }
-      ]
-    },
-    {
-      "sub_key": "미생물",
-      "stats": {
-        "mean": 1.3333333333333333,
-        "std": 2.3094010767585034,
-        "slope": 2.0000000000000004,
-        "avg_lag_days": 112.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "변색",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 1.1547005383792517,
-        "slope": -1.3103427341767302e-17,
-        "avg_lag_days": 171.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "팽창",
-      "stats": {
-        "mean": 1.3333333333333333,
-        "std": 1.5275252316519468,
-        "slope": 0.9999999999999999,
-        "avg_lag_days": 32.2
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 3
+          "date": "2026-01",
+          "count": 9
         }
       ]
     }

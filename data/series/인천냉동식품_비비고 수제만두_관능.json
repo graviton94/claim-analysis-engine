@@ -1,146 +1,53 @@
 {
   "key": "인천냉동식품_비비고 수제만두_관능",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 5.0,
-      "std": 3.605551275463989,
-      "slope": 3.5000000000000004,
-      "avg_lag_days": 74.9
+      "mean": 2.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 75.5
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
+        "date": "2026-01",
         "count": 2
-      },
-      {
-        "date": "2025-11",
-        "count": 4
-      },
-      {
-        "date": "2025-12",
-        "count": 9
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "맛",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 26.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "색상",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 25.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
       "sub_key": "성상",
       "stats": {
-        "mean": 2.3333333333333335,
-        "std": 2.081665999466133,
-        "slope": 2.0,
-        "avg_lag_days": 66.1
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 41.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "식감",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 266.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     },
     {
       "sub_key": "향(냄새)",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 2.0816659994661326,
-        "slope": 1.4999999999999998,
-        "avg_lag_days": 68.6
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 110.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 4
         }
       ]
     }

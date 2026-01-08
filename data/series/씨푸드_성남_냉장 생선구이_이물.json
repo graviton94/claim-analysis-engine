@@ -1,169 +1,53 @@
 {
   "key": "씨푸드_성남_냉장 생선구이_이물",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 9.0,
-      "std": 2.0,
-      "slope": 1.9999999999999993,
-      "avg_lag_days": 26.7
+      "mean": 3.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 14.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 9
-      },
-      {
-        "date": "2025-11",
-        "count": 12
-      },
-      {
-        "date": "2025-12",
-        "count": 13
+        "date": "2026-01",
+        "count": 3
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "금속류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 4.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "기타이물류",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 1.1547005383792517,
-        "slope": -1.3103427341767302e-17,
-        "avg_lag_days": 21.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
       "sub_key": "동물성이물",
       "stats": {
         "mean": 1.0,
-        "std": 1.0,
-        "slope": 0.4999999999999999,
-        "avg_lag_days": 21.0
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 20.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "인체이물류",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 14.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "합성수지류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 17.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     },
     {
       "sub_key": "혐오",
       "stats": {
-        "mean": 6.0,
-        "std": 1.0,
-        "slope": 0.49999999999999906,
-        "avg_lag_days": 31.4
+        "mean": 2.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 11.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 8
-        },
-        {
-          "date": "2025-11",
-          "count": 7
-        },
-        {
-          "date": "2025-12",
-          "count": 7
+          "date": "2026-01",
+          "count": 2
         }
       ]
     }

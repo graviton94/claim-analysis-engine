@@ -1,29 +1,21 @@
 {
   "key": "진천BC_볶음밥_품질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.6666666666666667,
-      "std": 0.5773502691896257,
-      "slope": -3.4611403802933817e-16,
-      "avg_lag_days": 139.8
+      "mean": 1.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 102.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 2
-      },
-      {
-        "date": "2025-11",
+        "date": "2026-01",
         "count": 1
-      },
-      {
-        "date": "2025-12",
-        "count": 2
       }
     ],
     "forecast": []
@@ -32,23 +24,15 @@
     {
       "sub_key": "변화",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 0.5773502691896257,
-        "slope": -3.4611403802933817e-16,
-        "avg_lag_days": 139.8
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 102.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 2
-        },
-        {
-          "date": "2025-11",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 2
         }
       ]
     }

@@ -1,191 +1,52 @@
 {
   "key": "남원공장_손만두_이물",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 5.333333333333333,
-      "std": 3.214550253664318,
-      "slope": 2.5,
-      "avg_lag_days": 60.8
+      "mean": 3.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 45.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 4
-      },
-      {
-        "date": "2025-11",
+        "date": "2026-01",
         "count": 3
-      },
-      {
-        "date": "2025-12",
-        "count": 10
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "금속류",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 43.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "기타이물류",
-      "stats": {
-        "mean": 1.0,
-        "std": 1.0,
-        "slope": 0.4999999999999999,
-        "avg_lag_days": 60.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
-    {
       "sub_key": "동물성이물",
       "stats": {
-        "mean": 1.3333333333333333,
-        "std": 1.5275252316519468,
-        "slope": 0.9999999999999999,
-        "avg_lag_days": 47.8
+        "mean": 2.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 44.5
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "sub_key": "식물성이물",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 228.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "인체이물류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 87.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "토사류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 39.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
+          "date": "2026-01",
+          "count": 2
         }
       ]
     },
     {
       "sub_key": "합성수지류",
       "stats": {
-        "mean": 1.3333333333333333,
-        "std": 0.5773502691896257,
-        "slope": -2.0423860530018709e-16,
-        "avg_lag_days": 40.2
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 46.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
+          "date": "2026-01",
           "count": 1
         }
       ]

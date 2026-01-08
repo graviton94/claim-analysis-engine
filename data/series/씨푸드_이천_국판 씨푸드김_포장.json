@@ -1,57 +1,26 @@
 {
   "key": "씨푸드_이천_국판 씨푸드김_포장",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 9.666666666666666,
-      "std": 5.507570547286102,
-      "slope": 5.0,
-      "avg_lag_days": 59.8
+      "mean": 3.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 45.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 9
-      },
-      {
-        "date": "2025-11",
-        "count": 9
-      },
-      {
-        "date": "2025-12",
-        "count": 18
+        "date": "2026-01",
+        "count": 4
       }
     ],
     "forecast": []
   },
   "children": [
-    {
-      "sub_key": "기타",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 32.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
     {
       "sub_key": "오포장",
       "stats": {
@@ -62,38 +31,7 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "제품파손",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 25.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
+          "date": "2026-01",
           "count": 1
         }
       ]
@@ -101,69 +39,30 @@
     {
       "sub_key": "중량수량미달",
       "stats": {
-        "mean": 5.333333333333333,
-        "std": 5.773502691896258,
-        "slope": 5.0,
-        "avg_lag_days": 52.1
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 42.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 2
-        },
-        {
-          "date": "2025-12",
-          "count": 12
+          "date": "2026-01",
+          "count": 1
         }
       ]
     },
     {
       "sub_key": "포장불량",
       "stats": {
-        "mean": 3.3333333333333335,
-        "std": 1.5275252316519465,
-        "slope": -0.5000000000000006,
-        "avg_lag_days": 82.2
+        "mean": 2.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 46.5
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 5
-        },
-        {
-          "date": "2025-12",
+          "date": "2026-01",
           "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "표시사항",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 21.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
         }
       ]
     }

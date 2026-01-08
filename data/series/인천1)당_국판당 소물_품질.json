@@ -1,77 +1,38 @@
 {
   "key": "인천1)당_국판당 소물_품질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 4.0,
-      "std": 2.0,
-      "slope": 1.9999999999999996,
-      "avg_lag_days": 282.1
+      "mean": 1.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 178.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 4
-      },
-      {
-        "date": "2025-11",
-        "count": 4
-      },
-      {
-        "date": "2025-12",
-        "count": 6
+        "date": "2026-01",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "기타",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": -1.6146321952231105e-16,
-        "avg_lag_days": 60.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 2
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
       "sub_key": "성분",
       "stats": {
-        "mean": 3.3333333333333335,
-        "std": 2.081665999466133,
-        "slope": 1.9999999999999998,
-        "avg_lag_days": 326.5
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 178.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 2
-        },
-        {
-          "date": "2025-11",
-          "count": 4
-        },
-        {
-          "date": "2025-12",
-          "count": 5
+          "date": "2026-01",
+          "count": 1
         }
       ]
     }

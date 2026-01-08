@@ -6,6 +6,15 @@ from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import pyarrow.dataset as ds
 
+# Handle query parameters for navigation from main dashboard
+if st.query_params:
+    if 'plant' in st.query_params:
+        st.session_state['trigger_analysis'] = True
+        st.session_state['target_plant'] = st.query_params['plant']
+        st.session_state['target_grade'] = st.query_params['grade']
+        st.session_state['target_category'] = st.query_params['category']
+        st.rerun()
+
 # [Core Module Import] 
 # 핵심 분석 로직은 core/analytics.py에서 가져옵니다.
 from core.storage import load_partitioned, DATA_HUB_PATH
@@ -198,7 +207,7 @@ col_p1, col_p2 = st.columns([1, 1])
 with col_p1:
     # 그래프 기준 선택 영역
     st.markdown("**📈 그래프 선 기준** (추이 그래프에서 각 선으로 표시할 기준)")
-    all_index_candidates = ['등급기준', '대분류', '불만원인', '중분류', '소분류', '제품범주1', '제품범주2', '제품범주3', '제품명']
+    all_index_candidates = ['등급기준', '불만원인', '대분류', '중분류', '소분류', '제품범주1', '제품범주2', '제품범주3', '제품명']
     all_index_candidates = [c for c in all_index_candidates if c in filtered_df_step3.columns]
     graph_index_candidates = [c for c in all_index_candidates if c in filtered_df_step3.columns]
     graph_index = st.selectbox(

@@ -1,28 +1,20 @@
 {
   "key": "Migasa_올리브유_포장",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.6666666666666666,
-      "std": 0.5773502691896258,
-      "slope": -1.6146321952231105e-16,
-      "avg_lag_days": 281.5
+      "mean": 2.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 325.5
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 1
-      },
-      {
-        "date": "2025-11",
-        "count": 0
-      },
-      {
-        "date": "2025-12",
+        "date": "2026-01",
         "count": 3
       }
     ],
@@ -30,71 +22,32 @@
   },
   "children": [
     {
-      "sub_key": "오포장",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
-    {
       "sub_key": "제품파손",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 196.0
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 206.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
+          "date": "2026-01",
+          "count": 2
         }
       ]
     },
     {
       "sub_key": "포장불량",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 367.0
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 445.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     }

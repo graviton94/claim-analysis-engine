@@ -1,7 +1,7 @@
 {
   "key": "씨제이웰케어-본사_닥터뉴트리_배송",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -14,16 +14,8 @@
   "data": {
     "history": [
       {
-        "date": "2025-10",
+        "date": "2026-01",
         "count": 1
-      },
-      {
-        "date": "2025-11",
-        "count": 3
-      },
-      {
-        "date": "2025-12",
-        "count": 2
       }
     ],
     "forecast": []
@@ -39,62 +31,8 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "배송지연",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "택배박스 외관",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     }

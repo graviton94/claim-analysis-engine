@@ -1,7 +1,7 @@
 {
   "key": "인천냉동식품_물만두_배송",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -14,16 +14,8 @@
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 7
-      },
-      {
-        "date": "2025-11",
-        "count": 8
-      },
-      {
-        "date": "2025-12",
-        "count": 12
+        "date": "2026-01",
+        "count": 3
       }
     ],
     "forecast": []
@@ -39,16 +31,8 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 3
+          "date": "2026-01",
+          "count": 2
         }
       ]
     },
@@ -62,16 +46,8 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 7
-        },
-        {
-          "date": "2025-11",
-          "count": 5
-        },
-        {
-          "date": "2025-12",
-          "count": 9
+          "date": "2026-01",
+          "count": 1
         }
       ]
     }

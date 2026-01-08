@@ -1,77 +1,38 @@
 {
   "key": "진천BC_더건강한 닭가슴살_변질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 2.0,
-      "std": 1.7320508075688772,
-      "slope": 1.5,
-      "avg_lag_days": 35.7
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 40.5
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 0
-      },
-      {
-        "date": "2025-11",
-        "count": 3
-      },
-      {
-        "date": "2025-12",
-        "count": 4
+        "date": "2026-01",
+        "count": 2
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "곰팡이",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 58.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
       "sub_key": "기타변질",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 1.5275252316519465,
-        "slope": 0.9999999999999999,
-        "avg_lag_days": 31.2
+        "mean": 2.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 40.5
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 3
+          "date": "2026-01",
+          "count": 2
         }
       ]
     }

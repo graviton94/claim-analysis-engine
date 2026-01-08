@@ -1,57 +1,26 @@
 {
   "key": "진천)두부_국산콩두부_포장",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 3.3333333333333335,
-      "std": 0.5773502691896258,
-      "slope": -4.548524085698064e-16,
-      "avg_lag_days": 43.4
+      "mean": 3.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 4.7
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 10
-      },
-      {
-        "date": "2025-11",
-        "count": 14
-      },
-      {
-        "date": "2025-12",
-        "count": 7
+        "date": "2026-01",
+        "count": 4
       }
     ],
     "forecast": []
   },
   "children": [
-    {
-      "sub_key": "냉동",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 4
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
     {
       "sub_key": "오포장",
       "stats": {
@@ -62,15 +31,7 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
+          "date": "2026-01",
           "count": 1
         }
       ]
@@ -78,69 +39,30 @@
     {
       "sub_key": "제품파손",
       "stats": {
-        "mean": 2.6666666666666665,
-        "std": 0.5773502691896258,
-        "slope": 0.4999999999999996,
-        "avg_lag_days": 52.8
+        "mean": 2.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 5.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 6
-        },
-        {
-          "date": "2025-11",
-          "count": 8
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "편의",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 6.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 0
+          "date": "2026-01",
+          "count": 2
         }
       ]
     },
     {
       "sub_key": "포장불량",
       "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 6.0
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 4.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     }

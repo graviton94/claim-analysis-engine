@@ -200,6 +200,14 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     dropped_rows = initial_rows - len(df)
     print(f"[ETL-STEP1] '상담번호' NaN 제거: {dropped_rows}개 행 삭제됨. 현재 {len(df)}개 행.")
 
+    # Step 1-1: 상담번호 기준 중복 제거 (가장 마지막 업로드 우선)
+    # 업로드 순서 그대로 두고 keep='last'로 동일 상담번호는 최신 행만 유지
+    before_dedup = len(df)
+    df['상담번호'] = df['상담번호'].astype(str).str.strip()
+    df = df.drop_duplicates(subset=['상담번호'], keep='last')
+    after_dedup = len(df)
+    print(f"[ETL-STEP1-1] 상담번호 중복 제거: {before_dedup - after_dedup}개 행 제거. 현재 {after_dedup}개 행.")
+
     # Step 2 (접수일): '접수년/월/일' 컬럼을 합쳐 '접수일자' 생성 (기존 로직 유지)
     date_cols = ['접수년', '접수월', '접수일']
     for col in date_cols:

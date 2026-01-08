@@ -1,29 +1,21 @@
 {
   "key": "부산공장_잡곡_품질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 10.0,
-      "std": 2.0,
-      "slope": 1.999999999999998,
-      "avg_lag_days": 116.2
+      "mean": 6.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 103.3
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 9
-      },
-      {
-        "date": "2025-11",
-        "count": 12
-      },
-      {
-        "date": "2025-12",
-        "count": 12
+        "date": "2026-01",
+        "count": 6
       }
     ],
     "forecast": []
@@ -32,46 +24,30 @@
     {
       "sub_key": "변화",
       "stats": {
-        "mean": 8.333333333333334,
-        "std": 1.5275252316519468,
-        "slope": 0.49999999999999895,
-        "avg_lag_days": 124.9
+        "mean": 3.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 121.7
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 8
-        },
-        {
-          "date": "2025-11",
-          "count": 12
-        },
-        {
-          "date": "2025-12",
-          "count": 8
+          "date": "2026-01",
+          "count": 3
         }
       ]
     },
     {
       "sub_key": "성분",
       "stats": {
-        "mean": 1.6666666666666667,
-        "std": 2.0816659994661326,
-        "slope": 1.4999999999999998,
-        "avg_lag_days": 72.6
+        "mean": 3.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 85.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 4
+          "date": "2026-01",
+          "count": 3
         }
       ]
     }

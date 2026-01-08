@@ -1,29 +1,21 @@
 {
   "key": "진천BC_백미_포장",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 11.666666666666666,
-      "std": 5.507570547286102,
-      "slope": 4.999999999999999,
-      "avg_lag_days": 79.5
+      "mean": 2.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 57.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 20
-      },
-      {
-        "date": "2025-11",
-        "count": 31
-      },
-      {
-        "date": "2025-12",
-        "count": 31
+        "date": "2026-01",
+        "count": 4
       }
     ],
     "forecast": []
@@ -39,154 +31,38 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 6
-        },
-        {
-          "date": "2025-11",
-          "count": 12
-        },
-        {
-          "date": "2025-12",
-          "count": 6
-        }
-      ]
-    },
-    {
-      "sub_key": "유통기한",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -6.551713670883651e-18,
-        "avg_lag_days": 217.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 0
-        }
-      ]
-    },
-    {
-      "sub_key": "제품파손",
-      "stats": {
-        "mean": 1.0,
-        "std": 1.0,
-        "slope": -0.5000000000000003,
-        "avg_lag_days": 20.3
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 6
-        },
-        {
-          "date": "2025-12",
-          "count": 4
+          "date": "2026-01",
+          "count": 2
         }
       ]
     },
     {
       "sub_key": "중량수량미달",
       "stats": {
-        "mean": 2.0,
-        "std": 2.6457513110645907,
-        "slope": 2.0000000000000004,
-        "avg_lag_days": 106.8
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 77.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 5
         }
       ]
     },
     {
       "sub_key": "편의",
       "stats": {
-        "mean": 7.666666666666667,
-        "std": 3.7859388972001824,
-        "slope": 2.999999999999999,
-        "avg_lag_days": 77.7
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 7
-        },
-        {
-          "date": "2025-11",
-          "count": 7
-        },
-        {
-          "date": "2025-12",
-          "count": 12
-        }
-      ]
-    },
-    {
-      "sub_key": "포장불량",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 0.5773502691896258,
-        "slope": 0.5000000000000001,
-        "avg_lag_days": 38.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "포장서비스",
-      "stats": {
-        "mean": 0.0,
+        "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 0.0
+        "avg_lag_days": 37.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 3
         }
       ]
     }

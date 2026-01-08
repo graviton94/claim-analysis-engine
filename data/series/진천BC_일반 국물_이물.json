@@ -1,100 +1,38 @@
 {
   "key": "진천BC_일반 국물_이물",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.0,
-      "std": 1.7320508075688772,
-      "slope": 1.5,
-      "avg_lag_days": 124.3
+      "mean": 1.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 44.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
+        "date": "2026-01",
         "count": 1
-      },
-      {
-        "date": "2025-11",
-        "count": 1
-      },
-      {
-        "date": "2025-12",
-        "count": 4
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "동물성이물",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 1.1547005383792517,
-        "slope": 1.0000000000000002,
-        "avg_lag_days": 50.5
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "인체이물류",
+      "sub_key": "금속류",
       "stats": {
         "mean": 1.0,
-        "std": 1.0,
-        "slope": 1.0000000000000002,
-        "avg_lag_days": 172.3
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 44.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "합성수지류",
-      "stats": {
-        "mean": 0.3333333333333333,
-        "std": 0.5773502691896258,
-        "slope": -0.5000000000000002,
-        "avg_lag_days": 128.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 1
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 0
         }
       ]
     }

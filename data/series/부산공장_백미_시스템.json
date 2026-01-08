@@ -1,7 +1,7 @@
 {
   "key": "부산공장_백미_시스템",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -14,16 +14,8 @@
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 8
-      },
-      {
-        "date": "2025-11",
-        "count": 8
-      },
-      {
-        "date": "2025-12",
-        "count": 12
+        "date": "2026-01",
+        "count": 1
       }
     ],
     "forecast": []
@@ -39,84 +31,7 @@
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "상품정보오류",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "운영",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 2
-        },
-        {
-          "date": "2025-11",
-          "count": 4
-        },
-        {
-          "date": "2025-12",
-          "count": 6
-        }
-      ]
-    },
-    {
-      "sub_key": "주문/결제",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 3
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
+          "date": "2026-01",
           "count": 1
         }
       ]

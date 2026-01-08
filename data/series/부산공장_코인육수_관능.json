@@ -1,29 +1,21 @@
 {
   "key": "부산공장_코인육수_관능",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 20.0,
-      "std": 5.291502622129181,
-      "slope": 4.999999999999999,
-      "avg_lag_days": 269.7
+      "mean": 7.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 251.3
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 23
-      },
-      {
-        "date": "2025-11",
-        "count": 24
-      },
-      {
-        "date": "2025-12",
-        "count": 31
+        "date": "2026-01",
+        "count": 7
       }
     ],
     "forecast": []
@@ -32,46 +24,15 @@
     {
       "sub_key": "색상",
       "stats": {
-        "mean": 19.333333333333332,
-        "std": 4.163331998932266,
-        "slope": 3.9999999999999996,
-        "avg_lag_days": 274.7
+        "mean": 7.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 251.3
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 23
-        },
-        {
-          "date": "2025-11",
-          "count": 24
-        },
-        {
-          "date": "2025-12",
-          "count": 29
-        }
-      ]
-    },
-    {
-      "sub_key": "성상",
-      "stats": {
-        "mean": 0.6666666666666666,
-        "std": 1.1547005383792517,
-        "slope": 1.0000000000000002,
-        "avg_lag_days": 124.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 0
-        },
-        {
-          "date": "2025-12",
-          "count": 2
+          "date": "2026-01",
+          "count": 7
         }
       ]
     }

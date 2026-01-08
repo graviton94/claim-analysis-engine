@@ -82,8 +82,52 @@ def save_partitioned_parquet(
 
     기존 save_partitioned 로직을 활용하되, 입력 df에 생성된 지표를 그대로 포함하여 저장합니다.
     """
+    output_path = Path(output_path)
+
+    if '상담번호' not in df.columns:
+        raise ValueError("상담번호 컬럼이 없어 저장할 수 없습니다. 상담번호는 고유 ID입니다.")
+
+    # 상담번호를 문자열로 정규화해 비교 안정성 확보
+    df = df.copy()
+    df['상담번호'] = df['상담번호'].astype(str).str.strip()
+
+    # 기존 허브 데이터와 병합 후 상담번호 기준 최신 행 유지 (keep='last')
+    existing_df = pd.DataFrame()
+    if output_path.exists():
+        try:
+            existing_df = load_partitioned(path=output_path)
+        except Exception as e:
+            print(f"[STORAGE] 기존 허브 로드 실패(무시): {e}")
+
+    if not existing_df.empty:
+        # 상담번호 존재 보장
+        if '상담번호' not in existing_df.columns:
+            existing_df['상담번호'] = pd.NA
+
+        # 스키마 정렬: 새 df에 없는 컬럼을 추가하고 순서 정렬
+        missing_cols_in_new = [c for c in existing_df.columns if c not in df.columns]
+        for col in missing_cols_in_new:
+            df[col] = pd.NA
+
+        missing_cols_in_existing = [c for c in df.columns if c not in existing_df.columns]
+        for col in missing_cols_in_existing:
+            existing_df[col] = pd.NA
+
+        # 동일한 컬럼 순서로 정렬
+        df = df[existing_df.columns]
+
+        combined = pd.concat([existing_df, df], ignore_index=True)
+        before = len(combined)
+        combined['상담번호'] = combined['상담번호'].astype(str).str.strip()
+        combined = combined.drop_duplicates(subset=['상담번호'], keep='last')
+        after = len(combined)
+        print(f"[STORAGE] 상담번호 병합/중복 제거: {before - after}개 중복 제거, 최종 {after}행 저장")
+        df_to_save = combined
+    else:
+        df_to_save = df
+
     # 단순 위임 (df에 포함된 모든 컬럼 저장됨)
-    save_partitioned(df, output_path=output_path, partition_cols=partition_cols)
+    save_partitioned(df_to_save, output_path=output_path, partition_cols=partition_cols)
 
 
 def load_partitioned(
@@ -258,52 +302,61 @@ def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
     클레임 데이터의 [플랜트, 접수년, 접수월] 유니크 조합 추출.
     
     동작:
-        - data/hub/ 파티셔닝 폴더 스캔
-        - 파티션 메타데이터에서 연/월 정보 추출
-        - None/NaN 값 제외 후 타입 안전성 확보
-        - 각 행마다 플랜트 컬럼 추가
+        - data/hub/ 파티셔닝 폴더를 올바르게 스캔
+        - pyarrow.dataset을 사용하여 파티션된 전체 데이터 로드
+        - 필요한 컬럼만 효율적으로 읽어 유니크 조합 추출
     
     Args:
         path: 저장 경로 (기본값: 'data/hub')
     
     Returns:
         pd.DataFrame: {플랜트, 접수년, 접수월} 컬럼의 유니크 조합
-    
-    주의:
-        - None/NaN 값은 dropna()로 자동 제외
-        - 모든 컬럼을 str로 형변환 후 sorted() 수행 (Type Safety)
     """
     path = Path(path)
-    
-    if not path.exists() or not list(path.glob('접수년=*')):
+    if not path.exists() or not any(path.iterdir()):
+        print("[STORAGE] Hub directory is empty or does not exist.")
         return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
-    
+
     try:
-        # 전체 클레임 데이터 로드
-        df = pd.read_parquet(path)
+        # 파티션 스키마를 명시적으로 정의하여 안정성 확보
+        partitioning = ds.DirectoryPartitioning(pa.schema([
+            pa.field('접수년', pa.int64()),
+            pa.field('접수월', pa.int64())
+        ]))
         
-        # [플랜트, 접수년, 접수월] 유니크 조합 추출
-        # ★ Step 1: None/NaN 값 제외 (dropna)
-        claim_keys = df[['플랜트', '접수년', '접수월']].dropna()
+        # pyarrow.dataset을 사용하여 파티션된 데이터셋을 올바르게 로드
+        dataset = ds.dataset(path, partitioning=partitioning, format="parquet")
         
-        # ★ Step 2: 모든 컬럼을 str로 형변환하여 Type Safety 확보
+        # 성능 최적화를 위해 필요한 컬럼만 선택하여 로드
+        df = dataset.to_table(columns=['플랜트', '접수년', '접수월']).to_pandas()
+        
+        if df.empty:
+            print("[STORAGE] Hub data is empty after loading.")
+            return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
+
+        # 유니크 조합 추출
+        claim_keys = df[['플랜트', '접수년', '접수월']].drop_duplicates()
+        
+        # 정렬을 위해 타입 변환 및 None/NaN 값 제거
         claim_keys['플랜트'] = claim_keys['플랜트'].astype(str)
-        claim_keys['접수년'] = claim_keys['접수년'].astype(str)
-        claim_keys['접수월'] = claim_keys['접수월'].astype(str)
+        claim_keys['접수년'] = pd.to_numeric(claim_keys['접수년'], errors='coerce')
+        claim_keys['접수월'] = pd.to_numeric(claim_keys['접수월'], errors='coerce')
+        claim_keys = claim_keys.dropna()
         
-        # ★ Step 3: 유니크 조합 추출 및 정렬 (이제 모든 값이 str이므로 TypeError 없음)
-        claim_keys = claim_keys.drop_duplicates()
+        # 정수형으로 최종 변환
+        claim_keys['접수년'] = claim_keys['접수년'].astype(int)
+        claim_keys['접수월'] = claim_keys['접수월'].astype(int)
+
+        # 최종 정렬
+        claim_keys = claim_keys.sort_values(['플랜트', '접수년', '접수월']).reset_index(drop=True)
         
-        # str 정렬 수행 (타입 호환성 완벽)
-        claim_keys = claim_keys.sort_values(
-            ['플랜트', '접수년', '접수월'],
-            key=lambda x: x.astype(str)
-        ).reset_index(drop=True)
-        
-        print(f"[STORAGE] 클레임 키 추출 완료: {len(claim_keys)} 행 (None/NaN 제외 완료)")
+        print(f"[STORAGE] 클레임 키 추출 완료: {len(claim_keys)} 행")
         return claim_keys
-    
+
     except Exception as e:
+        if "No files found" in str(e) or "Path does not exist" in str(e):
+             print(f"[STORAGE] 데이터 경로에 파일 없음: {path}")
+             return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
         print(f"[WARNING] 클레임 키 추출 실패: {str(e)}")
         return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
 

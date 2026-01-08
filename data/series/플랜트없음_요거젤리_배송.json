@@ -1,7 +1,7 @@
 {
   "key": "플랜트없음_요거젤리_배송",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -14,16 +14,8 @@
   "data": {
     "history": [
       {
-        "date": "2024-10",
-        "count": 0
-      },
-      {
-        "date": "2024-11",
+        "date": "2026-01",
         "count": 1
-      },
-      {
-        "date": "2024-12",
-        "count": 0
       }
     ],
     "forecast": []
@@ -39,16 +31,8 @@
       },
       "history": [
         {
-          "date": "2024-10",
-          "count": 0
-        },
-        {
-          "date": "2024-11",
+          "date": "2026-01",
           "count": 1
-        },
-        {
-          "date": "2024-12",
-          "count": 0
         }
       ]
     }

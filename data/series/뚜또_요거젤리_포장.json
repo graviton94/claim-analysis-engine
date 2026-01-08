@@ -1,77 +1,38 @@
 {
   "key": "뚜또_요거젤리_포장",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 2.0,
-      "std": 2.0,
-      "slope": 2.0000000000000004,
-      "avg_lag_days": 34.8
+      "mean": 1.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 42.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 0
-      },
-      {
-        "date": "2025-11",
-        "count": 6
-      },
-      {
-        "date": "2025-12",
-        "count": 8
+        "date": "2026-01",
+        "count": 1
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "오포장",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 4
-        }
-      ]
-    },
-    {
       "sub_key": "제품파손",
       "stats": {
-        "mean": 2.0,
-        "std": 2.0,
-        "slope": 2.0000000000000004,
-        "avg_lag_days": 34.8
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 42.0
       },
       "history": [
         {
-          "date": "2025-10",
-          "count": 0
-        },
-        {
-          "date": "2025-11",
-          "count": 5
-        },
-        {
-          "date": "2025-12",
-          "count": 4
+          "date": "2026-01",
+          "count": 1
         }
       ]
     }

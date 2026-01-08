@@ -1,54 +1,53 @@
 {
   "key": "공주공장_쌈장가정용_변질",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.6666666666666666,
-      "std": 1.1547005383792517,
-      "slope": -1.3103427341767302e-17,
-      "avg_lag_days": 235.0
+      "mean": 2.0,
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 155.0
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
-        "count": 1
-      },
-      {
-        "date": "2025-11",
-        "count": 3
-      },
-      {
-        "date": "2025-12",
-        "count": 0
+        "date": "2026-01",
+        "count": 2
       }
     ],
     "forecast": []
   },
   "children": [
     {
-      "sub_key": "기타변질",
+      "sub_key": "곰팡이",
       "stats": {
-        "mean": 0.6666666666666666,
-        "std": 1.1547005383792517,
-        "slope": -1.3103427341767302e-17,
-        "avg_lag_days": 235.0
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 149.0
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 1
-        },
+        }
+      ]
+    },
+    {
+      "sub_key": "기타변질",
+      "stats": {
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 161.0
+      },
+      "history": [
         {
-          "date": "2025-11",
-          "count": 3
-        },
-        {
-          "date": "2025-12",
-          "count": 0
+          "date": "2026-01",
+          "count": 1
         }
       ]
     }

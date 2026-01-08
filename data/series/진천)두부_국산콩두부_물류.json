@@ -1,29 +1,21 @@
 {
   "key": "진천)두부_국산콩두부_물류",
   "meta": {
-    "last_updated": "2026-01-07",
+    "last_updated": "2026-01-08",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 2.0,
-      "std": 1.0,
-      "slope": 0.49999999999999983,
-      "avg_lag_days": 5.2
+      "std": 0.0,
+      "slope": 0.0,
+      "avg_lag_days": 2.5
     }
   },
   "data": {
     "history": [
       {
-        "date": "2025-10",
+        "date": "2026-01",
         "count": 2
-      },
-      {
-        "date": "2025-11",
-        "count": 1
-      },
-      {
-        "date": "2025-12",
-        "count": 3
       }
     ],
     "forecast": []
@@ -33,22 +25,14 @@
       "sub_key": "제품",
       "stats": {
         "mean": 2.0,
-        "std": 1.0,
-        "slope": 0.49999999999999983,
-        "avg_lag_days": 5.2
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 2.5
       },
       "history": [
         {
-          "date": "2025-10",
+          "date": "2026-01",
           "count": 2
-        },
-        {
-          "date": "2025-11",
-          "count": 1
-        },
-        {
-          "date": "2025-12",
-          "count": 3
         }
       ]
     }
