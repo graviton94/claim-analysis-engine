@@ -247,7 +247,7 @@ with col_p2:
     - 예: 그래프 = 등급기준 선택 → 그래프 항목에서 '일반', '중대' 선택 → '일반', '중대'에 대한 그래프가 그려짐
     """)
 
-if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_width=True):
+if st.button("📊 분석 시작 (Run Analysis)", type="primary", width="stretch"):
     if not pivot_indices:
         st.error("최소 하나 이상의 피벗 행(Index)을 선택해야 합니다.")
         st.stop()
@@ -304,7 +304,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 total_l1_row.index = pd.MultiIndex.from_tuples([tuple(idx_parts)], names=indices)
                 all_parts.append(total_l1_row)
             
-            final_pivot = pd.concat(all_parts)
+            final_pivot = pd.concat(all_parts, sort=False)
             
             grand_total_series = pivot_base.sum()
             grand_total_series.name = "Total"
@@ -312,7 +312,8 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             idx_parts = ['Total'] + [''] * (n_levels - 1)
             grand_total_df.index = pd.MultiIndex.from_tuples([tuple(idx_parts)], names=indices)
             
-            final_pivot = pd.concat([final_pivot, grand_total_df])
+            final_pivot = pd.concat([final_pivot, grand_total_df], sort=False)
+            final_pivot = final_pivot.sort_index(level=list(range(n_levels)))
             final_pivot['Total'] = final_pivot[all_months].sum(axis=1)
             return final_pivot
 
@@ -490,7 +491,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 )
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         
     except Exception as e:
         st.warning(f"그래프 생성 중 오류: {e}")
@@ -560,7 +561,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 else:
                     st.dataframe(
                         red_df[display_cols],
-                        use_container_width=True,
+                        width="stretch",
                         height=min(360, (len(red_df) + 1) * 35)
                     )
             with c_right:
@@ -570,7 +571,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 else:
                     st.dataframe(
                         yellow_df[display_cols],
-                        use_container_width=True,
+                        width="stretch",
                         height=min(360, (len(yellow_df) + 1) * 35)
                     )
             st.caption("전월/당월은 해당 항목의 월별 클레임 건수입니다. 점수산정 사유는 '진단' 컬럼에 요약되어 있습니다.")
@@ -618,7 +619,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
 
         st.dataframe(
             final_view.style.apply(style_hybrid_table, axis=None).format(format_dict), 
-            use_container_width=True,
+            width="stretch",
             height=(len(final_view) + 1) * 35 + 3,
             column_config={
                 "진단": st.column_config.TextColumn("위험 진단", help="AI 엔진이 판단한 위험 점수와 사유입니다.")
@@ -638,7 +639,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             
             valid_lag_df = filtered_df_step3[filtered_df_step3['Lag_Valid'] == True]
             fig = px.histogram(valid_lag_df, x='Lag_Days', nbins=50, title="Lag Days Distribution")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.warning("유효 데이터 없음")
 

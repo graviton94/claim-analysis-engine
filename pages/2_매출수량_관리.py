@@ -232,9 +232,9 @@ with st.expander("📥 CSV 데이터 일괄 업로드", expanded=False):
         try:
             csv_data = pd.read_csv(uploaded_file, encoding='utf-8')
             st.markdown(f"**미리보기** ({len(csv_data)}행)")
-            st.dataframe(csv_data.head(10), use_container_width=True)
+            st.dataframe(csv_data.head(10), width="stretch")
             
-            if st.button("✅ CSV 데이터 병합", use_container_width=True):
+            if st.button("✅ CSV 데이터 병합", width="stretch"):
                 st.session_state.sales_long_df = merge_csv_data(
                     st.session_state.sales_long_df, 
                     csv_data
@@ -256,7 +256,7 @@ st.markdown("아래 테이블에서 **ID**와 **매출수량**을 직접 입력/
 # 피벗 테이블 에디터 (ID 컬럼 추가)
 edited_df = st.data_editor(
     st.session_state.sales_display_df,
-    use_container_width=True,
+    width="stretch",
     height=400,
     disabled=['플랜트'],  # 플랜트명은 수정 불가
     num_rows="fixed",
@@ -281,7 +281,7 @@ with col_stats3:
     total_sales = st.session_state.sales_display_df.drop(columns=['ID', '플랜트']).sum().sum()
     st.metric("총 매출수량", f"{int(total_sales):,}")
 
-if st.button("💾 저장", key="save_sales", use_container_width=True):
+if st.button("💾 저장", key="save_sales", width="stretch"):
     if not st.session_state.sales_long_df.empty:
         save_sales_data(st.session_state.sales_long_df)
     else:
@@ -290,4 +290,4 @@ if st.button("💾 저장", key="save_sales", use_container_width=True):
 # 데이터 미리보기
 if not st.session_state.sales_long_df.empty:
     with st.expander("📋 Long 형식 데이터 미리보기 (저장 형식)", expanded=False):
-        st.dataframe(st.session_state.sales_long_df.head(50), use_container_width=True)
+        st.dataframe(st.session_state.sales_long_df.head(50), width="stretch")

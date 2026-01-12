@@ -64,7 +64,7 @@
             )
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
     except Exception as e:
         st.warning(f"그래프 생성 중 오류: {e}")
