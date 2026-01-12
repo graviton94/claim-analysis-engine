@@ -1,24 +1,29 @@
- # 🏛️ Project Master Blueprint (v2.0)
+# 🏛️ Project Master Blueprint (v3.0)
 
-## 0. Git Branch Policy
-- **Target**: `https://github.com/graviton94/claim-analysis-engine/tree/main`
-- **Rule**: 모든 코드 변경사항은 `main` 브랜치에 직접 커밋하거나, `main`으로 향하는 PR이어야 한다.
+## 0. Fundamental Principles
+- **Data-Driven**: 모든 판단은 데이터에 근거하며, 감(Gut feeling)을 통계적 수치로 변환한다.
+- **Speed**: 어떤 분석이든 1초 이내 응답을 목표로 파티셔닝과 캐싱을 최적화한다.
 
-## 1. Data Strategy: Series Data Mart
-- **분절화(Segmentation)**: 전체 데이터를 `[플랜트 | 제품범주2 | 중분류]` 단위로 쪼개어 `data/series/`에 개별 파일로 저장.
-- **효율성**: 전체 대용량 파일을 읽지 않고, 업데이트가 필요한 시리즈 파일만 접근하여 속도 최적화.
+## 1. Data Strategy: Smart Partitioning
+- **Storage**: `Year/Month` 파티셔닝된 Parquet 파일로 관리.
+- **Series Mart**: 분석 속도를 위해 `[플랜트|대분류|소분류]` 단위의 Nested JSON Series 별도 생성.
+- **Schema**: 54개 표준 필드 준수 (ETL 과정에서 타입 강제 변환).
 
-## 2. Detection Engine (Hybrid)
-### 2.1 Rule-based (P6 & P2)
-- 사용자가 설정한 조건(예: 특정 제품 건수 > N건)을 실시간 쿼리하여 감지.
-### 2.2 ML-based (P4)
-- **Top-down**: `플랜트 | 대분류` 단위로 챔피언 모델 학습.
-- **Seasonal Allocation**: 과거 동월 비중을 활용하여 하위 피벗 행에 예측값 배분.
-- **Risk Scoring**: 예측치의 기울기, 과거 Max 대비 비율을 분석하여 Warning Level 부여.
+## 2. Core Engines (The Brain)
 
-## 3. Analysis Intelligence (P3)
-- **Outlier Detection**: IQR(Interquartile Range) 또는 Z-Score를 활용하여 시계열 중 튀는 값 강조.
-- **Lag Analysis**: `제조일자`와 `접수일자` 사이의 차이를 계산하여 시차 분포 시각화.
+### 2.1 🛡️ Risk Scoring Engine (`analytics.py`)
+과거 데이터 분포와 현재 추세를 비교하여 **'위험도(Risk Score)'**를 산출한다.
+- **Statistical Guards**: 소량 데이터의 과대 해석 방지 (Small Sample Guard).
+- **Nelson Rules**: 공정 관리도(Control Chart) 기법을 응용한 8가지 이상 패턴 감지.
+- **Score Logic**: `기본 점수` + `패턴 가중치` + `확률적 임계치 초과 보너스`.
 
-## 4. Integration Logic
-- P1에서 데이터 업로드 시 -> 영향받는 `data/series/` 파일만 갱신 -> P4 엔진이 해당 시리즈만 재학습 -> P2 리스트 자동 업데이트.
+### 2.2 🔭 Forecasting Engine (`forecasting.py`)
+미래 물량을 예측하고, 현재의 진행 속도가 적절한지 판단한다.
+- **Input Guard**: 마감되지 않은 당월 데이터를 학습셋에서 자동 제외 (`Training Set Isolation`).
+- **Biz-Day Logic**: `np.busday_count`를 활용한 정밀한 일평균(Run-rate) 계산.
+- **Adaptive Weight**: 월초에는 `과거 패턴(MoM)` 중심, 월말에는 `현재 실적(Run-rate)` 중심으로 가중치 동적 조절.
+- **Model Pool**: Holt-Winters (Trend+Seasonality) 및 ARIMA 자동 선택.
+
+## 3. Advanced UX/UI
+- **Dynamic Pivot**: 사용자가 행/열을 자유롭게 드래그 앤 드롭하듯 변경 가능 (`3_플랜트_분석`).
+- **Explainable AI (XAI)**: 단순히 "위험함"이 아니라, "왜 위험한지(Why)"를 텍스트로 풀어서 제공 (`format_diagnosis`).

@@ -1,24 +1,20 @@
-# 📅 Development Milestone (v2.0)
+# 📅 Development Milestone (v3.0)
 
 ## Phase 1: Foundation (✅ 완료)
-- [x] 54개 필드 표준화 및 연/월 파티셔닝 저장.
-- [x] 매출 수량 관리 UI 및 데이터 연동.
+- [x] 대용량 데이터 파티셔닝 저장 구조 설계 (`core/storage`).
+- [x] 기본 대시보드 및 업로드 파이프라인 구축.
 
-## Phase 2: Deep Dive Analysis (D+1~2)
-- [ ] **P3 플랜트 분석** 고도화: 동적 피벗 UI 재구축.
-- [ ] **이상치 감지** 로직: 테이블 내 튀는 값 하이라이트.
-- [ ] **Lag 분석**: 제조~접수 시차 분포 차트 구현.
+## Phase 2: Intelligence Engine (✅ 완료)
+- [x] **Risk Engine**: Nelson Rules 및 통계적 이상 탐지 구현 (`core/analytics`).
+- [x] **Forecast Engine**: 앙상블 예측 및 영업일 보정 로직 구현 (`core/forecasting`).
+- [x] **Detail Analysis**: 동적 피벗 및 Lag 분석 UI (`3_플랜트_분석`).
 
-## Phase 3: Rule & Summary (D+3~4)
-- [ ] **P6 감지 대상 관리**: 사용자 정의 규칙 설정 및 저장 로직.
-- [ ] **P2 통합 요약**: 최신 현황 요약 및 P6 규칙 기반 고위험 리스트 출력.
-- [ ] **요약 레포트**: 리스트 클릭 시 상세 정보 팝업 구현.
+## Phase 3: Optimization & Stability (🚧 진행 중)
+- [ ] **Hyperparameter Tuning**: Optuna를 활용한 모델 파라미터 최적화 자동화.
+- [ ] **Performance**: 대용량 Series 연산 속도 개선 (Vectorization).
+- [ ] **UX Polish**: 예측 신뢰구간 시각화 및 리스크 진단 텍스트 가독성 개선.
 
-## Phase 4: ML Intelligence (D+5~6)
-- [ ] **P4 예측 페이지**: 시리즈 분절 배치 스캔 엔진 (`batch.py`).
-- [ ] **리스크 스캐너**: 챔피언 모델 선정 및 계절성 배분 로직 완성.
-- [ ] **Warning Marking**: 예측 기반 위험 등급 산출 및 `alerts.json` 저장.
-
-## Phase 5: Final Optimization (D+7)
-- [ ] 업로드 시 증분 업데이트 트리거 연결.
-- [ ] 전사 통합 테스트 및 UI/UX 비주얼 고도화.
+## Phase 4: Automation & Expansion (Next Step)
+- [ ] **Auto-Reporting**: 매월 초 주요 이슈를 요약하여 이메일/슬랙 자동 발송.
+- [ ] **Feedback Loop**: 사용자가 예측값이나 리스크 등급을 수정하면 이를 학습에 반영하는 피드백 파이프라인.
+- [ ] **LLM Integration**: "지난달 A공장 이슈가 뭐였어?"와 같은 질문에 답하는 챗봇 인터페이스 (Gemini API 연동).

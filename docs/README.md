@@ -1,38 +1,42 @@
-# 🏆 Advanced Claim Analysis & Early Warning System (v2.0)
+# 🏆 Intelligent Claim Analysis & Early Warning System (v3.0)
 
 > **⚠️ 작업 브랜치**: 모든 작업은 반드시 **[main 브랜치](https://github.com/graviton94/claim-analysis-engine/tree/main)**에서 수행합니다.
 
 ## 🎯 Project Vision
-단순한 통계 조회를 넘어, **비즈니스 규칙(Rule)**과 **인공지능(ML)**이 결합된 하이브리드 조기 경보 시스템을 구축합니다. 수만 개의 데이터 조합을 스스로 감시하고 이상 징후를 선제적으로 보고합니다.
+이 시스템은 단순한 대시보드가 아닙니다. **비즈니스 규칙(Rule)**, **통계적 이상 탐지(Statistical Detection)**, 그리고 **시계열 머신러닝(Time-series ML)**이 결합된 **하이브리드 인텔리전스 플랫폼**입니다. 
+수만 개의 제품 시리즈를 24시간 감시하며, "왜 위험한지"에 대한 통계적 근거와 "앞으로 어떻게 될지"에 대한 예측 시나리오를 제공합니다.
+
+## 🚀 Key Features (v3.0)
+### 1. 🚨 Dual-Track Risk Scoring (`core/analytics.py`)
+- **Nelson Rules**: 연속 상승, 편향 등 이상 패턴 감지.
+- **Distribution Analysis**: 포아송/음이항 분포 기반의 희소 사건(Rare Event) 확률 계산.
+- **Anomaly Detection**: IQR 및 STL 분해를 통한 시계열 이상치 자동 발굴.
+
+### 2. 🔮 Advanced Forecasting Engine (`core/forecasting.py`)
+- **Ensemble Prediction**: `Run-rate`(현재 실적) + `MoM Pattern`(과거 계절성) + `Holt-Winters/ARIMA`(시계열 모델) 앙상블.
+- **Business Day Awareness**: 영업일 기준 진행률 계산으로 월초/공휴일 예측 왜곡 방지.
+- **Data Guard**: 학습 데이터와 평가 데이터의 엄격한 분리(Data Leakage 방지).
 
 ## 🖥️ Page Navigation
-1. **수동 업로드**: CSV/Excel 표준화 적재 및 연/월 파티셔닝.
-2. **통합 요약 (Summary)**: 전사 추이 및 고위험 클레임 감지 리스트(Rule+ML).
-3. **플랜트별 상세 분석**: 동적 피벗, **이상치(Outlier) 감지**, **Lag(제조~접수 시차) 분석**.
-4. **예측 엔진 관리**: 전수 시리즈 스캔, 챔피언 모델 업데이트 및 정확도 레포트.
-5. **매출 수량 관리**: PPM 산출을 위한 플랜트별 매출 데이터 관리.
-6. **감지 대상 관리**: 사용자 정의 위험 조건(Rule) 설정 및 P2 연동.
+1. **데이터 업로드**: CSV/Excel 표준화 적재 및 연/월 파티셔닝 저장 (Parquet).
+2. **통합 요약 (Executive Summary)**: 전사 리스크 스코어링 현황 및 고위험군 Top-N 리포트.
+3. **플랜트 정밀 분석**: 동적 피벗 테이블, **Lag(제조-접수 시차) 분석**, 이상치 하이라이팅.
+4. **예측 시뮬레이션**: Optuna 기반 챔피언 모델(CatBoost/LSTM/SARIMAX) 경합 및 3개월 단기 예보.
 
 ## 📂 Directory Structure
 ```bash
 claim-prediction-system/
 ├── core/
-│   ├── engine/           # ML 모델 및 배치 엔진 (SARIMAX, CatBoost, LSTM)
-│   ├── etl.py            # 54개 필드 추출 및 정제
-│   └── storage.py        # Parquet 파티셔닝 및 시리즈 분절 저장
+│   ├── analytics.py      # [Engine 1] 리스크 스코어링 & 이상 탐지 (Nelson, STL)
+│   ├── forecasting.py    # [Engine 2] 시계열 예측 앙상블 (ETS, ARIMA, Ensemble)
+│   ├── etl.py            # 데이터 전처리 및 표준화
+│   └── storage.py        # 고성능 파티셔닝 입출력 (Arrow/Parquet)
 ├── pages/
 │   ├── 1_데이터_업로드.py
-│   ├── 2_통합_요약.py     # New: Executive Summary
-│   ├── 3_플랜트_분석.py   # Update: Outlier & Lag 분석 추가
-│   ├── 4_예측_페이지.py    # New: 엔진 관리 및 리스크 스캐너
-│   ├── 5_매출_관리.py
-│   └── 6_감지_대상_관리.py # New: 사용자 정의 규칙 설정
-├── data/
-│   ├── hub/              # Raw 파티션
-│   ├── series/           # 분절된 시계열 데이터 마트 (JSON/Parquet)
-│   └── results/          # 최종 리스크 마킹 결과 (alerts.json)
-└── docs/                 # 설계 문서
-
+│   ├── 2_통합_요약.py     
+│   ├── 3_플랜트_분석.py   # Lag 분석 & 동적 피벗 탑재
+│   └── 4_예측_시뮬레이션.py # Optuna 튜닝 및 시뮬레이션
+└── app.py                # 메인 대시보드 (Risk & Forecast 요약)
 ```
 
 ## 📂 Field def

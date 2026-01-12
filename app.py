@@ -14,6 +14,7 @@ from io import BytesIO
 # [Core Engine] Phase 2.8 엔진 탑재
 from core.storage import DATA_HUB_PATH
 from core.analytics import calculate_advanced_risk_score
+from core.forecasting import ForecastEngine
 
 # --- 0. Helper Functions ---
 def format_diagnosis(diagnosis_str):
@@ -151,103 +152,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 0-B. 고급 월말 예측 함수 ---
-
-def predict_month_end_advanced(df_this: pd.Series, df_last: pd.Series, df_before_last: pd.Series, 
-                                 current_month: int, days_passed: int, days_in_month: int) -> dict:
-    
-    result = {
-        'predicted_val': 0.0,
-        'method': '미결정',
-        'yoy_baseline': 0.0,
-        'trend_slope_yoy': 0.0,
-        'trend_slope_recent': 0.0,
-        'confidence': '낮음',
-    }
-    
-    if days_passed <= 0:
-        return result
-    
-    try:
-        # Step 1: 동월 YoY 데이터 수집
-        yoy_current = df_this.get(current_month, 0)
-        yoy_last = df_last.get(current_month, 0) if len(df_last) > 0 else 0
-        yoy_before = df_before_last.get(current_month, 0) if len(df_before_last) > 0 else 0
-        
-        # Step 2: 추세선 계산
-        trend_slope_yoy = 0.0
-        if len(df_last) >= 3:
-            x_yoy = np.arange(len(df_last), dtype=float)
-            y_yoy = np.array(df_last.values, dtype=float)
-            z_yoy = np.polyfit(x_yoy, y_yoy, 1)
-            trend_slope_yoy = float(z_yoy[0])
-        
-        trend_slope_recent = 0.0
-        recent_months_data = []
-        for m in range(max(1, current_month - 2), current_month):
-            if m in df_this.index:
-                recent_months_data.append(df_this[m])
-        
-        if len(recent_months_data) >= 2:
-            x_recent = np.arange(len(recent_months_data), dtype=float)
-            y_recent = np.array(recent_months_data, dtype=float)
-            z_recent = np.polyfit(x_recent, y_recent, 1)
-            trend_slope_recent = float(z_recent[0])
-        
-        # Step 3: 예측값 계산
-        current_val = yoy_current
-        daily_avg_baseline = current_val / days_passed if days_passed > 0 else 0
-        
-        pred_baseline = daily_avg_baseline * days_in_month
-        
-        pred_yoy = yoy_last
-        if abs(trend_slope_yoy) > 0.001:
-            pred_yoy += trend_slope_yoy * (days_passed / days_in_month)
-        
-        pred_2y = yoy_before
-        if abs(trend_slope_recent) > 0.001:
-            pred_2y += trend_slope_recent * (days_passed / days_in_month)
-        
-        valid_yoy_years = sum([1 for v in [yoy_current, yoy_last, yoy_before] if v > 0])
-        
-        if valid_yoy_years >= 2:
-            weights = [0.4, 0.4, 0.2]
-            predictions = [pred_baseline, pred_yoy, pred_2y]
-        else:
-            weights = [0.7, 0.2, 0.1]
-            predictions = [pred_baseline, pred_yoy, pred_2y]
-        
-        predicted_val = sum(w * p for w, p in zip(weights, predictions))
-        predicted_val = max(0, predicted_val)
-        
-        # Step 4: 신뢰도 판단
-        has_yoy = yoy_last > 0
-        has_2y = yoy_before > 0
-        has_trend = abs(trend_slope_yoy) > 0.001 or abs(trend_slope_recent) > 0.001
-        
-        if (has_yoy and has_2y) and has_trend:
-            confidence = '높음'
-        elif has_yoy or (has_2y and has_trend):
-            confidence = '중간'
-        else:
-            confidence = '낮음'
-        
-        result = {
-            'predicted_val': float(predicted_val),
-            'method': f'YoY 가중 예측 (신뢰도: {confidence})',
-            'yoy_baseline': float(yoy_last),
-            'trend_slope_yoy': float(trend_slope_yoy),
-            'trend_slope_recent': float(trend_slope_recent),
-            'confidence': confidence,
-        }
-        
-        return result
-    
-    except Exception as e:
-        print(f"[WARNING] 예측 계산 실패: {e}")
-        return result
-
-
 # --- 1. 데이터 로드 및 전처리 ---
 
 def get_last_updated_time():
@@ -260,22 +164,36 @@ def get_last_updated_time():
         return datetime.now().strftime('%Y-%m-%d %H:%M')
 
 @st.cache_data(ttl=3600)
-def load_and_scan_risks():
+def load_and_scan_risks(mode='인입'):
+    """
+    mode: '인입' (전체 데이터) 또는 '실적' (불만원인 필터링)
+    ForecastEngine을 초기화하여 반환
+    
+    ⚠️ 중요: mode 파라미터가 변경되면 캐시가 무효화되어 새로 계산됨
+    """
     try:
-        if not DATA_HUB_PATH: return None, None, None, None
+        if not DATA_HUB_PATH: return None, None, None, None, None
         dataset = ds.dataset(DATA_HUB_PATH, partitioning="hive", format="parquet")
         df = dataset.to_table().to_pandas()
-        if df.empty: return None, None, None, None
+        if df.empty: return None, None, None, None, None
     except:
-        return None, None, None, None
+        return None, None, None, None, None
 
     df['접수일자'] = pd.to_datetime(df['접수일자'])
     df['접수월'] = df['접수일자'].dt.strftime('%Y-%m')
+    
+    # 실적 모드 필터링
+    if mode == '실적':
+        performance_reasons = ['고객불만족', '구매불만', '제조불만']
+        df = df[df['불만원인'].isin(performance_reasons)].copy()
     
     max_date = df['접수일자'].max()
     target_month = max_date.strftime('%Y-%m')
     prev_month_date = max_date.replace(day=1) - timedelta(days=1)
     prev_month = prev_month_date.strftime('%Y-%m')
+
+    # ===== ForecastEngine 초기화 (전체 이력 기반) =====
+    forecast_engine = ForecastEngine(df, date_col='접수일자')
 
     # 1. Pivot Table (건수 집계)
     grouped = df.groupby(['플랜트', '대분류', '소분류', '등급기준', '접수월']).size().reset_index(name='건수')
@@ -285,7 +203,7 @@ def load_and_scan_risks():
     last_date_series = df.groupby(['플랜트', '대분류', '소분류', '등급기준'])['접수일자'].max()
     
     risk_results = []
-    if target_month not in pivot.columns: return df, pd.DataFrame(), target_month, prev_month
+    if target_month not in pivot.columns: return df, pd.DataFrame(), target_month, prev_month, forecast_engine
 
     targets = pivot.index
     date_cols = sorted([c for c in pivot.columns if isinstance(c, str) and c.startswith('20')])
@@ -321,12 +239,32 @@ def load_and_scan_risks():
     risk_df = pd.DataFrame(risk_results)
     if not risk_df.empty: risk_df = risk_df.sort_values('점수', ascending=False)
         
-    return df, risk_df, target_month, prev_month
+    return df, risk_df, target_month, prev_month, forecast_engine
 
 # --- 2. Dashboard Logic ---
 
+# 모드 토글 추가 (Sidebar)
+st.sidebar.markdown("### 📊 분석 모드")
+selected_mode = st.sidebar.radio(
+    "조회 모드 선택",
+    options=["인입 (Inflow)", "실적 (Performance)"],
+    horizontal=False,
+    help="인입: 전체 데이터 | 실적: 고객불만족/구매불만/제조불만 만 포함"
+)
+
+# 모드를 간단하게 변환
+mode = '인입' if selected_mode == "인입 (Inflow)" else '실적'
+
+# ===== 모드 전환 감지: 캐시 무효화 =====
+if 'prev_mode' not in st.session_state:
+    st.session_state.prev_mode = mode
+elif st.session_state.prev_mode != mode:
+    # 모드가 변경되었으므로 캐시 비우기
+    st.cache_data.clear()
+    st.session_state.prev_mode = mode
+
 with st.spinner("📡 데이터 분석 중..."):
-    raw_df, risk_report, target_month, prev_month = load_and_scan_risks()
+    raw_df, risk_report, target_month, prev_month, forecast_engine = load_and_scan_risks(mode=mode)
     last_updated = get_last_updated_time()
 
 if raw_df is None:
@@ -336,7 +274,8 @@ if raw_df is None:
 # [Header]
 c1, c2 = st.columns([3, 1])
 c1.title("📡 Quality Control Tower")
-c1.caption(f"기준년월: {target_month} | 전사 통합 모니터링")
+mode_label = f"【{selected_mode}】" if selected_mode else ""
+c1.caption(f"기준년월: {target_month} | 전사 통합 모니터링 {mode_label}")
 c2.markdown(f"<div style='text-align:right; padding-top:20px; color:gray;'>Last Update: {last_updated}</div>", unsafe_allow_html=True)
 
 # [KPI]
@@ -366,12 +305,35 @@ danger_v, danger_m = get_kpi_dynamic(raw_df, "위험")
 crit_v, crit_m = get_kpi_dynamic(raw_df, "중대")
 gen_v, gen_m = get_kpi_dynamic(raw_df, "일반")
 
-st.subheader(f"📊 전사 클레임 인입 현황 ({max_date.strftime('%Y/%m/%d')} 기준)")
+# 커스텀 메트릭: 증감 방향에 따라 건수 폰트 색상 변경
+def render_colored_metric(col, label, value_str, delta_str, delta_percent):
+    """퍼센트에 따라 건수 색상이 변하는 메트릭 카드"""
+    # 색상 결정: 증가(+)=빨강, 감소(-)=파랑, 동일(0)=회색
+    if delta_percent > 0:
+        value_color = "#ef4444"  # 빨강 (증가)
+    elif delta_percent < 0:
+        value_color = "#3b82f6"  # 파랑 (감소)
+    else:
+        value_color = "#6b7280"  # 회색 (동일)
+    
+    col.markdown(f"""
+    <div style='background: white; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>
+        <p style='color: #6b7280; font-size: 0.875rem; margin: 0 0 12px 0; font-weight: 500;'>{label}</p>
+        <p style='color: {value_color}; font-size: 1.875rem; line-height: 1; margin: 0 0 8px 0; font-weight: 700;'>{value_str}</p>
+        <p style='color: {value_color}; font-size: 1.025rem; margin: 0; font-weight: 500;'>{delta_str}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 모드에 따른 멘트 변경
+mode_label_text = "인입" if mode == "인입" else "실적"
+kpi_label = f"전사({mode_label_text})"
+
+st.subheader(f"📊 전사 클레임 {mode_label_text} 현황 ({max_date.strftime('%Y/%m/%d')} 기준)")
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("전사 Total", f"{total_v:,}건", f"{total_m:+.1f}% (전월 동기 비)", delta_color="off" if total_m == 0 else "inverse")
-k2.metric("위험 등급", f"{danger_v:,}건", f"{danger_m:+.1f}% (전월 동기 비)", delta_color="off" if danger_m == 0 else "inverse")
-k3.metric("중대 등급", f"{crit_v:,}건", f"{crit_m:+.1f}% (전월 동기 비)", delta_color="off" if crit_m == 0 else "inverse")
-k4.metric("일반 등급", f"{gen_v:,}건", f"{gen_m:+.1f}% (전월 동기 비)", delta_color="off" if gen_m == 0 else "inverse")
+render_colored_metric(k1, kpi_label, f"{total_v:,}건", f"{total_m:+.1f}% (전월 동기 비)", total_m)
+render_colored_metric(k2, "위험", f"{danger_v:,}건", f"{danger_m:+.1f}% (전월 동기 비)", danger_m)
+render_colored_metric(k3, "중대", f"{crit_v:,}건", f"{crit_m:+.1f}% (전월 동기 비)", crit_m)
+render_colored_metric(k4, "일반", f"{gen_v:,}건", f"{gen_m:+.1f}% (전월 동기 비)", gen_m)
 
 st.divider()
 
@@ -406,23 +368,72 @@ with col_chart:
         days_passed = max_date_data.day
         days_in_month = max_date_data.days_in_month
         
-        if days_passed < days_in_month:
-            current_val = df_this.get(current_month, 0)
-            if days_passed > 0:
-                pred_result = predict_month_end_advanced(
-                    df_this=df_this, df_last=df_last, df_before_last=df_before_last,
-                    current_month=current_month, days_passed=days_passed, days_in_month=days_in_month
-                )
-                predicted_val = pred_result['predicted_val']
-                
+        # ===== 월말 예측 + 3개월 예측 통합 (+3M 예측) =====
+        try:
+            combined_months = []
+            combined_values = []
+            combined_hover = []
+            
+            # 당월 예측
+            if days_passed < days_in_month:
+                current_val = df_this.get(current_month, 0)
+                if days_passed > 0 and forecast_engine:
+                    # ===== 고도화된 다중 모델 앙상블 예측 =====
+                    pred_result = forecast_engine.predict_current_month_advanced(int(current_val), max_date_data)
+                    predicted_val = pred_result['predicted_final']
+                    confidence = pred_result.get('confidence', '미정')
+                    progress = pred_result.get('progress', 0)
+                    volatility = pred_result.get('volatility', 'N/A')
+                    ci_lower = pred_result.get('ci_lower', predicted_val)
+                    ci_upper = pred_result.get('ci_upper', predicted_val)
+                    models = pred_result.get('models', {})
+                    
+                    combined_months.append(current_month)
+                    combined_values.append(predicted_val)
+                    
+                    # 상세한 호버 정보
+                    hover_text = f"""<b>{current_month}월 (월말 예측)</b><br>
+예측값: {predicted_val:.0f}건<br>
+신뢰도 구간: [{ci_lower:.0f}, {ci_upper:.0f}]<br>
+현재값: {current_val:.0f}건 | 진행률: {progress:.1f}%<br>
+신뢰도: {confidence} | 변동성: {volatility}<br>
+<br><b>모델별 예측:</b><br>
+• Run-rate: {models.get('runrate', 0):.0f}건<br>
+• Pattern: {models.get('pattern', 0):.0f}건<br>
+• Trend: {models.get('trend', 0):.0f}건<br>
+• Holt-Winters: {models.get('hw', 0):.0f}건<br>
+• SARIMA: {models.get('sarima', 0):.0f}건"""
+                    
+                    combined_hover.append(hover_text)
+            
+            # 3개월 예측
+            if forecast_engine:
+                future_preds = forecast_engine.predict_next_3_months()
+                if future_preds and 'method' in future_preds:
+                    method_name = future_preds.pop('method')
+                    for month_str in sorted(future_preds.keys()):
+                        try:
+                            month_num = int(month_str.split('-')[1])
+                            pred_val = future_preds[month_str]
+                            combined_months.append(month_num)
+                            combined_values.append(pred_val)
+                            combined_hover.append(f"<b>{month_num}월 (3M 예측)</b><br>예측값: {pred_val:.0f}건<br>방식: {method_name}")
+                        except:
+                            pass
+            
+            # 통합 선 그리기
+            if combined_months:
                 fig.add_trace(go.Scatter(
-                    x=[current_month], y=[predicted_val], name='월말 예측',
-                    mode='markers+text',
-                    marker=dict(color='yellow', size=12, symbol='circle', line=dict(width=2, color='darkred')),
-                    text=[f"{predicted_val:.0f}"], textposition="top center", textfont=dict(size=14, color='#ef4444'),
-                    hovertext=f"<b>월말 예측값: {predicted_val:.0f}건</b><br>현재값: {current_val:.0f}건<br>방식: {pred_result['method']}",
-                    hoverinfo='text'
+                    x=combined_months, y=combined_values, name='+3M 예측',
+                    mode='lines+markers',
+                    line=dict(color='#ff9500', width=2, dash='dash'),  # 주황색 대시
+                    marker=dict(size=8, symbol='diamond'),
+                    customdata=combined_hover,
+                    hovertemplate='%{customdata}<extra></extra>',
+                    legendgroup='forecast'
                 ))
+        except Exception as e:
+            print(f"[WARNING] 통합 예측 그래프 렌더링 실패: {e}")
 
         fig.update_layout(
             height=350, margin=dict(l=10, r=10, t=10, b=10), 
@@ -440,7 +451,7 @@ with col_insight:
     # 1. 최근 1개월(롤링 30일) 데이터 필터링
     # rolling window: 최근 30일(포함) 기준으로 필터링
     max_date = raw_df['접수일자'].max()
-    start_dt = max_date - timedelta(days=30)
+    start_dt = max_date - timedelta(days=90)
     
     # Data Cleaning & Conversion
     df_lot = raw_df[raw_df['접수일자'] >= start_dt].copy()

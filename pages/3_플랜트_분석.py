@@ -384,7 +384,7 @@ with col_p2:
     - 예: 그래프 기준=등급기준, 항목='일반'+'중대' 선택 → 2개 선 그래프
     """)
 
-if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_width=True):
+if st.button("📊 분석 시작 (Run Analysis)", type="primary", width='stretch'):
     if not pivot_indices:
         st.error("최소 하나 이상의 피벗 행(Index)을 선택해야 합니다.")
         st.stop()
@@ -403,6 +403,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
     all_months_in_range = pd.date_range(start=start_date, end=end_date, freq='MS').strftime('%Y-%m').tolist()
 
     # --- 1. Base Pivot 생성 ---
+    pivot_table = pd.DataFrame()
     try:
         def create_pivot_with_subtotals_dynamic(df, indices, columns, values, aggfunc, all_months):
             pivot_base = pd.pivot_table(df, index=indices, columns=columns, values=values, aggfunc=aggfunc, fill_value=0)
@@ -461,6 +462,8 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             aggfunc='count',
             all_months=all_months_in_range
         )
+        # Ensure MultiIndex is lexsorted to avoid PerformanceWarning during .loc indexing
+        pivot_table_sorted = pivot_table.sort_index()
 
     except Exception as e:
         st.error(f"피벗 생성 오류: {e}")
@@ -658,7 +661,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 )
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         
     except Exception as e:
         st.warning(f"그래프 생성 중 오류: {e}")
@@ -699,10 +702,10 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 key_tuple = tuple(row[col] for col in pivot_indices if col in risk_rows.columns)
                 key = key_tuple if len(key_tuple) > 1 else (key_tuple[0] if len(key_tuple) == 1 else None)
                 if key is not None:
-                    if prev_month and prev_month in pivot_table.columns:
-                        prev_cnt = int(pivot_table.loc[key, prev_month]) if prev_month in pivot_table.columns else 0
-                    if target_month in pivot_table.columns:
-                        curr_cnt = int(pivot_table.loc[key, target_month])
+                    if prev_month and prev_month in pivot_table_sorted.columns:
+                        prev_cnt = int(pivot_table_sorted.loc[key, prev_month]) if prev_month in pivot_table_sorted.columns else 0
+                    if target_month in pivot_table_sorted.columns:
+                        curr_cnt = int(pivot_table_sorted.loc[key, target_month])
             except Exception:
                 pass
             return pd.Series({"전월": prev_cnt, "당월": curr_cnt})
@@ -728,7 +731,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 else:
                     st.dataframe(
                         red_df[display_cols],
-                        use_container_width=True,
+                        width='stretch',
                         height=min(360, (len(red_df) + 1) * 35)
                     )
             with c_right:
@@ -738,7 +741,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 else:
                     st.dataframe(
                         yellow_df[display_cols],
-                        use_container_width=True,
+                        width='stretch',
                         height=min(360, (len(yellow_df) + 1) * 35)
                     )
             st.caption("전월/당월은 해당 항목의 월별 클레임 건수입니다. 점수산정 사유는 '진단' 컬럼에 요약되어 있습니다.")
@@ -786,7 +789,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
 
         st.dataframe(
             final_view.style.apply(style_hybrid_table, axis=None).format(format_dict), 
-            use_container_width=True,
+            width='stretch',
             height=(len(final_view) + 1) * 35 + 3,
             column_config={
                 "진단": st.column_config.TextColumn("위험 진단", help="AI 엔진이 판단한 위험 점수와 사유입니다.")
@@ -806,7 +809,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
             
             valid_lag_df = filtered_df_step3[filtered_df_step3['Lag_Valid'] == True]
             fig = px.histogram(valid_lag_df, x='Lag_Days', nbins=50, title="Lag Days Distribution")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         else:
             st.warning("유효 데이터 없음")
 

@@ -1,23 +1,19 @@
-# 🤖 Copilot Instruction (Task Order v2.0)
+# 🤖 Copilot Instruction (Task Order v3.0)
 
-너는 이 시스템의 수석 AI 개발자다. 아래 원칙을 반드시 준수하라.
+너는 이 시스템의 수석 아키텍트이자 AI 엔지니어다. 아래 **v3.0 원칙**을 엄격히 준수하라.
 
-## 1. 개발 환경 및 브랜치
-- **Branch**: 무조건 `main` 브랜치에서 작업한다.
-- **Encoding**: 한글 깨짐 방지를 위해 `utf-8-sig` 인코딩을 모든 파일 입출력에 적용한다.
+## 1. Architecture & Responsibility
+- **Separation of Concerns**: 
+  - **Risk/Anomaly** 관련 로직은 무조건 `core/analytics.py`에 작성한다.
+  - **Prediction/Trend** 관련 로직은 무조건 `core/forecasting.py`에 작성한다.
+  - UI(`app.py`, `pages/*.py`)는 비즈니스 로직을 직접 포함하지 않고, 위 엔진들을 호출하여 결과만 표시한다.
 
-## 2. 핵심 로직 제약
-- **Data Load**: `core/storage.py`를 통해 파티셔닝된 데이터를 읽을 때, `astype(int)`로 연/월 컬럼의 타입을 강제하여 비교 에러를 방지한다.
-- **Prediction**: 
-  - 모델 학습은 `플랜트 | 대분류` 단위로만 수행하고 저장한다.
-  - 하위 항목 배분은 `predict_with_seasonal_allocation` 함수를 사용한다.
-- **UI Interaction**: P6에서 설정된 규칙은 `st.session_state`나 별도 JSON으로 관리되어 P2와 실시간 연동되어야 한다.
+## 2. Statistical Integrity (통계적 무결성)
+- **Data Leakage 방지**: 예측 모델 학습 시, **'진행 중인 당월 데이터'**는 절대 학습 데이터(`train_set`)에 포함하지 않는다. 별도의 `eval_set`이나 `inference_input`으로만 사용한다.
+- **Business Days**: 모든 일평균(Daily Average) 계산은 단순 `30일`이 아닌, **'실제 영업일(Business Days)'** 기준으로 수행한다.
+- **Small Sample**: 데이터 포인트가 3개 미만인 경우, 통계 모델(ETS, ARIMA)을 강제로 Skip하고 단순 평균이나 0을 반환하는 **Fallback Logic**을 필수 구현한다.
 
-## 3. UI/UX 원칙
-- 모든 페이지 상단에 현재 선택된 `플랜트` 정보를 명시한다.
-- 복잡한 필터는 `st.expander`를 사용하여 화면을 깔끔하게 유지한다.
-- 도움말이 필요한 기능(예: 실적만 보기)에는 `help` 파라미터를 사용하여 툴팁을 제공한다.
-
-## 4. 코드 품질
-- **한글 주석**: 모든 설명은 한국어로 작성.
-- **타입 힌트**: Python Type Hinting (`def func(df: pd.DataFrame) -> None:`) 준수.
+## 3. Code Quality & Performance
+- **Type Hinting**: 모든 함수의 입출력에 명확한 타입 힌트(`pd.DataFrame`, `Optional[int]`)를 명시한다.
+- **Safe Conversion**: 나눗셈 연산 시 `ZeroDivisionError`를 방지하는 헬퍼 함수를 사용하거나 예외 처리를 수행한다.
+- **Caching**: 반복 호출되는 연산(예: 휴일 계산, 파티션 로딩)은 `@st.cache_data`를 적절히 활용한다.
