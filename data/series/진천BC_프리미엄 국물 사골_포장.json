@@ -1,7 +1,7 @@
 {
   "key": "진천BC_프리미엄 국물 사골_포장",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -22,7 +22,7 @@
   },
   "children": [
     {
-      "sub_key": "오포장",
+      "sub_key": "제품파손",
       "stats": {
         "mean": 0.0,
         "std": 0.0,

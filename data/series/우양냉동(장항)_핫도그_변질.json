@@ -1,14 +1,14 @@
 {
   "key": "우양냉동(장항)_핫도그_변질",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 1.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 61.0
+      "avg_lag_days": 103.0
     }
   },
   "data": {
@@ -22,12 +22,12 @@
   },
   "children": [
     {
-      "sub_key": "곰팡이",
+      "sub_key": "기타변질",
       "stats": {
         "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 61.0
+        "avg_lag_days": 103.0
       },
       "history": [
         {

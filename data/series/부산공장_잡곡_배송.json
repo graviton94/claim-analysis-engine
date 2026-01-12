@@ -1,7 +1,7 @@
 {
   "key": "부산공장_잡곡_배송",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -15,7 +15,7 @@
     "history": [
       {
         "date": "2026-01",
-        "count": 61
+        "count": 13
       }
     ],
     "forecast": []
@@ -32,7 +32,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 2
+          "count": 3
         }
       ]
     },
@@ -47,7 +47,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 39
+          "count": 4
         }
       ]
     },
@@ -62,7 +62,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 20
+          "count": 6
         }
       ]
     }

@@ -101,7 +101,7 @@ class RiskScoringEngine:
     def _calculate_sparse_score(self) -> Tuple[float, str]:
         """ [Track A] 희소 데이터 스코어링 (Phase 3.1: 소표본 가드 추가) """
         if self.mean == 0:
-            raw_score = 100.0 if self.current_value > 0 else 0.0
+            raw_score = 80.0 if self.current_value > 0 else 0.0
             method = "희소유형 돌발 발생"
         else:
             # [Phase 3.1] Small Sample Variance Guard
@@ -211,10 +211,26 @@ class RiskScoringEngine:
                 
         return score_add, triggered
 
+    def _calculate_velocity_score(self) -> float:
+            """ [Track B] 급격한 기울기 변화 감지 (일반 등급 미탐 방지) """
+            if self.n_obs < 1: return 0.0
+            
+            prev = self.history.iloc[-1]
+            # 전월 0건이거나 당월 절대값이 작으면 패스
+            if prev == 0 and self.current_value < 3: return 0.0
+            if self.current_value < 5: return 0.0 # 최소 5건 이상일 때만 속도 판정
+            
+            denom = prev if prev > 0 else 0.5 # 0으로 나누기 방지
+            ratio = self.current_value / denom
+            
+            if ratio >= 3.0: return 30.0
+            elif ratio >= 2.0: return 15.0
+            return 0.0
+
     def calculate_score(self) -> Dict:
         # 0. 발생 없음
         if self.current_value == 0:
-            return {"score": 0, "status": "", "reason": "발생 없음"}
+            return {"score": 0, "status": "🟢", "reason": "발생 없음"}
 
         # 1. 월중 조기 경보 (Partial Month Logic)
         partial_month_penalty = 0
@@ -423,4 +439,31 @@ def calculate_advanced_risk_score(history_series: pd.Series, target_month_str: s
         result = engine.calculate_score()
         return result['status'], result['score'], result['reason']
     except Exception as e:
-        return "⚪", 0, f"Err"
+        return "⚪", 0, f"Err({str(e)})"
+    
+# --- [Utility Function] Missing in Phase 3.1 ---
+
+def detect_outliers_iqr(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Detect outliers using IQR method.
+    Returns a boolean DataFrame where True indicates an outlier.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("Input must be DataFrame")
+    
+    numeric_df = df.select_dtypes(include=np.number)
+    if numeric_df.empty:
+        return pd.DataFrame(False, index=df.index, columns=df.columns)
+    
+    Q1 = numeric_df.quantile(0.25)
+    Q3 = numeric_df.quantile(0.75)
+    IQR = Q3 - Q1
+    
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    
+    is_outlier = (numeric_df < lower_bound) | (numeric_df > upper_bound)
+    
+    result = pd.DataFrame(False, index=df.index, columns=df.columns)
+    result[is_outlier.columns] = is_outlier
+    return result

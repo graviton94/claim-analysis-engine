@@ -624,7 +624,7 @@ if not risk_report.empty:
                       </div>
                       <div style='flex: 0.2; display: flex; flex-direction: column; gap: 8px;'>
                         <a href="{excel_href}" download="Risk_{row['플랜트']}_{cat_sub}.xlsx" class='lot-download-btn' style='flex: 1;'>📥엑셀</a>
-                        <a href="pages/3_플랜트_분석.py?plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}" class='lot-download-btn' style='flex: 1;'>🔬분석</a>
+                        <a href="/플랜트_분석?plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}&subcategory={cat_sub}" class='lot-download-btn' style='flex: 1;' target="_self">🔬분석</a>
                       </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -702,7 +702,7 @@ if not risk_report.empty:
                       </div>
                       <div style='flex: 0.2; display: flex; flex-direction: column; gap: 8px;'>
                         <a href="{excel_href}" download="Risk_{row['플랜트']}_{cat_sub}.xlsx" class='lot-download-btn' style='flex: 1;'>📥엑셀</a>
-                        <a href="pages/3_플랜트_분석.py?plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}" class='lot-download-btn' style='flex: 1;'>🔬분석</a>
+                        <a href="/플랜트_분석?plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}&subcategory={cat_sub}" class='lot-download-btn' style='flex: 1;' target="_self">🔬분석</a>
                       </div>
                     </div>
                     """, unsafe_allow_html=True)

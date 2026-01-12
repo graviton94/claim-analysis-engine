@@ -1,21 +1,21 @@
 {
   "key": "진천)육가공_B2C 스팸단품_변질",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 30.0,
+      "mean": 12.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 442.6
+      "avg_lag_days": 562.8
     }
   },
   "data": {
     "history": [
       {
         "date": "2026-01",
-        "count": 30
+        "count": 12
       }
     ],
     "forecast": []
@@ -24,45 +24,30 @@
     {
       "sub_key": "곰팡이",
       "stats": {
-        "mean": 4.0,
+        "mean": 2.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 671.5
+        "avg_lag_days": 638.0
       },
       "history": [
         {
           "date": "2026-01",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "기타변질",
-      "stats": {
-        "mean": 6.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 511.2
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 6
+          "count": 2
         }
       ]
     },
     {
       "sub_key": "변색",
       "stats": {
-        "mean": 20.0,
+        "mean": 10.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 376.3
+        "avg_lag_days": 547.7
       },
       "history": [
         {
           "date": "2026-01",
-          "count": 20
+          "count": 10
         }
       ]
     }

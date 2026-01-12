@@ -1,14 +1,14 @@
 {
   "key": "진천)육가공_미트편의식_이물",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 1.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 4.0
+      "avg_lag_days": 14.0
     }
   },
   "data": {
@@ -22,12 +22,12 @@
   },
   "children": [
     {
-      "sub_key": "기타이물류",
+      "sub_key": "합성수지류",
       "stats": {
         "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 4.0
+        "avg_lag_days": 14.0
       },
       "history": [
         {

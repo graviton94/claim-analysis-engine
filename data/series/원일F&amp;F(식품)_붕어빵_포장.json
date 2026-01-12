@@ -1,26 +1,56 @@
 {
   "key": "원일F&amp;F(식품)_붕어빵_포장",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 0.0,
+      "mean": 1.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 0.0
+      "avg_lag_days": 106.0
     }
   },
   "data": {
     "history": [
       {
         "date": "2026-01",
-        "count": 13
+        "count": 4
       }
     ],
     "forecast": []
   },
   "children": [
+    {
+      "sub_key": "오포장",
+      "stats": {
+        "mean": 0.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 0.0
+      },
+      "history": [
+        {
+          "date": "2026-01",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "sub_key": "포장오류",
+      "stats": {
+        "mean": 1.0,
+        "std": 0.0,
+        "slope": 0.0,
+        "avg_lag_days": 106.0
+      },
+      "history": [
+        {
+          "date": "2026-01",
+          "count": 1
+        }
+      ]
+    },
     {
       "sub_key": "해동",
       "stats": {
@@ -32,7 +62,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 13
+          "count": 2
         }
       ]
     }

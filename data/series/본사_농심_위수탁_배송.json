@@ -1,7 +1,7 @@
 {
   "key": "본사_농심_위수탁_배송",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -22,7 +22,7 @@
   },
   "children": [
     {
-      "sub_key": "배송지연",
+      "sub_key": "배송서비스",
       "stats": {
         "mean": 0.0,
         "std": 0.0,

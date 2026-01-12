@@ -1,7 +1,7 @@
 {
   "key": "진천BC_적전류_포장",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -22,21 +22,6 @@
   },
   "children": [
     {
-      "sub_key": "제품파손",
-      "stats": {
-        "mean": 0.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 0.0
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 1
-        }
-      ]
-    },
-    {
       "sub_key": "해동",
       "stats": {
         "mean": 0.0,
@@ -47,7 +32,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 1
+          "count": 2
         }
       ]
     }

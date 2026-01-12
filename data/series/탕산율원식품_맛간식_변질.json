@@ -1,14 +1,14 @@
 {
   "key": "탕산율원식품_맛간식_변질",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 4.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 102.5
+      "avg_lag_days": 90.8
     }
   },
   "data": {
@@ -24,30 +24,30 @@
     {
       "sub_key": "곰팡이",
       "stats": {
-        "mean": 3.0,
+        "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 103.3
+        "avg_lag_days": 59.0
       },
       "history": [
         {
           "date": "2026-01",
-          "count": 3
+          "count": 1
         }
       ]
     },
     {
       "sub_key": "기타변질",
       "stats": {
-        "mean": 1.0,
+        "mean": 3.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 100.0
+        "avg_lag_days": 101.3
       },
       "history": [
         {
           "date": "2026-01",
-          "count": 1
+          "count": 3
         }
       ]
     }

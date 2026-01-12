@@ -1,7 +1,7 @@
 {
   "key": "인천2)유_올리브유_배송",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-09",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -15,7 +15,7 @@
     "history": [
       {
         "date": "2026-01",
-        "count": 4
+        "count": 1
       }
     ],
     "forecast": []
@@ -32,7 +32,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 4
+          "count": 1
         }
       ]
     }

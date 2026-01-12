@@ -7,13 +7,49 @@ from dateutil.relativedelta import relativedelta
 import pyarrow.dataset as ds
 
 # Handle query parameters for navigation from main dashboard
-if st.query_params:
-    if 'plant' in st.query_params:
+if st.query_params and 'plant' in st.query_params:
+    # 새로 들어온 쿼리파라미터일 때만 1회 적용하여, 이후에는 사용자가 자유롭게 필터를 수정할 수 있도록 함
+    qp_plant = st.query_params['plant']
+    qp_grade = st.query_params.get('grade', '')
+    qp_category = st.query_params.get('category', '')
+    qp_subcategory = st.query_params.get('subcategory', '')
+    qp_key = f"{qp_plant}|{qp_grade}|{qp_category}|{qp_subcategory}"
+
+    if st.session_state.get('last_qp_key') != qp_key:
+        st.session_state['last_qp_key'] = qp_key
+
+        # Step 1: 플랜트 선택
+        st.session_state['target_plant'] = qp_plant
+        st.session_state['plant_changed'] = False  # 외부 진입 시 자동 초기화 방지
+        
+        # Step 2: 검색 옵션 = Custom (직접 선택) + 사업부문 및 불만원인 모두 선택
+        st.session_state['search_mode'] = "Custom (직접 선택)"
+        st.session_state['custom_select_all'] = True  # 전체 선택 플래그
+        
+        # Step 3: 등급, 대분류, 소분류 필터
+        # 단일 값을 리스트로 설정 (multiselect는 리스트를 받음)
+        st.session_state['step3_grades'] = [qp_grade] if qp_grade else []
+        st.session_state['step3_categories'] = [qp_category] if qp_category else []
+        st.session_state['step3_subcategories'] = [qp_subcategory] if qp_subcategory else []
+        
+        # Step 4: 그래프 기준 및 대상 항목
+        st.session_state['graph_last_index'] = '소분류'
+        st.session_state['graph_selected_values'] = [qp_subcategory] if qp_subcategory else []
+        
+        # Step 4: 테이블 열 선택 = 등급기준, 대분류, 소분류, 제품범주2
+        st.session_state['pivot_indices'] = ['등급기준', '대분류', '소분류', '제품범주2']
+        
+        # 트리거 플래그 설정
         st.session_state['trigger_analysis'] = True
-        st.session_state['target_plant'] = st.query_params['plant']
-        st.session_state['target_grade'] = st.query_params['grade']
-        st.session_state['target_category'] = st.query_params['category']
-        st.rerun()
+        st.session_state['from_risk_card'] = True  # Risk 카드에서 진입했음을 표시
+        
+        # 이전 상태 초기화 (계층적 필터링을 위해)
+        if 'prev_grades' in st.session_state:
+            del st.session_state['prev_grades']
+        if 'prev_categories' in st.session_state:
+            del st.session_state['prev_categories']
+
+        # rerun 없이 그대로 진행하여 페이지가 정상 렌더링되도록 함
 
 # [Core Module Import] 
 # 핵심 분석 로직은 core/analytics.py에서 가져옵니다.
@@ -56,8 +92,32 @@ all_plants = sorted(master_df['플랜트'].dropna().unique().tolist())
 st.markdown("#### Step 1: 분석 범위 설정")
 col_s1_1, col_s1_2, col_s1_3 = st.columns([1, 1, 1])
 
+# 플랜트 선택 시 필터 자동 초기화를 위한 콜백
+def on_plant_change():
+    # 플랜트가 변경되면 step3, step4 필터를 초기화할 준비 (다음 실행 시 적용)
+    st.session_state['plant_changed'] = True
+    # step3 초기화
+    if 'step3_grades' in st.session_state:
+        del st.session_state['step3_grades']
+    if 'step3_categories' in st.session_state:
+        del st.session_state['step3_categories']
+    if 'step3_subcategories' in st.session_state:
+        del st.session_state['step3_subcategories']
+    # step4 초기화
+    if 'graph_last_index' in st.session_state:
+        del st.session_state['graph_last_index']
+    if 'graph_selected_values' in st.session_state:
+        del st.session_state['graph_selected_values']
+    if 'pivot_indices' in st.session_state:
+        del st.session_state['pivot_indices']
+
 with col_s1_1:
-    selected_plant = st.selectbox("🏭플랜트 선택", all_plants)
+    selected_plant = st.selectbox(
+        "🏭플랜트 선택", 
+        all_plants, 
+        key='target_plant' if st.session_state.get('target_plant') else None,
+        on_change=on_plant_change
+    )
 
 # [Auto-Range] 선택된 플랜트 데이터 범위 감지
 plant_specific_data = master_df[master_df['플랜트'] == selected_plant]
@@ -107,6 +167,7 @@ with col_step2:
         "조회 모드를 선택하세요:",
         ("인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)"),
         horizontal=True,
+        key='search_mode',
         on_change=reset_custom_selections
     )
 
@@ -142,10 +203,20 @@ with col_step2:
         col_c1, col_c2 = st.columns(2)
         with col_c1:
             opts_biz = sorted(plant_df['사업부문'].dropna().unique())
-            sel_biz = st.multiselect("사업부문 선택", opts_biz, default=opts_biz, key='sel_biz')
+            # Risk 카드에서 진입 시 전체 선택
+            if st.session_state.get('custom_select_all', False) and 'sel_biz' not in st.session_state:
+                st.session_state['sel_biz'] = opts_biz
+            sel_biz = st.multiselect("사업부문 선택", opts_biz, key='sel_biz')
         with col_c2:
             opts_reason = sorted(plant_df['불만원인'].dropna().unique())
-            sel_reason = st.multiselect("불만원인 선택", opts_reason, default=opts_reason, key='sel_reason')
+            # Risk 카드에서 진입 시 전체 선택
+            if st.session_state.get('custom_select_all', False) and 'sel_reason' not in st.session_state:
+                st.session_state['sel_reason'] = opts_reason
+            sel_reason = st.multiselect("불만원인 선택", opts_reason, key='sel_reason')
+        
+        # 플래그 리셋
+        if st.session_state.get('custom_select_all', False):
+            st.session_state['custom_select_all'] = False
         
         if sel_biz:
             filtered_df_step2 = filtered_df_step2[filtered_df_step2['사업부문'].isin(sel_biz)]
@@ -155,44 +226,90 @@ with col_step2:
             whole_history_df = whole_history_df[whole_history_df['불만원인'].isin(sel_reason)]
 
 with col_step3:
-    st.markdown("#### Step 3: 등급 및 대분류 필터")
+    st.markdown("#### Step 3: 등급, 대분류, 소분류 필터")
     
+    # === 1. 등급 필터 ===
     grade_options = sorted(filtered_df_step2['등급기준'].dropna().unique())
+    # 플랜트 변경 시 또는 초기 진입 시 전체 선택 (단, Risk 카드 진입 시 주입값 유지)
+    if 'step3_grades' not in st.session_state or (st.session_state.get('plant_changed', False) and not st.session_state.get('from_risk_card', False)):
+        st.session_state['step3_grades'] = grade_options
+    
     selected_grades = st.multiselect(
         "분석할 등급을 선택하세요:",
         grade_options,
-        default=grade_options,
         key='step3_grades'
     )
 
-    filtered_df_step3 = filtered_df_step2.copy()
-    
+    # 등급 선택 여부 체크
     if not selected_grades:
         grade_mode = "선택 없음"
+        filtered_df_for_category = filtered_df_step2.copy()
     elif len(selected_grades) == len(grade_options):
         grade_mode = "전체 등급"
+        filtered_df_for_category = filtered_df_step2.copy()
     else:
         grade_mode = f"선택 {len(selected_grades)}개 등급"
+        filtered_df_for_category = filtered_df_step2[filtered_df_step2['등급기준'].isin(selected_grades)].copy()
 
-    if selected_grades:
-        filtered_df_step3 = filtered_df_step3[filtered_df_step3['등급기준'].isin(selected_grades)]
-        # [Sync] History Data
-        whole_history_df = whole_history_df[whole_history_df['등급기준'].isin(selected_grades)]
-
-    # 대분류 필터
+    # === 2. 대분류 필터 (등급에 따라 필터링됨) ===
     st.markdown("")
-    category_options = sorted(filtered_df_step3['대분류'].dropna().unique())
+    category_options = sorted(filtered_df_for_category['대분류'].dropna().unique())
+    # 등급이 변경되거나 플랜트가 변경되면 대분류를 전체 선택으로 초기화 (단, Risk 카드 진입 시 주입값 유지)
+    if ('step3_categories' not in st.session_state or 
+        ((st.session_state.get('plant_changed', False) or st.session_state.get('prev_grades') != selected_grades) and not st.session_state.get('from_risk_card', False))):
+        st.session_state['step3_categories'] = category_options
+        st.session_state['prev_grades'] = selected_grades
+    
     selected_categories = st.multiselect(
         "분석할 대분류를 선택하세요:",
         category_options,
-        default=category_options,
         key='step3_categories'
     )
     
+    # 대분류 선택 여부 체크
+    if not selected_categories:
+        filtered_df_for_subcategory = filtered_df_for_category.copy()
+    else:
+        filtered_df_for_subcategory = filtered_df_for_category[filtered_df_for_category['대분류'].isin(selected_categories)].copy()
+
+    # === 3. 소분류 필터 (등급, 대분류에 따라 필터링됨) ===
+    st.markdown("")
+    subcategory_options = sorted(filtered_df_for_subcategory['소분류'].dropna().unique())
+    # 대분류가 변경되거나 플랜트가 변경되면 소분류를 전체 선택으로 초기화 (단, Risk 카드 진입 시 주입값 유지)
+    if ('step3_subcategories' not in st.session_state or 
+        ((st.session_state.get('plant_changed', False) or st.session_state.get('prev_categories') != selected_categories) and not st.session_state.get('from_risk_card', False))):
+        st.session_state['step3_subcategories'] = subcategory_options
+        st.session_state['prev_categories'] = selected_categories
+    
+    selected_subcategories = st.multiselect(
+        "분석할 소분류를 선택하세요:",
+        subcategory_options,
+        key='step3_subcategories'
+    )
+    
+    # === 4. 최종 필터링 적용 ===
+    filtered_df_step3 = filtered_df_step2.copy()
+    whole_history_df_temp = whole_history_df.copy()
+    
+    if selected_grades:
+        filtered_df_step3 = filtered_df_step3[filtered_df_step3['등급기준'].isin(selected_grades)]
+        whole_history_df_temp = whole_history_df_temp[whole_history_df_temp['등급기준'].isin(selected_grades)]
+    
     if selected_categories:
         filtered_df_step3 = filtered_df_step3[filtered_df_step3['대분류'].isin(selected_categories)]
-        # [Sync] History Data
-        whole_history_df = whole_history_df[whole_history_df['대분류'].isin(selected_categories)]
+        whole_history_df_temp = whole_history_df_temp[whole_history_df_temp['대분류'].isin(selected_categories)]
+    
+    if selected_subcategories:
+        filtered_df_step3 = filtered_df_step3[filtered_df_step3['소분류'].isin(selected_subcategories)]
+        whole_history_df_temp = whole_history_df_temp[whole_history_df_temp['소분류'].isin(selected_subcategories)]
+    
+    # History Data 업데이트
+    whole_history_df = whole_history_df_temp
+    
+    # plant_changed 플래그 리셋
+    if st.session_state.get('plant_changed', False):
+        st.session_state['plant_changed'] = False
+        st.session_state['from_risk_card'] = False  # 사용자가 직접 변경 시 외부 주입 상태 해제
 
     cnt_step3 = len(filtered_df_step3)
     st.caption(f"📊 필터링 후 대상 건수: **{cnt_step3:,}** 건")
@@ -210,22 +327,31 @@ with col_p1:
     all_index_candidates = ['등급기준', '불만원인', '대분류', '중분류', '소분류', '제품범주1', '제품범주2', '제품범주3', '제품명']
     all_index_candidates = [c for c in all_index_candidates if c in filtered_df_step3.columns]
     graph_index_candidates = [c for c in all_index_candidates if c in filtered_df_step3.columns]
+    
+    # 그래프 기준 기본값: '등급기준'
+    if 'graph_last_index' not in st.session_state:
+        st.session_state['graph_last_index'] = '등급기준' if '등급기준' in graph_index_candidates else graph_index_candidates[0]
+    
     graph_index = st.selectbox(
         "그래프 기준 선택 (1개)",
         graph_index_candidates,
-        index=0 if '등급기준' in graph_index_candidates else 0
+        index=graph_index_candidates.index(st.session_state['graph_last_index']) if st.session_state.get('graph_last_index') in graph_index_candidates else 0
     )
 
     graph_value_options = sorted(filtered_df_step3[graph_index].dropna().unique()) if graph_index in filtered_df_step3.columns else []
+    
     # 그래프 기준이 바뀌면 대상 항목을 전체 선택으로 초기화
     if st.session_state.get('graph_last_index') != graph_index:
         st.session_state['graph_selected_values'] = graph_value_options
         st.session_state['graph_last_index'] = graph_index
+    
+    # 그래프 대상 항목 기본값: 모두 선택
+    if 'graph_selected_values' not in st.session_state:
+        st.session_state['graph_selected_values'] = graph_value_options
 
     graph_selected_values = st.multiselect(
         "그래프 대상 항목 선택", 
         graph_value_options, 
-        default=graph_value_options,
         key='graph_selected_values'
     )
 
@@ -233,18 +359,29 @@ with col_p1:
 
     # 테이블 행 선택 영역
     st.markdown("**📅 테이블 열 선택** (피벗 테이블의 행 구성)")
+    
+    # 테이블 열 선택 기본값: '등급기준', '대분류', '소분류'
+    default_pivot_indices = ['등급기준', '대분류', '소분류']
+    default_pivot_indices = [c for c in default_pivot_indices if c in all_index_candidates]
+    if not default_pivot_indices:
+        default_pivot_indices = all_index_candidates[:2] if len(all_index_candidates) >= 2 else all_index_candidates[:1]
+    
+    if 'pivot_indices' not in st.session_state:
+        st.session_state['pivot_indices'] = default_pivot_indices
+    
     pivot_indices = st.multiselect(
         "피벗 테이블 행 선택", 
         all_index_candidates, 
-        default=['등급기준', '대분류', '소분류'] if all(['등급기준' in all_index_candidates, '대분류' in all_index_candidates]) else all_index_candidates[:2]
+        key='pivot_indices'
     )
 
 with col_p2:
     st.markdown("""
     ✅ **설정 안내**
-    - **테이블 열**: 다중 선택 가능, 선택한 순서대로 전체 하위항목에 대한 행이 생성됩니다.
-    - **그래프 선**: 기준은 1개만 선택, 하위 항목은 다중 선택
-    - 예: 그래프 = 등급기준 선택 → 그래프 항목에서 '일반', '중대' 선택 → '일반', '중대'에 대한 그래프가 그려짐
+    - **그래프 선 기준**: 1개만 선택 (기본값: 등급기준)
+    - **그래프 대상 항목**: 다중 선택 가능, 항목당 1개 선 생성 (기본값: 전체)
+    - **테이블 열**: 다중 선택 가능 (기본값: 등급기준, 대분류, 소분류)
+    - 예: 그래프 기준=등급기준, 항목='일반'+'중대' 선택 → 2개 선 그래프
     """)
 
 if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_width=True):
@@ -337,9 +474,16 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
         
         all_cols = pivot_table.columns.tolist()
         month_cols = [c for c in all_cols if c in all_months_in_range]
-        
-        old_cols = [c for c in month_cols if c < cutoff_str]
-        recent_cols = [c for c in month_cols if c >= cutoff_str]
+
+        # 최근 2개년만 표시: 현재 선택 종료일(end_date)의 연도와 그 직전 연도
+        try:
+            target_year = end_date.year
+        except Exception:
+            target_year = datetime.now().year
+        allowed_years = {target_year, target_year - 1}
+
+        recent_cols = [c for c in month_cols if int(c[:4]) in allowed_years]
+        old_cols = [c for c in month_cols if int(c[:4]) not in allowed_years]
         
         df_old = pivot_table[old_cols]
         df_recent = pivot_table[recent_cols]
@@ -393,16 +537,40 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", use_container_
                 # [MODIFIED] Grade Extraction & Passing
                 current_idx = idx if isinstance(idx, tuple) else (idx,)
                 
-                # pivot_indices[0] is always '등급기준' due to forcing logic
-                current_grade = current_idx[0] 
-
+                # 1. 데이터 추출
                 series_data = whole_history_grouped.loc[current_idx]
-                
-                # Pass grade to engine
+
+                # [Fix] Zero-Filling & History Sync (점수 불일치 해결 핵심)
+                if not series_data.index.empty:
+                    series_data.index = pd.to_datetime(series_data.index)
+                    
+                    # 분석 기준일 (Target Month)
+                    target_ts = pd.to_datetime(target_month)
+                    
+                    # [핵심 변경] 데이터의 시작점이 아니라, '기준일로부터 24개월 전'을 강제 시작점으로 잡음
+                    # 이유: app.py는 전체 기간을 보는데, 여기만 기간이 짧으면 평균이 높게 왜곡됨 (분모 확보)
+                    force_start_date = target_ts - relativedelta(months=24)
+                    
+                    # 전체 월 인덱스 생성 (24개월 전 ~ 현재)
+                    full_idx = pd.date_range(start=force_start_date, end=target_ts, freq='MS')
+                    
+                    # 0으로 채우기 (과거 데이터가 없으면 0으로 간주하여 평균을 낮춤 -> 급증 감지력 강화)
+                    series_data = series_data.reindex(full_idx, fill_value=0)
+
+                # [Fix] Grade값 매핑
+                if '등급기준' in pivot_indices:
+                    grade_pos = pivot_indices.index('등급기준')
+                    current_grade = current_idx[grade_pos] if isinstance(current_idx, tuple) else current_idx
+                else:
+                    current_grade = "일반"
+
+                # 2. 엔진 호출
                 sig, score, reason = calculate_advanced_risk_score(series_data, target_month, grade=current_grade)
                 
+                # 3. 결과 저장
                 signals.append(sig)
                 reasons.append(f"[{score}점] {reason}")
+                
             except:
                 signals.append("⚪")
                 reasons.append("데이터 없음")

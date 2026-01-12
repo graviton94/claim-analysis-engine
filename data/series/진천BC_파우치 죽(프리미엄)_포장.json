@@ -1,21 +1,21 @@
 {
   "key": "진천BC_파우치 죽(프리미엄)_포장",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-09",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 1.0,
+      "mean": 0.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 75.0
+      "avg_lag_days": 0.0
     }
   },
   "data": {
     "history": [
       {
         "date": "2026-01",
-        "count": 6
+        "count": 3
       }
     ],
     "forecast": []
@@ -32,22 +32,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "sub_key": "제품파손",
-      "stats": {
-        "mean": 1.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 75.0
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 2
+          "count": 3
         }
       ]
     }

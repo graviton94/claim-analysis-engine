@@ -1,21 +1,21 @@
 {
   "key": "인천냉동식품_비비고 수제만두_이물",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
-      "mean": 7.0,
+      "mean": 1.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 47.7
+      "avg_lag_days": 141.0
     }
   },
   "data": {
     "history": [
       {
         "date": "2026-01",
-        "count": 8
+        "count": 1
       }
     ],
     "forecast": []
@@ -27,72 +27,12 @@
         "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 70.0
+        "avg_lag_days": 141.0
       },
       "history": [
         {
           "date": "2026-01",
           "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "기타이물류",
-      "stats": {
-        "mean": 1.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 41.0
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "식물성이물",
-      "stats": {
-        "mean": 1.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 43.0
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "sub_key": "인체이물류",
-      "stats": {
-        "mean": 1.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 39.0
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "sub_key": "합성수지류",
-      "stats": {
-        "mean": 3.0,
-        "std": 0.0,
-        "slope": 0.0,
-        "avg_lag_days": 47.0
-      },
-      "history": [
-        {
-          "date": "2026-01",
-          "count": 3
         }
       ]
     }

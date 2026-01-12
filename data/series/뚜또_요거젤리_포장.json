@@ -1,14 +1,14 @@
 {
   "key": "뚜또_요거젤리_포장",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 1.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 42.0
+      "avg_lag_days": 28.0
     }
   },
   "data": {
@@ -27,7 +27,7 @@
         "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 42.0
+        "avg_lag_days": 28.0
       },
       "history": [
         {

@@ -1,14 +1,14 @@
 {
   "key": "삼해상사(김포)_국판삼해김_이물",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
       "mean": 1.0,
       "std": 0.0,
       "slope": 0.0,
-      "avg_lag_days": 25.0
+      "avg_lag_days": 50.0
     }
   },
   "data": {
@@ -27,7 +27,7 @@
         "mean": 1.0,
         "std": 0.0,
         "slope": 0.0,
-        "avg_lag_days": 25.0
+        "avg_lag_days": 50.0
       },
       "history": [
         {

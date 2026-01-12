@@ -1,7 +1,7 @@
 {
   "key": "인천냉동식품_비비고 왕교자_배송",
   "meta": {
-    "last_updated": "2026-01-08",
+    "last_updated": "2026-01-12",
     "warning_level": 0,
     "champion_model": null,
     "parent_stats": {
@@ -15,7 +15,7 @@
     "history": [
       {
         "date": "2026-01",
-        "count": 42
+        "count": 25
       }
     ],
     "forecast": []
@@ -32,7 +32,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 18
+          "count": 6
         }
       ]
     },
@@ -47,7 +47,7 @@
       "history": [
         {
           "date": "2026-01",
-          "count": 24
+          "count": 19
         }
       ]
     }
