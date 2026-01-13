@@ -226,7 +226,7 @@ with col_step2:
             whole_history_df = whole_history_df[whole_history_df['불만원인'].isin(sel_reason)]
 
 with col_step3:
-    st.markdown("#### Step 3: 등급, 대분류, 소분류 필터")
+    st.markdown("#### Step 3: 등급, 대분류 필터")
     
     # === 1. 등급 필터 ===
     grade_options = sorted(filtered_df_step2['등급기준'].dropna().unique())
@@ -266,28 +266,7 @@ with col_step3:
         key='step3_categories'
     )
     
-    # 대분류 선택 여부 체크
-    if not selected_categories:
-        filtered_df_for_subcategory = filtered_df_for_category.copy()
-    else:
-        filtered_df_for_subcategory = filtered_df_for_category[filtered_df_for_category['대분류'].isin(selected_categories)].copy()
-
-    # === 3. 소분류 필터 (등급, 대분류에 따라 필터링됨) ===
-    st.markdown("")
-    subcategory_options = sorted(filtered_df_for_subcategory['소분류'].dropna().unique())
-    # 대분류가 변경되거나 플랜트가 변경되면 소분류를 전체 선택으로 초기화 (단, Risk 카드 진입 시 주입값 유지)
-    if ('step3_subcategories' not in st.session_state or 
-        ((st.session_state.get('plant_changed', False) or st.session_state.get('prev_categories') != selected_categories) and not st.session_state.get('from_risk_card', False))):
-        st.session_state['step3_subcategories'] = subcategory_options
-        st.session_state['prev_categories'] = selected_categories
-    
-    selected_subcategories = st.multiselect(
-        "분석할 소분류를 선택하세요:",
-        subcategory_options,
-        key='step3_subcategories'
-    )
-    
-    # === 4. 최종 필터링 적용 ===
+    # === 3. 최종 필터링 적용 ===
     filtered_df_step3 = filtered_df_step2.copy()
     whole_history_df_temp = whole_history_df.copy()
     
@@ -299,10 +278,7 @@ with col_step3:
         filtered_df_step3 = filtered_df_step3[filtered_df_step3['대분류'].isin(selected_categories)]
         whole_history_df_temp = whole_history_df_temp[whole_history_df_temp['대분류'].isin(selected_categories)]
     
-    if selected_subcategories:
-        filtered_df_step3 = filtered_df_step3[filtered_df_step3['소분류'].isin(selected_subcategories)]
-        whole_history_df_temp = whole_history_df_temp[whole_history_df_temp['소분류'].isin(selected_subcategories)]
-    
+    # 선택한 대분류의 하위 중분류, 소분류는 자동으로 포함 (선택 불필요)
     # History Data 업데이트
     whole_history_df = whole_history_df_temp
     
