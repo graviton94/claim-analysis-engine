@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from io import BytesIO
 import pyarrow.dataset as ds
 import pyarrow as pa
@@ -44,7 +45,7 @@ def load_metadata():
         dataset = ds.dataset(DATA_HUB_PATH, format="parquet", partitioning="hive")
         
         # UI 필터링 및 차트 표시에 꼭 필요한 컬럼만 로드
-        cols = ['플랜트', '대분류', '소분류', '접수일자', '건수', '불만원인', '사업부문']
+        cols = ['플랜트', '대분류', '소분류', '접수일자', '건수', '불만원인', '사업부문', '등급기준']
         available_cols = dataset.schema.names
         read_cols = [c for c in cols if c in available_cols]
         
@@ -102,102 +103,175 @@ if df_raw.empty:
     st.stop()
 
 # ==============================================================================
-# 3. 사이드바: 시뮬레이션 설정
+# 3. 사이드바: 실험 파라미터만 표시
 # ==============================================================================
-st.sidebar.header("1. 분석 대상 설정")
-
-# 1-0. 분석 모드
-mode_select = st.sidebar.radio(
-    "📊 조회 모드",
-    ["인입 (Inflow)", "실적 (Performance)"],
-    help="실적 모드는 '고객불만족/구매불만/제조불만' 및 '식품/B2B식품' 건만 필터링합니다."
-)
-
-# 데이터 필터링 로직 (UI용)
-if mode_select == "실적 (Performance)":
-    if '불만원인' in df_raw.columns:
-        reasons = ['고객불만족', '구매불만', '제조불만']
-        df_filtered = df_raw[df_raw['불만원인'].isin(reasons)].copy()
-    else:
-        df_filtered = df_raw.copy()
-        
-    if '사업부문' in df_filtered.columns:
-        biz_units = ['식품', 'B2B식품']
-        df_filtered = df_filtered[df_filtered['사업부문'].isin(biz_units)]
-else:
-    df_filtered = df_raw.copy()
-
-# Step 1: Plant
-plants = sorted(df_filtered['플랜트'].dropna().unique()) if not df_filtered.empty else []
-sel_plant = st.sidebar.selectbox("🏭 플랜트 선택", plants)
-
-# Step 2: Major Category
-if sel_plant:
-    df_plant = df_filtered[df_filtered['플랜트'] == sel_plant]
-    majors = sorted(df_plant['대분류'].dropna().unique())
-    sel_major = st.sidebar.selectbox("📂 대분류 선택", majors)
-else:
-    df_plant = pd.DataFrame()
-    majors = []
-    sel_major = None
-
-# Step 3: Final Target Data (UI Analysis)
-if sel_major:
-    df_target = df_plant[df_plant['대분류'] == sel_major].copy()
-    
-    st.sidebar.divider()
-    st.sidebar.info(f"📊 분석 대상: {len(df_target):,}건")
-    if not df_target.empty:
-        valid_dates = df_target['접수일자'].dropna()
-        if not valid_dates.empty:
-            min_date = valid_dates.min().date()
-            max_date = valid_dates.max().date()
-            st.sidebar.caption(f"기간: {min_date} ~ {max_date}")
-else:
-    df_target = pd.DataFrame()
-
-# Step 4: Simulation Params
-st.sidebar.header("2. 실험 파라미터")
+st.sidebar.header("📊 실험 파라미터")
 forecast_months = st.sidebar.slider("예측 기간 (개월)", 3, 12, 6)
 n_trials = st.sidebar.number_input("AutoML 시도 횟수", 10, 50, 15, help="높을수록 정확하지만 느려집니다.")
 
-# Action Button
-# [FIX] Session State 초기화
+# ==============================================================================
+# 4. 메인 화면: Step 1~3 필터링 로직 (3_플랜트_분석과 동일)
+# ==============================================================================
+
+# [CONFIG] 필터링 기준값
+TARGET_BUSINESS_UNITS = ['식품', 'B2B식품']
+PERFORMANCE_REASONS = ['제조불만', '고객불만족', '구매불만']
+
+# --- Step 1: 범위 설정 (플랜트 + 기간) ---
+st.markdown("#### Step 1: 분석 범위 설정")
+col_s1_1, col_s1_2, col_s1_3 = st.columns([1, 1, 1])
+
+all_plants = sorted(df_raw['플랜트'].dropna().unique()) if not df_raw.empty else []
+
+with col_s1_1:
+    sel_plant = st.selectbox("🏭플랜트 선택", all_plants, key='sim_plant_select')
+
+# 플랜트별 데이터 범위 감지
+plant_data = df_raw[df_raw['플랜트'] == sel_plant] if sel_plant else pd.DataFrame()
+if not plant_data.empty:
+    min_dt = plant_data['접수일자'].min()
+    max_dt = plant_data['접수일자'].max()
+    min_date = min_dt.replace(day=1).date()
+    next_month = max_dt.replace(day=1) + pd.Timedelta(days=32)
+    next_month = next_month.replace(day=1)
+    max_date = (next_month - pd.Timedelta(days=1)).date()
+else:
+    min_date = df_raw['접수일자'].min().date() if not df_raw.empty else None
+    max_date = df_raw['접수일자'].max().date() if not df_raw.empty else None
+
+with col_s1_2:
+    start_date = st.date_input("📅시작일 (Start)", value=min_date, min_value=min_date, max_value=max_date, key='sim_start_date')
+
+with col_s1_3:
+    end_date = st.date_input("📅종료일 (End)", value=max_date, min_value=min_date, max_value=max_date, key='sim_end_date')
+
+# Step 1 필터링 결과
+if sel_plant and start_date and end_date:
+    plant_df = df_raw[
+        (df_raw['플랜트'] == sel_plant) &
+        (df_raw['접수일자'].dt.date >= start_date) &
+        (df_raw['접수일자'].dt.date <= end_date)
+    ].copy()
+    st.info(f"📋 **요약**: `{sel_plant}` | `{start_date} ~ {end_date}` | 대상 **{len(plant_df):,}** 건")
+else:
+    plant_df = pd.DataFrame()
+    st.warning("플랜트와 기간을 선택해주세요.")
+
+st.divider()
+
+# --- Step 2 & 3: 조회 모드 및 필터 ---
+col_step2, col_step3 = st.columns(2)
+
+with col_step2:
+    st.markdown("#### Step 2: 조회 모드")
+    
+    def reset_sim_custom_selections():
+        if 'sim_sel_biz' in st.session_state: 
+            del st.session_state['sim_sel_biz']
+        if 'sim_sel_reason' in st.session_state: 
+            del st.session_state['sim_sel_reason']
+    
+    search_mode = st.radio(
+        "조회 모드를 선택하세요:",
+        ("인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)"),
+        horizontal=True,
+        key='sim_search_mode',
+        on_change=reset_sim_custom_selections
+    )
+    
+    filtered_df_step2 = plant_df.copy()
+    
+    # 모드별 필터링
+    if search_mode == "인입 (Inflow)":
+        cond_biz = filtered_df_step2['사업부문'].isin(TARGET_BUSINESS_UNITS)
+        cond_reason = filtered_df_step2['불만원인'].notna()
+        filtered_df_step2 = filtered_df_step2[cond_biz & cond_reason]
+        st.caption(f"ℹ️ **인입 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인(전체)")
+        
+    elif search_mode == "실적 (Performance)":
+        cond_biz = filtered_df_step2['사업부문'].isin(TARGET_BUSINESS_UNITS)
+        cond_reason = filtered_df_step2['불만원인'].isin(PERFORMANCE_REASONS)
+        filtered_df_step2 = filtered_df_step2[cond_biz & cond_reason]
+        st.caption(f"ℹ️ **실적 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인({', '.join(PERFORMANCE_REASONS)})")
+        
+    else:  # Custom
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            opts_biz = sorted(plant_df['사업부문'].dropna().unique())
+            sel_biz = st.multiselect("사업부문 선택", opts_biz, key='sim_sel_biz')
+        with col_c2:
+            opts_reason = sorted(plant_df['불만원인'].dropna().unique())
+            sel_reason = st.multiselect("불만원인 선택", opts_reason, key='sim_sel_reason')
+        
+        if sel_biz:
+            filtered_df_step2 = filtered_df_step2[filtered_df_step2['사업부문'].isin(sel_biz)]
+        if sel_reason:
+            filtered_df_step2 = filtered_df_step2[filtered_df_step2['불만원인'].isin(sel_reason)]
+
+with col_step3:
+    st.markdown("#### Step 3: 등급, 대분류 필터")
+    
+    # === 1. 등급 필터 ===
+    grade_options = sorted(filtered_df_step2['등급기준'].dropna().unique())
+    if 'sim_step3_grades' not in st.session_state:
+        st.session_state['sim_step3_grades'] = grade_options
+    
+    selected_grades = st.multiselect(
+        "분석할 등급을 선택하세요:",
+        grade_options,
+        key='sim_step3_grades'
+    )
+    
+    # 등급 선택 여부 체크
+    if not selected_grades:
+        filtered_df_for_category = filtered_df_step2.copy()
+    else:
+        filtered_df_for_category = filtered_df_step2[filtered_df_step2['등급기준'].isin(selected_grades)].copy()
+    
+    # === 2. 대분류 필터 (등급에 따라 필터링됨) ===
+    st.markdown("")
+    category_options = sorted(filtered_df_for_category['대분류'].dropna().unique())
+    
+    if 'sim_step3_categories' not in st.session_state:
+        st.session_state['sim_step3_categories'] = category_options
+    
+    selected_categories = st.multiselect(
+        "분석할 대분류를 선택하세요:",
+        category_options,
+        key='sim_step3_categories'
+    )
+    
+    # === 3. 최종 필터링 적용 ===
+    df_target = filtered_df_step2.copy()
+    
+    if selected_grades:
+        df_target = df_target[df_target['등급기준'].isin(selected_grades)]
+    
+    if selected_categories:
+        df_target = df_target[df_target['대분류'].isin(selected_categories)]
+    
+    cnt_step3 = len(df_target)
+    st.caption(f"📊 필터링 후 대상 건수: **{cnt_step3:,}** 건")
+
+st.divider()
+
+# ==============================================================================
+# 5. Step 4: 시뮬레이션 실행 및 결과 표시
+# ==============================================================================
+
+# Action Button & Session State
 if 'sim_results' not in st.session_state:
     st.session_state['sim_results'] = None
 
 def run_simulation():
     st.session_state['run_clicked'] = True
-    # 이전 결과 초기화
     st.session_state['sim_results'] = None
 
-btn_run = st.sidebar.button("🚀 시뮬레이션 시작", type="primary", use_container_width=True, disabled=df_target.empty, on_click=run_simulation)
+btn_run = st.button("🚀 시뮬레이션 시작", type="primary", use_container_width=True, disabled=df_target.empty, on_click=run_simulation)
 
-# ==============================================================================
-# 4. 메인 화면: 분석 및 시각화
-# ==============================================================================
+st.divider()
 
-if df_target.empty:
-    st.warning("데이터를 선택해주세요 (필터 조건에 맞는 데이터가 없을 수 있습니다).")
-else:
-    # [A] 데이터 미리보기 (Expandable)
-    with st.expander("🔍 선택한 대분류의 과거 이력 보기", expanded=True):
-        daily_trend = df_target.set_index('접수일자').resample('M')['건수'].sum()
-        
-        fig_hist = go.Figure()
-        fig_hist.add_trace(go.Scatter(
-            x=daily_trend.index, y=daily_trend.values,
-            mode='lines+markers', name='실적',
-            line=dict(color='black', width=2)
-        ))
-        fig_hist.update_layout(
-            title=f"{sel_plant} > {sel_major} 월별 추이 ({mode_select})",
-            height=300, margin=dict(l=20, r=20, t=40, b=20),
-            xaxis_title=None, yaxis_title="건수"
-        )
-        st.plotly_chart(fig_hist, width='stretch')
-
-# [B] 시뮬레이션 실행 및 결과 표시 (Session State 기반)
+# [C] 시뮬레이션 실행 및 결과 표시 (Session State 기반)
 # 버튼을 눌렀거나, 이미 결과가 저장되어 있는 경우 실행
 if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) and not df_target.empty:
     st.divider()
@@ -206,30 +280,48 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
     if st.session_state['sim_results'] is None:
         try:
             with st.spinner("🧠 AI 모델 엔진 가동 중... (예측 및 백데이터 로딩)"):
-                # 1. 예측 엔진 실행
-                if '건수' not in df_target.columns: df_target['건수'] = 1
-                engine = SimulationEngine(df_target, date_col='접수일자', val_col='건수')
+                # [Step 4-1] 필터된 데이터 aggregation (월별 합계로 변환)
+                if '건수' not in df_target.columns: 
+                    df_target['건수'] = 1
+                
+                # 월별 클레임 건수 집계
+                monthly_counts = df_target.groupby(df_target['접수일자'].dt.to_period('M')).size()
+                monthly_df = pd.DataFrame({
+                    'ds': monthly_counts.index.to_timestamp(),
+                    'y': monthly_counts.values
+                })
+                
+                # [Step 4-2] 예측 엔진 실행 (aggregated 데이터 사용)
+                if len(monthly_df) < 3:
+                    st.error("예측을 위해 최소 3개월 이상의 데이터가 필요합니다.")
+                    st.stop()
+                
+                engine = SimulationEngine(monthly_df, date_col='ds', val_col='y')
                 df_forecast = engine.run_competition(periods=forecast_months)
                 
-                # 2. 배분 로직 실행
+                # [Step 4-3] 배분 로직 실행 (선택된 대분류 기반)
+                sel_major_list = selected_categories if selected_categories else []
+                sel_major_str = ", ".join(sel_major_list) if sel_major_list else "All"
+                
                 alloc_df = engine.predict_with_allocation(
                     plant=sel_plant,
-                    major_category=sel_major,
+                    major_category=sel_major_str,
                     sub_df=df_target,
                     periods=forecast_months,
                     forecast_df=df_forecast
                 )
 
-                # 3. [NEW] 다운로드용 전체 컬럼 데이터 로드 (Heavy Task)
-                df_full_backdata = load_full_target_data(sel_plant, sel_major, mode_select)
+                # [Step 4-4] 다운로드용 전체 컬럼 데이터 로드 (Heavy Task)
+                df_full_backdata = load_full_target_data(sel_plant, sel_major_str, search_mode)
                 
-                # 4. 결과 저장
+                # [Step 4-5] 결과 저장
                 st.session_state['sim_results'] = {
                     'engine': engine,
                     'df_forecast': df_forecast,
                     'alloc_df': alloc_df,
                     'df_full_backdata': df_full_backdata,
-                    'model_weights': engine.model_weights
+                    'model_weights': engine.model_weights,
+                    'monthly_df': monthly_df
                 }
         except Exception as e:
             st.error(f"시뮬레이션 중 오류 발생: {str(e)}")
@@ -241,6 +333,7 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
     df_forecast = results['df_forecast']
     alloc_df = results['alloc_df']
     df_full_backdata = results['df_full_backdata']
+    monthly_df = results['monthly_df']
     
     col_l, col_r = st.columns([1.2, 1])
     
@@ -334,7 +427,7 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
             pivot_alloc = pivot_alloc.fillna(0)
             pivot_alloc.loc['Total'] = pivot_alloc.sum()
             
-            # 스타일링 (width=None 이슈 해결됨)
+            # 스타일링
             st.dataframe(
                 pivot_alloc.style
                     .format("{:,.1f}")
@@ -352,22 +445,22 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
             
             # (1) 배분 결과 CSV
             csv_alloc = alloc_df.to_csv(index=False).encode('utf-8-sig')
+            major_str = "_".join(selected_categories[:2]) if selected_categories else "All"
             b1.download_button(
                 label="📥 배분 결과 (CSV)",
                 data=csv_alloc,
-                file_name=f"Allocation_{sel_plant}_{sel_major}.csv",
+                file_name=f"Allocation_{sel_plant}_{major_str}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
             
             # (2) 백데이터(전체 컬럼) CSV
-            # [FIX] Session State에 저장된 Full Data 사용
             if not df_full_backdata.empty:
                 csv_raw = df_full_backdata.to_csv(index=False).encode('utf-8-sig')
                 b2.download_button(
                     label="💾 원본 백데이터 (CSV)",
                     data=csv_raw,
-                    file_name=f"BackData_Full_{sel_plant}_{sel_major}.csv",
+                    file_name=f"BackData_Full_{sel_plant}_{major_str}.csv",
                     mime="text/csv",
                     use_container_width=True
                 )
@@ -378,7 +471,7 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
             st.warning("배분할 하위 데이터가 부족하거나 예측 결과(Ensemble)가 없습니다.")
 
 elif not btn_run and not st.session_state.get('run_clicked'):
-    st.info("👈 왼쪽 사이드바에서 대상을 선택하고 [시뮬레이션 시작] 버튼을 눌러주세요.")
+    st.info("👈 위의 Step 1 ~ 3을 설정하고 [시뮬레이션 시작] 버튼을 눌러주세요.")
     
     c1, c2, c3 = st.columns(3)
     with c1:
