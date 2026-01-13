@@ -69,18 +69,28 @@ def load_full_target_data(plant, major, mode):
     try:
         dataset = ds.dataset(DATA_HUB_PATH, format="parquet", partitioning="hive")
         
-        # PyArrow Filter Expression (속도 최적화)
-        # 플랜트와 대분류 조건으로 파티션을 필터링하여 읽음
-        filter_expr = (ds.field('플랜트') == plant) & (ds.field('대분류') == major)
-        
-        # 컬럼 제한 없이 모든 컬럼 읽기
-        table = dataset.to_table(filter=filter_expr)
-        df_full = table.to_pandas()
+        # 플랜트 기준으로만 필터링 (대분류가 여러 개일 수 있으므로)
+        if major and major != "All":
+            majors = [m.strip() for m in major.split(",")]
+            table = dataset.to_table()
+            df_full = table.to_pandas()
+            
+            # 플랜트로 필터링
+            df_full = df_full[df_full['플랜트'] == plant]
+            
+            # 선택된 대분류로 필터링
+            if majors and majors[0]:  # 리스트가 비어있지 않고 첫 번째 요소가 비어있지 않음
+                df_full = df_full[df_full['대분류'].isin(majors)]
+        else:
+            # 플랜트 기준만 필터링
+            table = dataset.to_table()
+            df_full = table.to_pandas()
+            df_full = df_full[df_full['플랜트'] == plant]
         
         if '접수일자' in df_full.columns:
             df_full['접수일자'] = pd.to_datetime(df_full['접수일자'])
-            
-        # 모드에 따른 필터링 적용 (실적 모드일 경우)
+        
+        # 모드에 따른 필터링 적용
         if mode == "실적 (Performance)":
             if '불만원인' in df_full.columns:
                 reasons = ['고객불만족', '구매불만', '제조불만']
@@ -92,7 +102,7 @@ def load_full_target_data(plant, major, mode):
                 
         return df_full
     except Exception as e:
-        st.error(f"백데이터 로드 실패: {e}")
+        st.warning(f"백데이터 로드 경고: {e}")
         return pd.DataFrame()
 
 with st.spinner("💾 데이터베이스 로딩 중..."):
@@ -335,17 +345,29 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
     df_full_backdata = results['df_full_backdata']
     monthly_df = results['monthly_df']
     
-    col_l, col_r = st.columns([1.2, 1])
+    # --- 1. 제목 및 조건 표시 ---
+    selected_grades_str = ", ".join(selected_grades) if selected_grades else "전체 등급"
+    st.subheader(f"📈 시뮬레이션 결과 ({selected_grades_str} / {search_mode})")
     
-    # --- 1. Top-down Forecasting ---
-    with col_l:
-        st.subheader("🏁 모델 경합 (Model Competition)")
-        
-        # 그래프 시각화
-        fig_pred = go.Figure()
-        
-        # 1. 과거 데이터
-        recent_hist = engine.train_data.tail(12)
+    # --- 2. 모델 경합 그래프 (Full Width) ---
+    st.markdown(f"#### 🏁 모델 경합 (Model Competition)")
+    
+    # 그래프 데이터 준비
+    recent_hist = engine.train_data.tail(12)
+    if not recent_hist.empty:
+        start_month_graph = recent_hist.index[0].strftime('%Y-%m')
+        end_month_graph = monthly_df['ds'].max().strftime('%Y-%m')
+    else:
+        start_month_graph = monthly_df['ds'].min().strftime('%Y-%m')
+        end_month_graph = monthly_df['ds'].max().strftime('%Y-%m')
+    
+    st.markdown(f"📊 2개년 추이 분석 ({start_month_graph} ~ {end_month_graph})")
+    
+    # 그래프 시각화
+    fig_pred = go.Figure()
+    
+    # 1. 과거 데이터
+    if not recent_hist.empty:
         last_date = recent_hist.index[-1]
         last_val = recent_hist.values[-1]
         
@@ -355,120 +377,205 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
             line=dict(color='black', width=2),
             marker=dict(size=6)
         ))
+    else:
+        last_date = monthly_df['ds'].iloc[-1]
+        last_val = monthly_df['y'].iloc[-1]
+    
+    # 2. 예측 데이터
+    model_styles = {
+        'Ensemble': {'color': '#6200ea', 'width': 5, 'dash': 'solid'},
+        'AutoML':   {'color': '#e74c3c', 'width': 2, 'dash': 'dot'},
+        'Prophet':  {'color': '#2ecc71', 'width': 1, 'dash': 'dot'},
+        'SARIMAX':  {'color': '#3498db', 'width': 1, 'dash': 'dot'}
+    }
+    
+    cols_sorted = [c for c in df_forecast.columns if c != 'Ensemble']
+    if 'Ensemble' in df_forecast.columns:
+        cols_sorted.append('Ensemble')
+    
+    for model_name in cols_sorted:
+        style = model_styles.get(model_name, {'color': 'gray', 'width': 1, 'dash': 'dot'})
         
-        # 2. 예측 데이터
-        model_styles = {
-            'Ensemble': {'color': '#6200ea', 'width': 5, 'dash': 'solid'},
-            'AutoML':   {'color': '#e74c3c', 'width': 2, 'dash': 'dot'},
-            'Prophet':  {'color': '#2ecc71', 'width': 1, 'dash': 'dot'},
-            'SARIMAX':  {'color': '#3498db', 'width': 1, 'dash': 'dot'}
-        }
+        # Gap Filling
+        pred_x = [last_date] + list(df_forecast.index)
+        pred_y = [last_val] + list(df_forecast[model_name].values)
         
-        cols_sorted = [c for c in df_forecast.columns if c != 'Ensemble']
+        mode_style = 'lines+markers' if model_name == 'Ensemble' else 'lines'
+        
+        fig_pred.add_trace(go.Scatter(
+            x=pred_x, y=pred_y,
+            mode=mode_style,
+            name=f'{model_name} 예측',
+            line=dict(color=style['color'], width=style['width'], dash=style['dash']),
+            opacity=1.0 if model_name == 'Ensemble' else 0.5
+        ))
+
+    fig_pred.update_layout(
+        height=500,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode="x unified",
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
+        plot_bgcolor='white'
+    )
+    fig_pred.add_vline(x=last_date, line_width=1, line_dash="dash", line_color="gray")
+    
+    st.plotly_chart(fig_pred, use_container_width=True)
+    
+    # 모델 가중치 (간단 표시)
+    weights = results['model_weights']
+    if weights:
+        weights_text = " | ".join([f"{model}: {w*100:.1f}%" for model, w in weights.items()])
+        st.info(f"⚖️ **모델별 가중치**: {weights_text}")
+
+    if 'Ensemble' in df_forecast.columns:
+        avg_pred = df_forecast['Ensemble'].mean()
+        st.success(f"🏆 최종 앙상블(Ensemble) 예측 결과, 향후 월평균 **{avg_pred:.0f}건**이 예상됩니다.")
+    
+    st.divider()
+
+    # --- 4. Risk 현황진단 ---
+    st.markdown("#### 🛡️ Risk 현황진단")
+    
+    try:
+        # 과거 12개월 + 예측 데이터 조합
+        past_12_months = monthly_df.tail(12).copy() if len(monthly_df) >= 12 else monthly_df.copy()
+        
+        # 예측 데이터 포함
         if 'Ensemble' in df_forecast.columns:
-            cols_sorted.append('Ensemble')
+            forecast_with_dates = pd.DataFrame({
+                'ds': df_forecast.index,
+                'y': df_forecast['Ensemble'].values
+            })
+            combined_df = pd.concat([past_12_months, forecast_with_dates], ignore_index=True)
+        else:
+            combined_df = past_12_months.copy()
         
-        for model_name in cols_sorted:
-            style = model_styles.get(model_name, {'color': 'gray', 'width': 1, 'dash': 'dot'})
+        # 간단한 위험 신호 판단 (변화율 기반)
+        if len(combined_df) >= 2:
+            combined_df['change'] = combined_df['y'].pct_change() * 100
+            combined_df['signal'] = '⚪'
             
-            # Gap Filling
-            pred_x = [last_date] + list(df_forecast.index)
-            pred_y = [last_val] + list(df_forecast[model_name].values)
-            
-            mode_style = 'lines+markers' if model_name == 'Ensemble' else 'lines'
-            
-            fig_pred.add_trace(go.Scatter(
-                x=pred_x, y=pred_y,
-                mode=mode_style,
-                name=f'{model_name} 예측',
-                line=dict(color=style['color'], width=style['width'], dash=style['dash']),
-                opacity=1.0 if model_name == 'Ensemble' else 0.5
-            ))
+            # Red: 급증 (>50% 증가) or 급감 (<-30%)
+            combined_df.loc[(combined_df['change'] > 50) | (combined_df['change'] < -30), 'signal'] = '🔴'
+            # Yellow: 중증도 증가 (20-50%) or 중증도 감소 (-30 ~ -10%)
+            combined_df.loc[((combined_df['change'] > 20) & (combined_df['change'] <= 50)) | 
+                           ((combined_df['change'] >= -30) & (combined_df['change'] < -10)), 'signal'] = '🟡'
+        else:
+            combined_df['signal'] = '⚪'
+        
+        # 경보 집계
+        red_count = (combined_df['signal'] == '🔴').sum()
+        yellow_count = (combined_df['signal'] == '🟡').sum()
+        
+        c_left, c_right = st.columns(2)
+        
+        with c_left:
+            st.markdown(f"##### Red(🔴) 경보: {red_count}건")
+            red_df = combined_df[combined_df['signal'] == '🔴']
+            if red_df.empty:
+                st.info("경보 대상이 없습니다.")
+            else:
+                st.dataframe(red_df[['ds', 'y', 'change', 'signal']], use_container_width=True)
+        
+        with c_right:
+            st.markdown(f"##### Yellow(🟡) 주의: {yellow_count}건")
+            yellow_df = combined_df[combined_df['signal'] == '🟡']
+            if yellow_df.empty:
+                st.info("주의 대상이 없습니다.")
+            else:
+                st.dataframe(yellow_df[['ds', 'y', 'change', 'signal']], use_container_width=True)
+        
+        st.caption("위험 신호는 월별 변화율 기준으로 판정됩니다. (과거 12개월 + 예측 데이터 포함)")
+    
+    except Exception as e:
+        st.warning(f"Risk 현황진단 생성 중 오류: {e}")
+    
+    st.divider()
 
-        fig_pred.update_layout(
-            title=dict(text=f"<b>향후 {forecast_months}개월 예측 시나리오</b>", font=dict(size=20)),
-            height=500,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            hovermode="x unified",
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
-            plot_bgcolor='white'
-        )
-        fig_pred.add_vline(x=last_date, line_width=1, line_dash="dash", line_color="gray")
+    # --- 5. 피벗 테이블, Lag분석, 원본데이터 탭 ---
+    tab1, tab2, tab3 = st.tabs(["피벗 테이블", "Lag 분석", "원본 데이터"])
+    
+    with tab1:
+        st.markdown("##### 📊 과거 12개월 + 예측 데이터 피벗 테이블")
         
-        st.plotly_chart(fig_pred, use_container_width=True)
-        
-        # 가중치 시각화
-        st.divider()
-        st.markdown("#### ⚖️ 모델별 가중치 (Dynamic Weights)")
-        weights = results['model_weights']
-        if weights:
-            cols = st.columns(len(weights))
-            for i, (model, w) in enumerate(weights.items()):
-                cols[i].metric(label=model, value=f"{w*100:.1f}%")
-
-        if 'Ensemble' in df_forecast.columns:
-            avg_pred = df_forecast['Ensemble'].mean()
-            st.success(f"🏆 최종 앙상블(Ensemble) 예측 결과, 향후 월평균 **{avg_pred:.0f}건**이 예상됩니다.")
-
-    # --- 2. Bottom-up Allocation (Seasonal) ---
-    with col_r:
-        st.subheader("🧩 소분류 배분 (Seasonal Allocation)")
-        st.caption("앙상블(Ensemble) 예측 총량을 과거 동월 비중(Ratio)에 따라 하위 소분류로 배분합니다.")
-        
-        if not alloc_df.empty:
-            pivot_alloc = alloc_df.pivot_table(
-                index='소분류', 
-                columns='예측월', 
-                values='예측건수', 
-                aggfunc='sum',
-                fill_value=0
-            )
-            pivot_alloc = pivot_alloc.fillna(0)
-            pivot_alloc.loc['Total'] = pivot_alloc.sum()
+        try:
+            # 과거 12개월 + 예측 데이터 조합 (소분류 기준 피벗)
+            cutoff_date = pd.to_datetime(end_date) - relativedelta(months=12)
+            historical_12m = df_target[df_target['접수일자'] >= cutoff_date].copy()
+            historical_12m['월'] = historical_12m['접수일자'].dt.strftime('%Y-%m')
             
-            # 스타일링
-            st.dataframe(
-                pivot_alloc.style
-                    .format("{:,.1f}")
-                    .background_gradient(
-                        cmap="Reds", 
-                        subset=(pivot_alloc.index[:-1], pivot_alloc.columns)
-                    )
-                    .apply(lambda x: ['font-weight: bold' if x.name == 'Total' else '' for _ in x], axis=1),
-                use_container_width=True,
-                height=400
-            )
-            
-            st.divider()
-            b1, b2 = st.columns(2)
-            
-            # (1) 배분 결과 CSV
-            csv_alloc = alloc_df.to_csv(index=False).encode('utf-8-sig')
-            major_str = "_".join(selected_categories[:2]) if selected_categories else "All"
-            b1.download_button(
-                label="📥 배분 결과 (CSV)",
-                data=csv_alloc,
-                file_name=f"Allocation_{sel_plant}_{major_str}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-            
-            # (2) 백데이터(전체 컬럼) CSV
-            if not df_full_backdata.empty:
-                csv_raw = df_full_backdata.to_csv(index=False).encode('utf-8-sig')
-                b2.download_button(
-                    label="💾 원본 백데이터 (CSV)",
-                    data=csv_raw,
-                    file_name=f"BackData_Full_{sel_plant}_{major_str}.csv",
-                    mime="text/csv",
-                    use_container_width=True
+            if not historical_12m.empty:
+                pivot_hist = pd.pivot_table(
+                    historical_12m,
+                    index='소분류',
+                    columns='월',
+                    values='상담번호',
+                    aggfunc='count',
+                    fill_value=0
+                )
+                
+                # 예측 데이터 추가
+                alloc_pivot = alloc_df.pivot_table(
+                    index='소분류',
+                    columns='예측월',
+                    values='예측건수',
+                    aggfunc='sum',
+                    fill_value=0
+                )
+                
+                # 결합
+                combined_pivot = pd.concat([pivot_hist, alloc_pivot], axis=1)
+                combined_pivot = combined_pivot.fillna(0)
+                combined_pivot.loc['Total'] = combined_pivot.sum()
+                
+                st.dataframe(
+                    combined_pivot.style
+                        .format("{:,.0f}")
+                        .background_gradient(cmap="Blues", subset=(combined_pivot.index[:-1], combined_pivot.columns)),
+                    use_container_width=True,
+                    height=400
                 )
             else:
-                b2.warning("백데이터 로드 실패")
+                st.info("과거 12개월 데이터가 없습니다.")
+        
+        except Exception as e:
+            st.warning(f"피벗 테이블 생성 오류: {e}")
+    
+    with tab2:
+        st.markdown("##### ⏱️ Lag 분석 (제조 ~ 접수 소요기간)")
+        
+        try:
+            # Lag 계산 (접수일자 기준)
+            if '접수일자' in df_target.columns:
+                df_target['접수일_만'] = df_target['접수일자'].dt.date
+                lag_stats_data = df_target.groupby('접수일_만').size()
                 
-        else:
-            st.warning("배분할 하위 데이터가 부족하거나 예측 결과(Ensemble)가 없습니다.")
+                if len(lag_stats_data) > 0:
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("평균 일일 클레임", f"{lag_stats_data.mean():.1f}")
+                    c2.metric("중앙값", f"{lag_stats_data.median():.1f}")
+                    c3.metric("최대값", f"{lag_stats_data.max():.0f}")
+                    
+                    # 분포 그래프
+                    fig_lag = px.histogram(
+                        df_target.groupby('접수일_만').size().reset_index(name='count'),
+                        x='count',
+                        nbins=30,
+                        title="일일 클레임 건수 분포"
+                    )
+                    st.plotly_chart(fig_lag, use_container_width=True)
+                else:
+                    st.info("Lag 데이터가 없습니다.")
+            else:
+                st.warning("접수일자 컬럼이 없습니다.")
+        
+        except Exception as e:
+            st.warning(f"Lag 분석 생성 오류: {e}")
+    
+    with tab3:
+        st.markdown("##### 📋 필터된 원본 데이터")
+        st.dataframe(df_target, use_container_width=True, height=500)
 
 elif not btn_run and not st.session_state.get('run_clicked'):
     st.info("👈 위의 Step 1 ~ 3을 설정하고 [시뮬레이션 시작] 버튼을 눌러주세요.")
