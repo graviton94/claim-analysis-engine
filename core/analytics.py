@@ -7,14 +7,16 @@ Implementation Level: Phase 3.1 (Statistical Stability & Safety Guards)
  - Small Sample Variance Guard
  - Early Month Velocity Guard
  - Conditional Safe Zone
+ - [New] Phase 2.5: Zero-Filling Data Preparation
 """
 
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson, nbinom
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Union, Optional
 import statsmodels.api as sm
-from datetime import datetime
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass
 
 # --- 1. Configuration Management (Phase 3.1) ---
@@ -403,6 +405,83 @@ class RiskScoringEngine:
         else:
              return {"score": int(total_score), "status": final_status, "reason": reason_str}
 
+# ============================================================================
+# [NEW] Phase 2.5: Zero-Filling Data Preparation
+# ============================================================================
+def prepare_risk_data(
+    df: pd.DataFrame,
+    pivot_keys: List[str],
+    target_date: Union[datetime, date, str],
+    lookback_months: int = 24
+) -> pd.DataFrame:
+    """
+    리스크 분석을 위한 데이터 전처리 (Zero-Filling & Pivot).
+    
+    동작:
+        1. target_date 기준 과거 N개월 날짜 인덱스 생성
+        2. pivot_keys를 기준으로 데이터 그룹화 및 집계
+        3. 모든 그룹에 대해 N개월 기간의 빈 데이터를 0으로 채움 (Zero-filling)
+        4. 리스크 엔진이 사용하기 편한 Wide Format (Columns=Date)으로 반환
+    
+    Args:
+        df: 원본 데이터프레임 (접수일자 컬럼 필수)
+        pivot_keys: 그룹핑할 컬럼 리스트 (예: ['등급기준', '대분류', '소분류'])
+        target_date: 분석 기준일 (End Date)
+        lookback_months: 과거 조회 기간 (기본 24개월)
+        
+    Returns:
+        pd.DataFrame: Index=MultiIndex(pivot_keys), Columns=DatetimeIndex
+    """
+    if df.empty:
+        return pd.DataFrame()
+
+    # 1. Target Date Parsing
+    if isinstance(target_date, str):
+        target_ts = pd.to_datetime(target_date)
+    elif isinstance(target_date, date) and not isinstance(target_date, datetime):
+        target_ts = pd.to_datetime(target_date)
+    else:
+        target_ts = target_date
+
+    # 2. Date Range Generation (Zero-filling 기준)
+    start_ts = target_ts - relativedelta(months=lookback_months)
+    # 월의 1일로 조정하여 정확한 매칭 유도
+    start_ts = start_ts.replace(day=1)
+    target_ts = target_ts.replace(day=1)
+    
+    full_date_idx = pd.date_range(start=start_ts, end=target_ts, freq='MS')
+    
+    # 3. Data Filtering (Range) & Month Column
+    # 날짜 범위가 벗어나는 데이터를 미리 제거하지 않음 (pivot후 reindex로 처리)
+    df = df.copy()
+    if not pd.api.types.is_datetime64_any_dtype(df['접수일자']):
+        df['접수일자'] = pd.to_datetime(df['접수일자'])
+        
+    df['__risk_month'] = df['접수일자'].dt.to_period('M').dt.to_timestamp()
+    
+    # 4. Pivot Table (Keys + Month -> Count)
+    # pivot_table을 사용하여 존재하지 않는 조합은 제외하고, 존재하는 조합에 대해서만 카운트
+    try:
+        pivot = pd.pivot_table(
+            df,
+            index=pivot_keys,
+            columns='__risk_month',
+            values='상담번호', # Count 대상 (임의 컬럼)
+            aggfunc='count',
+            fill_value=0
+        )
+        
+        # 5. Zero-Filling (Reindex Columns)
+        # 생성된 피벗 테이블의 컬럼(날짜)을 강제로 full_date_idx로 맞춤
+        # 없는 날짜는 0으로 채워짐
+        filled_pivot = pivot.reindex(columns=full_date_idx, fill_value=0)
+        
+        return filled_pivot
+        
+    except Exception as e:
+        print(f"[WARNING] prepare_risk_data 실패: {e}")
+        return pd.DataFrame()
+
 
 def calculate_lag_stats(df: pd.DataFrame) -> dict:
     """
@@ -430,10 +509,16 @@ def calculate_advanced_risk_score(history_series: pd.Series, target_month_str: s
             history_series.index = pd.to_datetime(history_series.index)
         target_ts = pd.to_datetime(target_month_str)
         
+        # [Phase 2.5 Fix] prepare_risk_data를 통해 이미 Zero-filling된 데이터가 들어오므로
+        # 여기서는 단순히 범위 내 데이터인지 확인만 하면 됨.
+        # 혹시 모를 안전장치로 reindex 한 번 더 수행 가능하나, 성능상 생략.
+        
         if target_ts in history_series.index:
             relevant_data = history_series.loc[:target_ts]
         else:
-            return "🟢", 0, "당월0건"
+            # target_ts가 인덱스에 없으면 (Zero-filling이 안 된 Raw 데이터가 들어온 경우)
+            # 여기서는 fallback으로 0 반환
+            return "🟢", 0, "데이터 범위 오류"
             
         engine = RiskScoringEngine(relevant_data, grade=grade, target_month_str=target_month_str)
         result = engine.calculate_score()
