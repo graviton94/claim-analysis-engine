@@ -3,43 +3,41 @@
 > **⚠️ 작업 브랜치**: 모든 작업은 반드시 **[main 브랜치](https://github.com/graviton94/claim-analysis-engine/tree/main)**에서 수행합니다.
 
 ## 🎯 Project Vision
-이 시스템은 단순한 대시보드가 아닙니다. **비즈니스 규칙(Rule)**, **통계적 이상 탐지(Statistical Detection)**, 그리고 **시계열 머신러닝(Time-series ML)**이 결합된 **하이브리드 인텔리전스 플랫폼**입니다. 
-수만 개의 제품 시리즈를 24시간 감시하며, "왜 위험한지"에 대한 통계적 근거와 "앞으로 어떻게 될지"에 대한 예측 시나리오를 제공합니다.
+이 시스템은 단순 조회를 넘어, **실시간 운영(Operational)**과 **심층 분석(Analytical)**이 결합된 하이브리드 인텔리전스 플랫폼입니다.
+현장 관리자에게는 즉각적인 위험 신호를, 데이터 분석가에게는 정밀한 미래 시뮬레이션 도구를 제공합니다.
 
-## 🚀 Key Features (v3.0)
-### 1. 🚨 Dual-Track Risk Scoring (`core/analytics.py`)
-- **Nelson Rules**: 연속 상승, 편향 등 이상 패턴 감지.
-- **Distribution Analysis**: 포아송/음이항 분포 기반의 희소 사건(Rare Event) 확률 계산.
-- **Anomaly Detection**: IQR 및 STL 분해를 통한 시계열 이상치 자동 발굴.
+## 🚀 Key Features (v3.0 Two-Track Strategy)
+### 1. ⚡ Operational Engine (Track A)
+- **Target**: `app.py` (대시보드), `2_통합_요약.py`
+- **Tech**: `core/forecasting.py` (Ensemble of Run-rate + MoM Pattern + Light ETS)
+- **Goal**: **0.5초 이내** 응답. "이번 달 마감 예상치는?"에 대한 즉답 제공.
 
-### 2. 🔮 Advanced Forecasting Engine (`core/forecasting.py`)
-- **Ensemble Prediction**: `Run-rate`(현재 실적) + `MoM Pattern`(과거 계절성) + `Holt-Winters/ARIMA`(시계열 모델) 앙상블.
-- **Business Day Awareness**: 영업일 기준 진행률 계산으로 월초/공휴일 예측 왜곡 방지.
-- **Data Guard**: 학습 데이터와 평가 데이터의 엄격한 분리(Data Leakage 방지).
+### 2. 🧪 Simulation Lab (Track B)
+- **Target**: `4_예측_시뮬레이션.py`
+- **Tech**: `core/engine/trainer.py` (Optuna AutoML + CatBoost/LSTM)
+- **Goal**: **정밀 타격**. "특정 제품군의 향후 6개월 시나리오는?"에 대한 딥러닝 예측 수행.
 
 ## 🖥️ Page Navigation
-1. **데이터 업로드**: CSV/Excel 표준화 적재 및 연/월 파티셔닝 저장 (Parquet).
-2. **통합 요약 (Executive Summary)**: 전사 리스크 스코어링 현황 및 고위험군 Top-N 리포트.
-3. **플랜트 정밀 분석**: 동적 피벗 테이블, **Lag(제조-접수 시차) 분석**, 이상치 하이라이팅.
-4. **예측 시뮬레이션**: Optuna 기반 챔피언 모델(CatBoost/LSTM/SARIMAX) 경합 및 3개월 단기 예보.
+1. **데이터 업로드**: CSV/Excel 표준화 적재 및 연/월 파티셔닝 (Parquet).
+2. **통합 요약 (Exec. View)**: 전사 리스크 스코어링 현황 및 `Quick Forecast` 요약.
+3. **플랜트 정밀 분석**: 동적 피벗, **Lag(제조-접수 시차) 분석**, 이상치 하이라이팅.
+4. **예측 시뮬레이션 (Lab)**: 특정 제품군(Series) 대상 **AutoML 튜닝** 및 **가상 시나리오 검증**.
 
 ## 📂 Directory Structure
 ```bash
 claim-prediction-system/
 ├── core/
-│   ├── analytics.py      # [Engine 1] 리스크 스코어링 & 이상 탐지 (Nelson, STL)
-│   ├── forecasting.py    # [Engine 2] 시계열 예측 앙상블 (ETS, ARIMA, Ensemble)
-│   ├── etl.py            # 데이터 전처리 및 표준화
-│   └── storage.py        # 고성능 파티셔닝 입출력 (Arrow/Parquet)
+│   ├── analytics.py      # [Risk] 리스크 스코어링 & 이상 탐지 (Nelson Rules)
+│   ├── forecasting.py    # [Fast] 대시보드용 고속 예측 엔진 (Statsmodels)
+│   ├── engine/           # [Heavy] 시뮬레이션용 ML 엔진 (Optuna, CatBoost)
+│   └── storage.py        # [IO] 데이터 파티셔닝 입출력
 ├── pages/
-│   ├── 1_데이터_업로드.py
-│   ├── 2_통합_요약.py     
-│   ├── 3_플랜트_분석.py   # Lag 분석 & 동적 피벗 탑재
-│   └── 4_예측_시뮬레이션.py # Optuna 튜닝 및 시뮬레이션
-└── app.py                # 메인 대시보드 (Risk & Forecast 요약)
+│   ├── 2_통합_요약.py     # Uses forecasting.py
+│   └── 4_예측_시뮬레이션.py # Uses core.engine
+└── app.py                # 메인 대시보드
 ```
 
-## 📂 Field def
+## 📂 Field Definitions (54 Fields)
 > **Target Fields**:
 > 접수년, 접수월, 접수일, 사업부문, 상담번호, 제품명, 제목, 분석결과, 등급기준, 불만원인, 
 > 대분류, 중분류, 소분류, 유통기한, 유통기한-년, 유통기한-월, 유통기한-일, 제조일자, 

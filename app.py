@@ -22,16 +22,14 @@ def format_diagnosis(diagnosis_str):
     if not diagnosis_str or diagnosis_str == '-':
         return "진단 정보 없음"
     
-    # Parse the diagnosis string (e.g., "⚡돌발감지(희소유형 발생 감지) / 📊추세이탈(패턴 이탈 감지)")
     parts = diagnosis_str.split(' / ')
     formatted_parts = []
     
     for part in parts:
         if '(' in part and ')' in part:
-            # Split category and detail
             category_end = part.find('(')
             category = part[:category_end]
-            detail = part[category_end+1:-1]  # Remove parentheses
+            detail = part[category_end+1:-1]
             formatted_parts.append(f"<strong>{category}:</strong> {detail}")
         else:
             formatted_parts.append(part)
@@ -43,17 +41,13 @@ def format_product_categories(df):
     if '제품범주2' not in df.columns:
         return ""
     
-    # 제품범주2별 건수 계산
     category_counts = df['제품범주2'].value_counts()
     total_count = len(df)
     
     if total_count == 0 or category_counts.empty:
         return ""
     
-    # 상위 2개 카테고리 선택
     top_categories = category_counts.head(2)
-    
-    # 백분율 계산 및 포맷팅
     formatted_parts = []
     for category, count in top_categories.items():
         percentage = (count / total_count) * 100
@@ -65,23 +59,16 @@ def format_product_categories(df):
     return ""
 
 def format_trend_with_highlight(trend_str):
-    """추이 문자열에서 마지막 숫자를 굵게 강조(검은색)
-
-    Returns the sequence with the final value wrapped in <strong> tags (black).
-    """
+    """추이 문자열에서 마지막 숫자를 굵게 강조(검은색)"""
     if not trend_str or trend_str == '-':
         return "추이 정보 없음"
 
-    # "1 → 2 → 3 → 4 → 5 → 6" 형식 파싱
     parts = trend_str.split(' → ')
     if len(parts) <= 1:
         return f"{trend_str}"
 
-    # 마지막 부분을 제외한 나머지
     normal_parts = parts[:-1]
     last_part = parts[-1]
-
-    # 마지막 숫자를 굵게(검은색)로 표시
     normal_text = ' → '.join(normal_parts)
     highlighted_text = f'<strong style="color: #111827;">{last_part}</strong>'
 
@@ -166,7 +153,7 @@ def get_last_updated_time():
 @st.cache_data(ttl=3600)
 def load_and_scan_risks(mode='인입'):
     """
-    mode: '인입' (전체 데이터) 또는 '실적' (불만원인 필터링)
+    mode: '인입' (전체 데이터) 또는 '실적' (불만원인 및 사업부문 필터링)
     ForecastEngine을 초기화하여 반환
     
     ⚠️ 중요: mode 파라미터가 변경되면 캐시가 무효화되어 새로 계산됨
@@ -182,15 +169,30 @@ def load_and_scan_risks(mode='인입'):
     df['접수일자'] = pd.to_datetime(df['접수일자'])
     df['접수월'] = df['접수일자'].dt.strftime('%Y-%m')
     
-    # 실적 모드 필터링
+    # [FIX] 실적 모드 필터링 조건 강화
     if mode == '실적':
+        # 1. 불만원인 필터링
         performance_reasons = ['고객불만족', '구매불만', '제조불만']
-        df = df[df['불만원인'].isin(performance_reasons)].copy()
+        cond_reason = df['불만원인'].isin(performance_reasons)
+        
+        # 2. 사업부문 필터링 ('식품', 'B2B식품'만 포함)
+        # 컬럼이 있는지 먼저 확인 (안전장치)
+        if '사업부문' in df.columns:
+            target_biz_units = ['식품', 'B2B식품']
+            cond_biz = df['사업부문'].isin(target_biz_units)
+            df = df[cond_reason & cond_biz].copy()
+        else:
+            # 사업부문 컬럼이 없으면 불만원인으로만 필터링
+            df = df[cond_reason].copy()
     
     max_date = df['접수일자'].max()
     target_month = max_date.strftime('%Y-%m')
     prev_month_date = max_date.replace(day=1) - timedelta(days=1)
     prev_month = prev_month_date.strftime('%Y-%m')
+
+    # [FIX] 예측 엔진이 집계할 '건수' 컬럼 생성 (행 1개 = 1건)
+    if '건수' not in df.columns:
+        df['건수'] = 1
 
     # ===== ForecastEngine 초기화 (전체 이력 기반) =====
     forecast_engine = ForecastEngine(df, date_col='접수일자')
@@ -249,7 +251,7 @@ selected_mode = st.sidebar.radio(
     "조회 모드 선택",
     options=["인입 (Inflow)", "실적 (Performance)"],
     horizontal=False,
-    help="인입: 전체 데이터 | 실적: 고객불만족/구매불만/제조불만 만 포함"
+    help="인입: 전체 데이터 | 실적: (고객불만족/구매불만/제조불만) + (식품/B2B식품)"
 )
 
 # 모드를 간단하게 변환
@@ -368,72 +370,58 @@ with col_chart:
         days_passed = max_date_data.day
         days_in_month = max_date_data.days_in_month
         
-        # ===== 월말 예측 + 3개월 예측 통합 (+3M 예측) =====
+        # ===== [NEW] 4개월 통합 예측 (v4.1) =====
         try:
             combined_months = []
             combined_values = []
             combined_hover = []
             
-            # 당월 예측
-            if days_passed < days_in_month:
-                current_val = df_this.get(current_month, 0)
-                if days_passed > 0 and forecast_engine:
-                    # ===== 고도화된 다중 모델 앙상블 예측 =====
-                    pred_result = forecast_engine.predict_current_month_advanced(int(current_val), max_date_data)
-                    predicted_val = pred_result['predicted_final']
-                    confidence = pred_result.get('confidence', '미정')
-                    progress = pred_result.get('progress', 0)
-                    volatility = pred_result.get('volatility', 'N/A')
-                    ci_lower = pred_result.get('ci_lower', predicted_val)
-                    ci_upper = pred_result.get('ci_upper', predicted_val)
-                    models = pred_result.get('models', {})
-                    
-                    combined_months.append(current_month)
-                    combined_values.append(predicted_val)
-                    
-                    # 상세한 호버 정보
-                    hover_text = f"""<b>{current_month}월 (월말 예측)</b><br>
-예측값: {predicted_val:.0f}건<br>
-신뢰도 구간: [{ci_lower:.0f}, {ci_upper:.0f}]<br>
-현재값: {current_val:.0f}건 | 진행률: {progress:.1f}%<br>
-신뢰도: {confidence} | 변동성: {volatility}<br>
-<br><b>모델별 예측:</b><br>
-• Run-rate: {models.get('runrate', 0):.0f}건<br>
-• Pattern: {models.get('pattern', 0):.0f}건<br>
-• Trend: {models.get('trend', 0):.0f}건<br>
-• Holt-Winters: {models.get('hw', 0):.0f}건<br>
-• SARIMA: {models.get('sarima', 0):.0f}건"""
-                    
-                    combined_hover.append(hover_text)
-            
-            # 3개월 예측
             if forecast_engine:
-                future_preds = forecast_engine.predict_next_3_months()
-                if future_preds and 'method' in future_preds:
-                    method_name = future_preds.pop('method')
-                    for month_str in sorted(future_preds.keys()):
-                        try:
-                            month_num = int(month_str.split('-')[1])
-                            pred_val = future_preds[month_str]
-                            combined_months.append(month_num)
-                            combined_values.append(pred_val)
-                            combined_hover.append(f"<b>{month_num}월 (3M 예측)</b><br>예측값: {pred_val:.0f}건<br>방식: {method_name}")
-                        except:
-                            pass
-            
-            # 통합 선 그리기
+                # 1. 통합 예측 실행 (4개월치 한 번에)
+                forecast_result = forecast_engine.forecast_4m()
+                
+                # 2. 결과 파싱
+                current_info = forecast_result['current']
+                future_map = forecast_result['future_4m']
+                
+                # 3. 차트에 추가
+                for date_key in sorted(future_map.keys()):
+                    # date_key: "YYYY-MM"
+                    year_part = int(date_key.split('-')[0])
+                    mon_num = int(date_key.split('-')[1])
+                    val = future_map[date_key]
+                    
+                    combined_months.append(mon_num)
+                    combined_values.append(val)
+                    
+                    # 호버 텍스트 분기 (당월 vs 미래)
+                    if mon_num == current_month:
+                        # 당월: 상세 정보 표시
+                        prog = current_info['progress_ratio'] * 100
+                        act = current_info['current_actual']
+                        dtl = current_info['details']
+                        hover_txt = f"""<b>{mon_num}월 (당월 마감예상)</b><br>
+예측: {val:,}건<br>
+현재: {act:,}건 (진행률 {prog:.1f}%)<br>
+모델: {dtl['weights_desc']}"""
+                    else:
+                        # 미래: 단순 표시
+                        hover_txt = f"<b>{mon_num}월 예측</b><br>{val:,}건"
+                    
+                    combined_hover.append(hover_txt)
+
+            # 4. 통합 선 그리기
             if combined_months:
                 fig.add_trace(go.Scatter(
-                    x=combined_months, y=combined_values, name='+3M 예측',
+                    x=combined_months, y=combined_values, name='4개월 예측',
                     mode='lines+markers',
-                    line=dict(color='#ff9500', width=2, dash='dash'),  # 주황색 대시
+                    line=dict(color='#ff9500', width=2, dash='dash'),
                     marker=dict(size=8, symbol='diamond'),
                     customdata=combined_hover,
-                    hovertemplate='%{customdata}<extra></extra>',
-                    legendgroup='forecast'
+                    hovertemplate='%{customdata}<extra></extra>'
                 ))
         except Exception as e:
-            print(f"[WARNING] 통합 예측 그래프 렌더링 실패: {e}")
+            print(f"[WARNING] 통합 예측 렌더링 실패: {e}")
 
         fig.update_layout(
             height=350, margin=dict(l=10, r=10, t=10, b=10), 

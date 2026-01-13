@@ -1,416 +1,392 @@
-# ============================================================================
-# 페이지: 예측 시뮬레이션 (Optuna 챔피언 모델 기반)
-# ============================================================================
-# 설명: Optuna로 튜닝된 3개 모델을 학습하고, 우승 모델로 6개월 예측
-#      성능 리더보드 및 시계열 시각화
-
 import streamlit as st
 import pandas as pd
 import numpy as np
-from pathlib import Path
-from datetime import datetime, timedelta
-import plotly.graph_objects as go
 import plotly.express as px
-from typing import Optional, Tuple
+import plotly.graph_objects as go
+from datetime import datetime
+from io import BytesIO
+import pyarrow.dataset as ds
+import pyarrow as pa
 
-from core.config import DATA_HUB_PATH, DATA_SALES_PATH, SALES_FILENAME
-from core.storage import load_partitioned, load_sales_with_estimation
-from core.engine.trainer import HyperParameterTuner, ChampionSelector
+# Core Engine Loading
+from core.config import DATA_HUB_PATH
+from core.engine.trainer import SimulationEngine
 
-# ============================================================================
-# 페이지 레이아웃 설정
-# ============================================================================
-st.set_page_config(page_title="예측 시뮬레이션", page_icon="🔮", layout="wide")
-st.title("🔮 예측 시뮬레이션 (Optuna Champion Model)")
-st.markdown(
-    "CatBoost, SARIMAX, LSTM 3개 모델을 Optuna로 자동 튜닝하고, "
-    "우승 모델의 3개월 예측 결과를 시각화합니다."
+# ==============================================================================
+# 1. 페이지 설정
+# ==============================================================================
+st.set_page_config(
+    page_title="예측 시뮬레이션 Lab",
+    page_icon="🧪",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ============================================================================
-# 기본 설정
-# ============================================================================
-SALES_PATH = Path(DATA_SALES_PATH) / SALES_FILENAME
-FORECAST_MONTHS = 3
+st.title("🧪 Prediction Simulation Lab (v6.1)")
+st.markdown("""
+이 실험실에서는 **Deep Learning & AutoML** 기술을 활용하여 정밀한 미래 예측을 수행합니다.
+1. **Competition**: 3가지 모델(Prophet, AutoML, SARIMAX)이 경합하여 미래 추세를 예측합니다.
+2. **Allocation**: 예측된 대분류 총량을 과거 패턴에 기반하여 **소분류로 자동 배분**합니다.
+""")
 
-
-# ============================================================================
-# 함수: 데이터 준비
-# ============================================================================
-
-def prepare_timeseries_data(
-    claims: pd.DataFrame,
-    plant: str,
-    product: Optional[str] = None,
-    min_months: int = 12
-) -> Tuple[pd.Series, Optional[pd.DataFrame], str]:
-    """
-    플랜트/제품군별 월별 클레임 건수 시계열 생성.
-    
-    Args:
-        claims: 클레임 데이터
-        plant: 플랜트명
-        product: 제품군 (None이면 전체)
-        min_months: 최소 데이터 개월 수
-    
-    Returns:
-        Tuple: (y_series, exog_df, description)
-    """
-    # 플랜트 필터
-    df = claims[claims['플랜트'] == plant].copy()
-    
-    # 제품군 필터 (optional)
-    if product and product != "전체":
-        df = df[df['제품군'] == product]
-    
-    # 월별 건수 집계
-    df['연월'] = df['접수년'] * 100 + df['접수월']
-    monthly = df.groupby(['접수년', '접수월', '연월']).size().reset_index(name='건수')
-    monthly = monthly.sort_values(['접수년', '접수월']).reset_index(drop=True)
-    
-    # 시계열 확인
-    if len(monthly) < min_months:
-        raise ValueError(f"데이터 부족: {len(monthly)}개월 (최소 {min_months}개월 필수)")
-    
-    y_series = monthly['건수']
-    
-    # 외생변수 (매출수량) 로드
+# ==============================================================================
+# 2. 데이터 로드 (Lightweight for UI)
+# ==============================================================================
+@st.cache_data(ttl=3600)
+def load_metadata():
+    """UI 구동용 경량 데이터 로드 (필수 컬럼만 읽음)"""
     try:
-        sales = load_sales_with_estimation(SALES_PATH)
-        sales_filtered = sales[sales['플랜트'] == plant].copy()
+        import os
+        if not os.path.exists(DATA_HUB_PATH):
+            st.error(f"데이터 경로를 찾을 수 없습니다: {DATA_HUB_PATH}")
+            return pd.DataFrame()
+
+        dataset = ds.dataset(DATA_HUB_PATH, format="parquet", partitioning="hive")
         
-        # 월별 매출 추출
-        exog_df = sales_filtered[['년', '월', '매출수량', 'is_estimated']].rename(
-            columns={'년': '접수년', '월': '접수월'}
-        ).sort_values(['접수년', '접수월']).reset_index(drop=True)
+        # UI 필터링 및 차트 표시에 꼭 필요한 컬럼만 로드
+        cols = ['플랜트', '대분류', '소분류', '접수일자', '건수', '불만원인', '사업부문']
+        available_cols = dataset.schema.names
+        read_cols = [c for c in cols if c in available_cols]
         
-        # y_series와 길이 맞추기
-        if len(exog_df) < len(y_series):
-            # 부족한 행 추가 (NaN)
-            missing = len(y_series) - len(exog_df)
-            exog_df = pd.concat([
-                pd.DataFrame({
-                    '접수년': [monthly['접수년'].iloc[i] for i in range(missing)],
-                    '접수월': [monthly['접수월'].iloc[i] for i in range(missing)],
-                    '매출수량': [np.nan] * missing,
-                    'is_estimated': [False] * missing
-                }),
-                exog_df
-            ], ignore_index=True)
-        else:
-            exog_df = exog_df[:len(y_series)]
-    
+        df = dataset.to_table(columns=read_cols).to_pandas()
+        
+        if '접수일자' in df.columns:
+            df['접수일자'] = pd.to_datetime(df['접수일자'])
+            
+        if '건수' not in df.columns:
+            df['건수'] = 1
+            
+        return df
+        
     except Exception as e:
-        st.warning(f"⚠️ 매출 데이터 로드 실패: {str(e)}")
-        exog_df = None
-    
-    # 설명 문자열
-    description = f"{plant}"
-    if product and product != "전체":
-        description += f" - {product}"
-    description += f" ({len(y_series)}개월)"
-    
-    return y_series, exog_df, description
+        st.error(f"데이터 로딩 실패: {str(e)}")
+        return pd.DataFrame()
 
+# [NEW] 다운로드용 전체 데이터 로드 함수
+def load_full_target_data(plant, major, mode):
+    """선택된 대상의 '모든 컬럼'을 원본에서 다시 읽어옴"""
+    try:
+        dataset = ds.dataset(DATA_HUB_PATH, format="parquet", partitioning="hive")
+        
+        # PyArrow Filter Expression (속도 최적화)
+        # 플랜트와 대분류 조건으로 파티션을 필터링하여 읽음
+        filter_expr = (ds.field('플랜트') == plant) & (ds.field('대분류') == major)
+        
+        # 컬럼 제한 없이 모든 컬럼 읽기
+        table = dataset.to_table(filter=filter_expr)
+        df_full = table.to_pandas()
+        
+        if '접수일자' in df_full.columns:
+            df_full['접수일자'] = pd.to_datetime(df_full['접수일자'])
+            
+        # 모드에 따른 필터링 적용 (실적 모드일 경우)
+        if mode == "실적 (Performance)":
+            if '불만원인' in df_full.columns:
+                reasons = ['고객불만족', '구매불만', '제조불만']
+                df_full = df_full[df_full['불만원인'].isin(reasons)]
+            
+            if '사업부문' in df_full.columns:
+                biz_units = ['식품', 'B2B식품']
+                df_full = df_full[df_full['사업부문'].isin(biz_units)]
+                
+        return df_full
+    except Exception as e:
+        st.error(f"백데이터 로드 실패: {e}")
+        return pd.DataFrame()
 
-# ============================================================================
-# 세션 상태 초기화
-# ============================================================================
-if 'tuner' not in st.session_state:
-    st.session_state.tuner = None
-if 'selector' not in st.session_state:
-    st.session_state.selector = None
-if 'leaderboard' not in st.session_state:
-    st.session_state.leaderboard = None
-if 'forecast' not in st.session_state:
-    st.session_state.forecast = None
-if 'claims_data' not in st.session_state:
-    st.session_state.claims_data = None
+with st.spinner("💾 데이터베이스 로딩 중..."):
+    df_raw = load_metadata()
 
-
-# ============================================================================
-# 영역 1: 데이터 로드
-# ============================================================================
-st.subheader("📊 Step 1: 데이터 로드")
-
-try:
-    claims_data = load_partitioned(DATA_HUB_PATH)
-    st.session_state.claims_data = claims_data
-    st.success(f"✅ 클레임 데이터 로드: {len(claims_data)} 행")
-except Exception as e:
-    st.error(f"❌ 클레임 데이터 로드 실패: {str(e)}")
+if df_raw.empty:
+    st.error("❌ 데이터가 없습니다. [1. 데이터 업로드] 페이지에서 데이터를 먼저 적재해주세요.")
     st.stop()
 
+# ==============================================================================
+# 3. 사이드바: 시뮬레이션 설정
+# ==============================================================================
+st.sidebar.header("1. 분석 대상 설정")
 
-# ============================================================================
-# 영역 2: 플랜트/제품군 선택
-# ============================================================================
-st.subheader("🔍 Step 2: 분석 대상 선택")
+# 1-0. 분석 모드
+mode_select = st.sidebar.radio(
+    "📊 조회 모드",
+    ["인입 (Inflow)", "실적 (Performance)"],
+    help="실적 모드는 '고객불만족/구매불만/제조불만' 및 '식품/B2B식품' 건만 필터링합니다."
+)
 
-col_plant, col_product = st.columns(2)
-
-# 플랜트 선택
-with col_plant:
-    plants = sorted(st.session_state.claims_data['플랜트'].unique())
-    selected_plant = st.selectbox("플랜트 선택 (필수)", plants, key="plant_select")
-
-# 제품군 선택
-with col_product:
-    products = ['전체'] + sorted(
-        st.session_state.claims_data[st.session_state.claims_data['플랜트'] == selected_plant]['제품군'].dropna().unique()
-    )
-    selected_product = st.selectbox("제품군 선택 (선택사항)", products, key="product_select")
-
-
-# ============================================================================
-# 영역 3: 학습 및 예측 프로세스
-# ============================================================================
-st.subheader("🚀 Step 3: 학습 및 예측")
-
-col_tune, col_forecast = st.columns([2, 1])
-
-with col_tune:
-    n_trials = st.number_input("Optuna 시행 횟수", min_value=5, max_value=100, value=20, step=5)
-
-with col_forecast:
-    forecast_months = st.number_input("예측 기간 (개월)", min_value=1, max_value=12, value=3)
-
-# 학습/예측 시작 버튼
-if st.button("▶️ 학습 및 예측 시작", width='stretch', key="run_prediction"):
-    
-    # Progress 표시
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    try:
-        # Step 1: 데이터 준비
-        status_text.info("📋 데이터 준비 중...")
-        progress_bar.progress(10)
+# 데이터 필터링 로직 (UI용)
+if mode_select == "실적 (Performance)":
+    if '불만원인' in df_raw.columns:
+        reasons = ['고객불만족', '구매불만', '제조불만']
+        df_filtered = df_raw[df_raw['불만원인'].isin(reasons)].copy()
+    else:
+        df_filtered = df_raw.copy()
         
-        y_series, exog_df, description = prepare_timeseries_data(
-            st.session_state.claims_data,
-            selected_plant,
-            selected_product if selected_product != "전체" else None
-        )
-        
-        st.info(f"분석 대상: {description}")
-        
-        # Step 2: Optuna 하이퍼파라미터 튜닝
-        status_text.info("🔍 Optuna 하이퍼파라미터 튜닝 중 (SARIMAX, CatBoost, LSTM)...")
-        progress_bar.progress(30)
-        
-        tuner = HyperParameterTuner(
-            n_trials=n_trials,
-            test_months=3,
-            random_state=42
-        )
-        
-        best_params = tuner.tune_all(y_series, exog=exog_df)
-        st.session_state.tuner = tuner
-        
-        progress_bar.progress(60)
-        
-        # Step 3: 챔피언 선정 및 성능 비교
-        status_text.info("🏆 챔피언 모델 선정 및 재학습 중...")
-        progress_bar.progress(75)
-        
-        selector = ChampionSelector(best_params)
-        leaderboard = selector.train_models(y_series, exog=exog_df, test_months=3)
-        st.session_state.selector = selector
-        st.session_state.leaderboard = leaderboard
-        
-        progress_bar.progress(85)
-        
-        # Step 4: 3개월 예측
-        status_text.info("📈 3개월 예측 중...")
-        progress_bar.progress(95)
-        
-        # 미래 외생변수 준비 (매출 없으면 NaN)
-        future_exog = None
-        if exog_df is not None:
-            try:
-                future_sales = exog_df[['매출수량']].tail(3).mean().values[0]
-                future_exog = pd.DataFrame({
-                    '매출수량': [future_sales] * forecast_months
-                })
-            except:
-                future_exog = None
-        
-        forecast = selector.forecast(y_series, exog=future_exog, steps=forecast_months)
-        st.session_state.forecast = forecast
-        
-        progress_bar.progress(100)
-        status_text.success("✅ 학습 및 예측 완료!")
-    
-    except Exception as e:
-        status_text.error(f"❌ 오류 발생: {str(e)}")
-        st.stop()
-
-
-# ============================================================================
-# 영역 4: 결과 시각화
-# ============================================================================
-
-if st.session_state.leaderboard is not None and st.session_state.selector is not None:
-    
-    st.divider()
-    st.subheader("📊 결과")
-    
-    # 4-1. 성능 리더보드
-    st.write("#### 🏆 모델 성능 리더보드")
-    
-    leaderboard_display = st.session_state.leaderboard.copy()
-    leaderboard_display['RMSE'] = leaderboard_display['RMSE'].round(2)
-    leaderboard_display = leaderboard_display[['Rank', 'Model', 'RMSE']]
-    
-    # 선택된 행을 노란색으로 표시
-    champion_name = st.session_state.selector.champion_name
-    
-    col1, col2, col3 = st.columns(3)
-    
-    for idx, row in leaderboard_display.iterrows():
-        if row['Model'] == champion_name:
-            with col1:
-                st.metric(
-                    f"🥇 {row['Model']} (Rank {row['Rank']})",
-                    f"{row['RMSE']:.2f}",
-                    delta="우승 모델"
-                )
-        elif row['Rank'] == 2:
-            with col2:
-                st.metric(
-                    f"🥈 {row['Model']} (Rank {row['Rank']})",
-                    f"{row['RMSE']:.2f}"
-                )
-        elif row['Rank'] == 3:
-            with col3:
-                st.metric(
-                    f"🥉 {row['Model']} (Rank {row['Rank']})",
-                    f"{row['RMSE']:.2f}"
-                )
-    
-    st.dataframe(
-        leaderboard_display,
-        width='stretch',
-        hide_index=True,
-        column_config={
-            'Rank': st.column_config.NumberColumn('순위', format='%d'),
-            'Model': st.column_config.TextColumn('모델'),
-            'RMSE': st.column_config.NumberColumn('RMSE', format='%.2f')
-        }
-    )
-    
-    # 4-2. 예측 차트 (신뢰구간 포함)
-    st.write("#### 📈 시계열 예측 (3개월 신뢰구간)")
-    
-    if st.session_state.forecast is not None:
-        
-        # 실제값 (최근 12개월)
-        y_actual = st.session_state.claims_data[st.session_state.claims_data['플랜트'] == selected_plant]
-        
-        # 제품군 필터
-        if selected_product != "전체":
-            y_actual = y_actual[y_actual['제품군'] == selected_product]
-        
-        y_actual = y_actual.groupby(['접수년', '접수월']).size().reset_index(name='건수')
-        y_actual = y_actual.sort_values(['접수년', '접수월']).reset_index(drop=True).tail(12)
-        
-        # 예측값
-        y_forecast = st.session_state.forecast
-        
-        # 신뢰구간 (RMSE 기반)
-        last_rmse = st.session_state.leaderboard.iloc[0]['RMSE']
-        ci_upper = y_forecast + 1.96 * last_rmse
-        ci_lower = np.maximum(y_forecast - 1.96 * last_rmse, 0)
-        
-        # 미래 날짜 생성
-        last_year = st.session_state.claims_data['접수년'].max()
-        last_month = st.session_state.claims_data[
-            st.session_state.claims_data['접수년'] == last_year
-        ]['접수월'].max()
-        
-        future_dates = []
-        current_year = last_year
-        current_month = last_month
-        
-        for _ in range(forecast_months):
-            current_month += 1
-            if current_month > 12:
-                current_month = 1
-                current_year += 1
-            future_dates.append(f"{current_year}-{current_month:02d}")
-        
-        # Plotly 차트
-        fig = go.Figure()
-        
-        # 실제값
-        actual_dates = [
-            f"{int(row['접수년'])}-{int(row['접수월']):02d}"
-            for _, row in y_actual.iterrows()
-        ]
-        
-        fig.add_trace(go.Scatter(
-            x=actual_dates,
-            y=y_actual['건수'].values,
-            mode='lines+markers',
-            name='실제값 (Actual)',
-            line=dict(color='blue', width=2),
-            marker=dict(size=8)
-        ))
-        
-        # 예측값
-        fig.add_trace(go.Scatter(
-            x=future_dates,
-            y=y_forecast,
-            mode='lines+markers',
-            name=f'예측값 ({champion_name})',
-            line=dict(color='red', width=2, dash='dash'),
-            marker=dict(size=8)
-        ))
-        
-        # 신뢰구간
-        fig.add_trace(go.Scatter(
-            x=future_dates + future_dates[::-1],
-            y=list(ci_upper) + list(ci_lower[::-1]),
-            fill='toself',
-            fillcolor='rgba(255, 0, 0, 0.1)',
-            line=dict(color='rgba(255, 0, 0, 0)'),
-            showlegend=True,
-            name='95% 신뢰구간'
-        ))
-        
-        fig.update_layout(
-            title=f"{description} - {champion_name} 모델 3개월 예측",
-            xaxis_title="기간",
-            yaxis_title="클레임 건수",
-            hovermode='x unified',
-            height=500,
-            template='plotly_white'
-        )
-        
-        st.plotly_chart(fig, width='stretch')
-        
-        # 예측값 테이블
-        st.write("#### 📋 예측값 상세")
-        
-        forecast_df = pd.DataFrame({
-            '기간': future_dates,
-            '예측 건수': np.round(y_forecast, 1),
-            '신뢰구간 하한': np.round(ci_lower, 1),
-            '신뢰구간 상한': np.round(ci_upper, 1)
-        })
-        
-        st.dataframe(
-            forecast_df,
-            width='stretch',
-            hide_index=True,
-            column_config={
-                '기간': st.column_config.TextColumn('예측 기간'),
-                '예측 건수': st.column_config.NumberColumn('예측값', format='%.1f'),
-                '신뢰구간 하한': st.column_config.NumberColumn('95% CI (하한)', format='%.1f'),
-                '신뢰구간 상한': st.column_config.NumberColumn('95% CI (상한)', format='%.1f')
-            }
-        )
-
+    if '사업부문' in df_filtered.columns:
+        biz_units = ['식품', 'B2B식품']
+        df_filtered = df_filtered[df_filtered['사업부문'].isin(biz_units)]
 else:
-    st.info("💡 '학습 및 예측 시작' 버튼을 클릭하여 모델을 학습하고 예측 결과를 확인하세요.")
+    df_filtered = df_raw.copy()
+
+# Step 1: Plant
+plants = sorted(df_filtered['플랜트'].dropna().unique()) if not df_filtered.empty else []
+sel_plant = st.sidebar.selectbox("🏭 플랜트 선택", plants)
+
+# Step 2: Major Category
+if sel_plant:
+    df_plant = df_filtered[df_filtered['플랜트'] == sel_plant]
+    majors = sorted(df_plant['대분류'].dropna().unique())
+    sel_major = st.sidebar.selectbox("📂 대분류 선택", majors)
+else:
+    df_plant = pd.DataFrame()
+    majors = []
+    sel_major = None
+
+# Step 3: Final Target Data (UI Analysis)
+if sel_major:
+    df_target = df_plant[df_plant['대분류'] == sel_major].copy()
+    
+    st.sidebar.divider()
+    st.sidebar.info(f"📊 분석 대상: {len(df_target):,}건")
+    if not df_target.empty:
+        valid_dates = df_target['접수일자'].dropna()
+        if not valid_dates.empty:
+            min_date = valid_dates.min().date()
+            max_date = valid_dates.max().date()
+            st.sidebar.caption(f"기간: {min_date} ~ {max_date}")
+else:
+    df_target = pd.DataFrame()
+
+# Step 4: Simulation Params
+st.sidebar.header("2. 실험 파라미터")
+forecast_months = st.sidebar.slider("예측 기간 (개월)", 3, 12, 6)
+n_trials = st.sidebar.number_input("AutoML 시도 횟수", 10, 50, 15, help="높을수록 정확하지만 느려집니다.")
+
+# Action Button
+# [FIX] Session State 초기화
+if 'sim_results' not in st.session_state:
+    st.session_state['sim_results'] = None
+
+def run_simulation():
+    st.session_state['run_clicked'] = True
+    # 이전 결과 초기화
+    st.session_state['sim_results'] = None
+
+btn_run = st.sidebar.button("🚀 시뮬레이션 시작", type="primary", use_container_width=True, disabled=df_target.empty, on_click=run_simulation)
+
+# ==============================================================================
+# 4. 메인 화면: 분석 및 시각화
+# ==============================================================================
+
+if df_target.empty:
+    st.warning("데이터를 선택해주세요 (필터 조건에 맞는 데이터가 없을 수 있습니다).")
+else:
+    # [A] 데이터 미리보기 (Expandable)
+    with st.expander("🔍 선택한 대분류의 과거 이력 보기", expanded=True):
+        daily_trend = df_target.set_index('접수일자').resample('M')['건수'].sum()
+        
+        fig_hist = go.Figure()
+        fig_hist.add_trace(go.Scatter(
+            x=daily_trend.index, y=daily_trend.values,
+            mode='lines+markers', name='실적',
+            line=dict(color='black', width=2)
+        ))
+        fig_hist.update_layout(
+            title=f"{sel_plant} > {sel_major} 월별 추이 ({mode_select})",
+            height=300, margin=dict(l=20, r=20, t=40, b=20),
+            xaxis_title=None, yaxis_title="건수"
+        )
+        st.plotly_chart(fig_hist, width='stretch')
+
+# [B] 시뮬레이션 실행 및 결과 표시 (Session State 기반)
+# 버튼을 눌렀거나, 이미 결과가 저장되어 있는 경우 실행
+if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) and not df_target.empty:
+    st.divider()
+    
+    # --- 계산 로직 (결과가 없을 때만 실행) ---
+    if st.session_state['sim_results'] is None:
+        try:
+            with st.spinner("🧠 AI 모델 엔진 가동 중... (예측 및 백데이터 로딩)"):
+                # 1. 예측 엔진 실행
+                if '건수' not in df_target.columns: df_target['건수'] = 1
+                engine = SimulationEngine(df_target, date_col='접수일자', val_col='건수')
+                df_forecast = engine.run_competition(periods=forecast_months)
+                
+                # 2. 배분 로직 실행
+                alloc_df = engine.predict_with_allocation(
+                    plant=sel_plant,
+                    major_category=sel_major,
+                    sub_df=df_target,
+                    periods=forecast_months,
+                    forecast_df=df_forecast
+                )
+
+                # 3. [NEW] 다운로드용 전체 컬럼 데이터 로드 (Heavy Task)
+                df_full_backdata = load_full_target_data(sel_plant, sel_major, mode_select)
+                
+                # 4. 결과 저장
+                st.session_state['sim_results'] = {
+                    'engine': engine,
+                    'df_forecast': df_forecast,
+                    'alloc_df': alloc_df,
+                    'df_full_backdata': df_full_backdata,
+                    'model_weights': engine.model_weights
+                }
+        except Exception as e:
+            st.error(f"시뮬레이션 중 오류 발생: {str(e)}")
+            st.stop()
+            
+    # --- 결과 시각화 (Session State에서 로드) ---
+    results = st.session_state['sim_results']
+    engine = results['engine']
+    df_forecast = results['df_forecast']
+    alloc_df = results['alloc_df']
+    df_full_backdata = results['df_full_backdata']
+    
+    col_l, col_r = st.columns([1.2, 1])
+    
+    # --- 1. Top-down Forecasting ---
+    with col_l:
+        st.subheader("🏁 모델 경합 (Model Competition)")
+        
+        # 그래프 시각화
+        fig_pred = go.Figure()
+        
+        # 1. 과거 데이터
+        recent_hist = engine.train_data.tail(12)
+        last_date = recent_hist.index[-1]
+        last_val = recent_hist.values[-1]
+        
+        fig_pred.add_trace(go.Scatter(
+            x=recent_hist.index, y=recent_hist.values,
+            mode='lines+markers', name='실적 History',
+            line=dict(color='black', width=2),
+            marker=dict(size=6)
+        ))
+        
+        # 2. 예측 데이터
+        model_styles = {
+            'Ensemble': {'color': '#6200ea', 'width': 5, 'dash': 'solid'},
+            'AutoML':   {'color': '#e74c3c', 'width': 2, 'dash': 'dot'},
+            'Prophet':  {'color': '#2ecc71', 'width': 1, 'dash': 'dot'},
+            'SARIMAX':  {'color': '#3498db', 'width': 1, 'dash': 'dot'}
+        }
+        
+        cols_sorted = [c for c in df_forecast.columns if c != 'Ensemble']
+        if 'Ensemble' in df_forecast.columns:
+            cols_sorted.append('Ensemble')
+        
+        for model_name in cols_sorted:
+            style = model_styles.get(model_name, {'color': 'gray', 'width': 1, 'dash': 'dot'})
+            
+            # Gap Filling
+            pred_x = [last_date] + list(df_forecast.index)
+            pred_y = [last_val] + list(df_forecast[model_name].values)
+            
+            mode_style = 'lines+markers' if model_name == 'Ensemble' else 'lines'
+            
+            fig_pred.add_trace(go.Scatter(
+                x=pred_x, y=pred_y,
+                mode=mode_style,
+                name=f'{model_name} 예측',
+                line=dict(color=style['color'], width=style['width'], dash=style['dash']),
+                opacity=1.0 if model_name == 'Ensemble' else 0.5
+            ))
+
+        fig_pred.update_layout(
+            title=dict(text=f"<b>향후 {forecast_months}개월 예측 시나리오</b>", font=dict(size=20)),
+            height=500,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            hovermode="x unified",
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
+            plot_bgcolor='white'
+        )
+        fig_pred.add_vline(x=last_date, line_width=1, line_dash="dash", line_color="gray")
+        
+        st.plotly_chart(fig_pred, use_container_width=True)
+        
+        # 가중치 시각화
+        st.divider()
+        st.markdown("#### ⚖️ 모델별 가중치 (Dynamic Weights)")
+        weights = results['model_weights']
+        if weights:
+            cols = st.columns(len(weights))
+            for i, (model, w) in enumerate(weights.items()):
+                cols[i].metric(label=model, value=f"{w*100:.1f}%")
+
+        if 'Ensemble' in df_forecast.columns:
+            avg_pred = df_forecast['Ensemble'].mean()
+            st.success(f"🏆 최종 앙상블(Ensemble) 예측 결과, 향후 월평균 **{avg_pred:.0f}건**이 예상됩니다.")
+
+    # --- 2. Bottom-up Allocation (Seasonal) ---
+    with col_r:
+        st.subheader("🧩 소분류 배분 (Seasonal Allocation)")
+        st.caption("앙상블(Ensemble) 예측 총량을 과거 동월 비중(Ratio)에 따라 하위 소분류로 배분합니다.")
+        
+        if not alloc_df.empty:
+            pivot_alloc = alloc_df.pivot_table(
+                index='소분류', 
+                columns='예측월', 
+                values='예측건수', 
+                aggfunc='sum',
+                fill_value=0
+            )
+            pivot_alloc = pivot_alloc.fillna(0)
+            pivot_alloc.loc['Total'] = pivot_alloc.sum()
+            
+            # 스타일링 (width=None 이슈 해결됨)
+            st.dataframe(
+                pivot_alloc.style
+                    .format("{:,.1f}")
+                    .background_gradient(
+                        cmap="Reds", 
+                        subset=(pivot_alloc.index[:-1], pivot_alloc.columns)
+                    )
+                    .apply(lambda x: ['font-weight: bold' if x.name == 'Total' else '' for _ in x], axis=1),
+                use_container_width=True,
+                height=400
+            )
+            
+            st.divider()
+            b1, b2 = st.columns(2)
+            
+            # (1) 배분 결과 CSV
+            csv_alloc = alloc_df.to_csv(index=False).encode('utf-8-sig')
+            b1.download_button(
+                label="📥 배분 결과 (CSV)",
+                data=csv_alloc,
+                file_name=f"Allocation_{sel_plant}_{sel_major}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+            
+            # (2) 백데이터(전체 컬럼) CSV
+            # [FIX] Session State에 저장된 Full Data 사용
+            if not df_full_backdata.empty:
+                csv_raw = df_full_backdata.to_csv(index=False).encode('utf-8-sig')
+                b2.download_button(
+                    label="💾 원본 백데이터 (CSV)",
+                    data=csv_raw,
+                    file_name=f"BackData_Full_{sel_plant}_{sel_major}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            else:
+                b2.warning("백데이터 로드 실패")
+                
+        else:
+            st.warning("배분할 하위 데이터가 부족하거나 예측 결과(Ensemble)가 없습니다.")
+
+elif not btn_run and not st.session_state.get('run_clicked'):
+    st.info("👈 왼쪽 사이드바에서 대상을 선택하고 [시뮬레이션 시작] 버튼을 눌러주세요.")
+    
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("#### 1. Top-down Forecasting")
+        st.caption("대분류 단위로 노이즈를 줄이고 거시적인 추세를 먼저 예측합니다.")
+    with c2:
+        st.markdown("#### 2. Model Competition")
+        st.caption("Prophet, LightGBM, SARIMAX가 경합하여 최적의 예측선을 찾습니다.")
+    with c3:
+        st.markdown("#### 3. Seasonal Allocation")
+        st.caption("총 예측량을 과거 패턴에 맞춰 제품(소분류) 단위로 정교하게 쪼갭니다.")

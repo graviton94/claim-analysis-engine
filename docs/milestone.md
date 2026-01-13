@@ -1,20 +1,20 @@
 # 📅 Development Milestone (v3.0)
 
-## Phase 1: Foundation (✅ 완료)
-- [x] 대용량 데이터 파티셔닝 저장 구조 설계 (`core/storage`).
-- [x] 기본 대시보드 및 업로드 파이프라인 구축.
-
-## Phase 2: Intelligence Engine (✅ 완료)
+## Phase 1 & 2: Foundation & Intelligence (✅ 완료)
+- [x] 대용량 데이터 파티셔닝 저장 (`core/storage`).
 - [x] **Risk Engine**: Nelson Rules 및 통계적 이상 탐지 구현 (`core/analytics`).
-- [x] **Forecast Engine**: 앙상블 예측 및 영업일 보정 로직 구현 (`core/forecasting`).
-- [x] **Detail Analysis**: 동적 피벗 및 Lag 분석 UI (`3_플랜트_분석`).
+- [x] **Fast Forecast**: 대시보드용 앙상블 예측 로직 구현 (`forecasting.py`).
 
-## Phase 3: Optimization & Stability (🚧 진행 중)
-- [ ] **Hyperparameter Tuning**: Optuna를 활용한 모델 파라미터 최적화 자동화.
-- [ ] **Performance**: 대용량 Series 연산 속도 개선 (Vectorization).
-- [ ] **UX Polish**: 예측 신뢰구간 시각화 및 리스크 진단 텍스트 가독성 개선.
+## Phase 3: Forecast Stabilization (🚧 진행 중 - Priority High)
+- [ ] **Data Guard**: `forecasting.py` 학습 시 '진행 중인 당월 데이터' 자동 제외 로직 적용.
+- [ ] **Weight Logic**: 월초/월말 가중치 동적 변화 로직 튜닝 및 검증.
+- [ ] **UI Connection**: `app.py` 메인 카드에 `forecasting.py` 결과 연동 (에러 핸들링 포함).
 
-## Phase 4: Automation & Expansion (Next Step)
-- [ ] **Auto-Reporting**: 매월 초 주요 이슈를 요약하여 이메일/슬랙 자동 발송.
-- [ ] **Feedback Loop**: 사용자가 예측값이나 리스크 등급을 수정하면 이를 학습에 반영하는 피드백 파이프라인.
-- [ ] **LLM Integration**: "지난달 A공장 이슈가 뭐였어?"와 같은 질문에 답하는 챗봇 인터페이스 (Gemini API 연동).
+## Phase 4: Simulation Lab Rebuilding (예정 - Next Sprint)
+- [ ] **Legacy Cleanup**: 작동하지 않는 `4_예측_시뮬레이션.py`의 구형 코드를 `core/engine` 구조에 맞춰 리팩토링.
+- [ ] **Lab UI**: 사용자가 기간/모델을 선택하는 제어 패널(Control Panel) 구축.
+- [ ] **Visualizer**: 과거 실제값 vs 시뮬레이션 예측값을 겹쳐보는 **Backtesting 차트** 구현.
+
+## Phase 5: Automation (Future)
+- [ ] **Auto-Reporting**: 매월 1일, 고위험군(Red Grade) 자동 리포트 생성.
+- [ ] **Feedback Loop**: 사용자가 예측값을 수정하면 이를 보정 계수로 저장.

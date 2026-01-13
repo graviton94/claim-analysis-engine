@@ -1,29 +1,31 @@
 # 🏛️ Project Master Blueprint (v3.0)
 
 ## 0. Fundamental Principles
-- **Data-Driven**: 모든 판단은 데이터에 근거하며, 감(Gut feeling)을 통계적 수치로 변환한다.
-- **Speed**: 어떤 분석이든 1초 이내 응답을 목표로 파티셔닝과 캐싱을 최적화한다.
+- **Separation of Concerns**: 운영용 조회와 분석용 연산은 철저히 분리한다. 무거운 연산이 대시보드 속도를 저하시켜선 안 된다.
 
-## 1. Data Strategy: Smart Partitioning
-- **Storage**: `Year/Month` 파티셔닝된 Parquet 파일로 관리.
-- **Series Mart**: 분석 속도를 위해 `[플랜트|대분류|소분류]` 단위의 Nested JSON Series 별도 생성.
-- **Schema**: 54개 표준 필드 준수 (ETL 과정에서 타입 강제 변환).
+## 1. Data Strategy
+- **파티셔닝 규칙**: 모든 허브 데이터는 `data/hub/YYYY/MM/data.parquet` 구조로 연·월 단위 파티셔닝한다.
+- **조회 원칙**: 연·월 필터 없이 전체 데이터셋을 한 번에 적재하지 않는다. 항상 `년(접수년)`, `월(접수월)` 조건을 기준으로 범위를 한정한다.
+- **I/O 유틸**: 기간 조회 시에는 반드시 `core/storage.load_range(start_ym, end_ym)`를 사용하여 효율적인 범위 로딩을 보장한다.
 
-## 2. Core Engines (The Brain)
+## 2. Prediction Architecture: Two-Track Strategy
 
-### 2.1 🛡️ Risk Scoring Engine (`analytics.py`)
-과거 데이터 분포와 현재 추세를 비교하여 **'위험도(Risk Score)'**를 산출한다.
-- **Statistical Guards**: 소량 데이터의 과대 해석 방지 (Small Sample Guard).
-- **Nelson Rules**: 공정 관리도(Control Chart) 기법을 응용한 8가지 이상 패턴 감지.
-- **Score Logic**: `기본 점수` + `패턴 가중치` + `확률적 임계치 초과 보너스`.
+### 2.1 Track A: Operational Forecasting (운영용)
+- **Role**: 현황판, 조기 경보.
+- **Engine**: `core/forecasting.py`
+- **Logic**: 
+  - **Ensemble**: `Run-rate`(실적) + `Pattern`(계절성) + `ETS`(추세) 가중 평균.
+  - **Dynamic Weight**: 월초에는 과거 패턴 중시, 월말에는 실적 중시.
+- **Constraint**: 무거운 라이브러리(Torch, Optuna) 사용 금지. 오직 `numpy`, `statsmodels`만 허용.
 
-### 2.2 🔭 Forecasting Engine (`forecasting.py`)
-미래 물량을 예측하고, 현재의 진행 속도가 적절한지 판단한다.
-- **Input Guard**: 마감되지 않은 당월 데이터를 학습셋에서 자동 제외 (`Training Set Isolation`).
-- **Biz-Day Logic**: `np.busday_count`를 활용한 정밀한 일평균(Run-rate) 계산.
-- **Adaptive Weight**: 월초에는 `과거 패턴(MoM)` 중심, 월말에는 `현재 실적(Run-rate)` 중심으로 가중치 동적 조절.
-- **Model Pool**: Holt-Winters (Trend+Seasonality) 및 ARIMA 자동 선택.
+### 2.2 Track B: Strategic Simulation (분석용)
+- **Role**: 심층 원인 분석, 미래 설계.
+- **Engine**: `core/engine/trainer.py`
+- **Logic**:
+  - **AutoML**: Optuna를 통해 Hyperparameter(Trend 강도, 계절 주기 등) 자동 최적화.
+  - **Competition**: Prophet vs CatBoost vs LSTM 성능 경합 후 챔피언 모델 선정.
+- **UI UX**: 사용자가 버튼을 눌렀을 때만(On-demand) 연산 시작.
 
-## 3. Advanced UX/UI
-- **Dynamic Pivot**: 사용자가 행/열을 자유롭게 드래그 앤 드롭하듯 변경 가능 (`3_플랜트_분석`).
-- **Explainable AI (XAI)**: 단순히 "위험함"이 아니라, "왜 위험한지(Why)"를 텍스트로 풀어서 제공 (`format_diagnosis`).
+## 3. Analysis Intelligence
+- **Risk Scoring**: 단순 건수가 아닌, 포아송 분포 기반의 **희소 사건 확률**과 Nelson Rules를 결합하여 산출 (`core/analytics.py`).
+- **Explainability**: "위험함"이 아니라 "최근 3개월 연속 상승하여 위험함"이라는 구체적 사유 텍스트 생성.
