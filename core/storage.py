@@ -1,8 +1,9 @@
 # ============================================================================
-# 저장소 모듈: Parquet 파티셔닝 입출력
+# 저장소 모듈: Parquet 파티셔닝 입출력 및 통합 로더 (Full Version)
 # ============================================================================
 # 설명: 클레임 데이터를 접수년/접수월 기준으로 파티셔닝하여 저장하고,
-#      특정 기간의 데이터를 효율적으로 로드합니다.
+#      다양한 필터 조건에 따라 데이터를 효율적으로 로드합니다.
+#      (Phase 1, 2 기능 포함 + Phase 2.5 통합 로더 추가)
 
 import pandas as pd
 import numpy as np
@@ -10,11 +11,22 @@ from pathlib import Path
 from typing import List, Optional, Union, Dict, Any
 import json
 import re
+from datetime import date, datetime
+
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
-from core.config import DATA_HUB_PATH, PARTITION_COLS, DATA_SERIES_PATH
 
+from core.config import DATA_HUB_PATH, PARTITION_COLS, DATA_SERIES_PATH, TARGET_54_COLS
+
+# [CONFIG] 필터링 상수 (Page 3/4 공통 사용)
+TARGET_BUSINESS_UNITS = ['식품', 'B2B식품']
+PERFORMANCE_REASONS = ['제조불만', '고객불만족', '구매불만']
+
+
+# ============================================================================
+# Phase 1: 기본 입출력 (Legacy Support)
+# ============================================================================
 
 def save_partitioned(
     df: pd.DataFrame,
@@ -23,19 +35,6 @@ def save_partitioned(
 ) -> None:
     """
     데이터프레임을 Parquet 형식으로 파티셔닝하여 저장.
-    
-    동작:
-        - partition_cols (기본: ['접수년', '접수월'])을 기준으로 물리 폴더 생성
-        - 각 폴더에 data.parquet 형식으로 저장
-        - 구조: data/hub/YYYY/MM/data.parquet
-    
-    Args:
-        df: 저장할 데이터프레임
-        output_path: 저장 경로 (기본값: 'data/hub')
-        partition_cols: 파티셔닝 기준 컬럼 리스트 (기본값: ['접수년', '접수월'])
-    
-    Raises:
-        ValueError: 필수 파티셔닝 컬럼 없음
     """
     output_path = Path(output_path)
     
@@ -49,7 +48,6 @@ def save_partitioned(
     for col in partition_cols:
         df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').fillna(0).astype(int)
     
-    # Parquet 파티셔닝 저장
     print(f"[STORAGE] 파티셔닝 저장 시작: {output_path}")
     print(f"[STORAGE] 파티셔닝 컬럼: {partition_cols}")
     
@@ -79,8 +77,7 @@ def save_partitioned_parquet(
 ) -> None:
     """
     요구사항 준수 버전: Lag_Days, Lag_Valid 포함하여 파티셔닝 저장.
-
-    기존 save_partitioned 로직을 활용하되, 입력 df에 생성된 지표를 그대로 포함하여 저장합니다.
+    상담번호 기준 중복 제거 로직 포함.
     """
     output_path = Path(output_path)
 
@@ -137,21 +134,6 @@ def load_partitioned(
 ) -> pd.DataFrame:
     """
     Parquet 파티셔닝 데이터 로드.
-    
-    동작:
-        - 특정 연/월 데이터 필터링 로드 (성능 최적화)
-        - 필터 미지정 시 전체 데이터 로드
-    
-    Args:
-        path: 저장 경로 (기본값: 'data/hub')
-        year: 조회 연도 (None이면 모든 연도 조회)
-        month: 조회 월 (None이면 모든 월 조회)
-    
-    Returns:
-        pd.DataFrame: 로드된 데이터프레임
-    
-    Raises:
-        FileNotFoundError: 저장된 데이터 없음
     """
     path = Path(path)
     
@@ -171,7 +153,6 @@ def load_partitioned(
     
     try:
         # DirectoryPartitioning 스키마 정의
-        # save_partitioned에서 정수형으로 변환했으므로 int64() 사용
         partitioning = ds.DirectoryPartitioning(pa.schema([
             pa.field('접수년', pa.int64()),
             pa.field('접수월', pa.int64())
@@ -204,10 +185,6 @@ def get_available_periods(
 ) -> pd.DataFrame:
     """
     저장된 파티셔닝 데이터의 사용 가능한 연/월 목록과 각 기간의 데이터 건수를 반환.
-
-    디렉토리 구조 지원:
-    - 접수년=YYYY/접수월=MM (pyarrow DirectoryPartitioning 기본)
-    - YYYY/MM (레거시/수동 저장)
     """
     path = Path(path)
     if not path.exists():
@@ -249,7 +226,6 @@ def get_available_periods(
                 try:
                     parquet_files = list(month_dir.glob('*.parquet'))
                     if not parquet_files:
-                        # Parquet 파일이 없으면 건너뜀 (빈 디렉토리)
                         continue
 
                     for pq_file in parquet_files:
@@ -275,13 +251,7 @@ def clear_partitioned_data(
     path: Union[str, Path] = DATA_HUB_PATH,
     confirm: bool = False
 ) -> None:
-    """
-    저장된 파티셔닝 데이터 초기화 (테스트/개발용).
-    
-    Args:
-        path: 저장 경로
-        confirm: 삭제 확인 플래그 (True여야 실제 삭제)
-    """
+    """데이터 초기화"""
     path = Path(path)
     
     if not confirm:
@@ -294,23 +264,12 @@ def clear_partitioned_data(
 
 
 # ============================================================================
-# Phase 2: 고도화 함수
+# Phase 2: 고도화 함수 (Nested Series & Sales Estimation)
 # ============================================================================
 
 def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
     """
     클레임 데이터의 [플랜트, 접수년, 접수월] 유니크 조합 추출.
-    
-    동작:
-        - data/hub/ 파티셔닝 폴더를 올바르게 스캔
-        - pyarrow.dataset을 사용하여 파티션된 전체 데이터 로드
-        - 필요한 컬럼만 효율적으로 읽어 유니크 조합 추출
-    
-    Args:
-        path: 저장 경로 (기본값: 'data/hub')
-    
-    Returns:
-        pd.DataFrame: {플랜트, 접수년, 접수월} 컬럼의 유니크 조합
     """
     path = Path(path)
     if not path.exists() or not any(path.iterdir()):
@@ -318,36 +277,28 @@ def get_claim_keys(path: Union[str, Path] = DATA_HUB_PATH) -> pd.DataFrame:
         return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
 
     try:
-        # 파티션 스키마를 명시적으로 정의하여 안정성 확보
         partitioning = ds.DirectoryPartitioning(pa.schema([
             pa.field('접수년', pa.int64()),
             pa.field('접수월', pa.int64())
         ]))
         
-        # pyarrow.dataset을 사용하여 파티션된 데이터셋을 올바르게 로드
         dataset = ds.dataset(path, partitioning=partitioning, format="parquet")
-        
-        # 성능 최적화를 위해 필요한 컬럼만 선택하여 로드
         df = dataset.to_table(columns=['플랜트', '접수년', '접수월']).to_pandas()
         
         if df.empty:
             print("[STORAGE] Hub data is empty after loading.")
             return pd.DataFrame(columns=['플랜트', '접수년', '접수월'])
 
-        # 유니크 조합 추출
         claim_keys = df[['플랜트', '접수년', '접수월']].drop_duplicates()
         
-        # 정렬을 위해 타입 변환 및 None/NaN 값 제거
         claim_keys['플랜트'] = claim_keys['플랜트'].astype(str)
         claim_keys['접수년'] = pd.to_numeric(claim_keys['접수년'], errors='coerce')
         claim_keys['접수월'] = pd.to_numeric(claim_keys['접수월'], errors='coerce')
         claim_keys = claim_keys.dropna()
         
-        # 정수형으로 최종 변환
         claim_keys['접수년'] = claim_keys['접수년'].astype(int)
         claim_keys['접수월'] = claim_keys['접수월'].astype(int)
 
-        # 최종 정렬
         claim_keys = claim_keys.sort_values(['플랜트', '접수년', '접수월']).reset_index(drop=True)
         
         print(f"[STORAGE] 클레임 키 추출 완료: {len(claim_keys)} 행")
@@ -367,22 +318,9 @@ def load_sales_with_estimation(
 ) -> pd.DataFrame:
     """
     매출 데이터 로드 및 스마트 추정 값 채우기.
-    
-    동작:
-        1. 매출 데이터 로드
-        2. 값이 없거나 0인 행에 대해 동일 플랜트의 직전 N개월 평균값으로 채우기
-        3. is_estimated (Boolean) 컬럼 추가하여 실적/추정 구분
-    
-    Args:
-        sales_path: 매출 데이터 저장 경로
-        lookback_months: 평균 계산 시 참고할 과거 개월 수 (기본값: 3)
-    
-    Returns:
-        pd.DataFrame: {플랜트, 년, 월, 매출수량, is_estimated} 스키마
     """
     sales_path = Path(sales_path)
     
-    # 매출 데이터 로드
     if not sales_path.exists():
         print("[INFO] 저장된 매출 데이터 없음")
         return pd.DataFrame(columns=['플랜트', '년', '월', '매출수량', 'is_estimated'])
@@ -393,37 +331,28 @@ def load_sales_with_estimation(
         print(f"[WARNING] 매출 데이터 로드 실패: {str(e)}")
         return pd.DataFrame(columns=['플랜트', '년', '월', '매출수량', 'is_estimated'])
     
-    # 기본 전처리
     df = df.copy()
     df['년'] = pd.to_numeric(df['년'], errors='coerce').astype('Int64')
     df['월'] = pd.to_numeric(df['월'], errors='coerce').astype('Int64')
     df['매출수량'] = pd.to_numeric(df['매출수량'], errors='coerce')
-    
-    # is_estimated 컬럼 초기화 (실적 = False)
     df['is_estimated'] = False
     
-    # 플랜트별로 순차 처리
-    # ★ None/NaN 플랜트 제외
     plants = df['플랜트'].dropna().unique()
     
     for plant in plants:
         plant_df = df[df['플랜트'] == plant].copy()
-        # ★ 인덱스 정렬 시 타입 안전성: 먼저 형변환 후 정렬
         plant_df['년'] = pd.to_numeric(plant_df['년'], errors='coerce').fillna(0).astype(int)
         plant_df['월'] = pd.to_numeric(plant_df['월'], errors='coerce').fillna(0).astype(int)
         plant_df = plant_df.sort_values(['년', '월']).reset_index(drop=True)
         
-        # NaN 또는 0인 행 찾기
         missing_mask = (plant_df['매출수량'].isna()) | (plant_df['매출수량'] == 0)
         
         for idx in plant_df[missing_mask].index:
             current_year = plant_df.loc[idx, '년']
             current_month = plant_df.loc[idx, '월']
             
-            # 직전 3개월 평균값 계산
             lookback_values = []
             for back_month in range(1, lookback_months + 1):
-                # 과거 달 계산 (월 순환)
                 past_year = current_year
                 past_month = current_month - back_month
                 
@@ -431,14 +360,12 @@ def load_sales_with_estimation(
                     past_year -= 1
                     past_month += 12
                 
-                # 과거 달 데이터 조회
                 past_data = plant_df[
                     (plant_df['년'] == past_year) & (plant_df['월'] == past_month)
                 ]
                 if not past_data.empty and not pd.isna(past_data['매출수량'].iloc[0]):
                     lookback_values.append(past_data['매출수량'].iloc[0])
             
-            # 평균값 계산 및 적용
             if lookback_values:
                 avg_value = sum(lookback_values) / len(lookback_values)
                 df.loc[
@@ -458,19 +385,13 @@ def load_sales_with_estimation(
     return df.sort_values(['플랜트', '년', '월']).reset_index(drop=True)
 
 
-# ============================================================================
-# Phase 1: Nested Series JSON 생성 (Critical)
-# ============================================================================
+# --- Nested Series JSON Generation Helpers ---
 
 def _sanitize_filename(name: str) -> str:
-    """파일 이름으로 사용될 수 없는 특수문자를 '-'로 치환."""
-    # Windows 및 Unix/Linux에서 일반적으로 허용되지 않는 문자들
-    # '/', '\', ':', '*', '?', '"', '<', '>', '|'
     return re.sub(r'[\\/:\*\?"<>\|]', '-', name)
 
 
 def _month_range(df: pd.DataFrame, date_col: str) -> List[str]:
-    """데이터셋 전체의 Min~Max 월 범위 생성 (YYYY-MM 문자열 리스트)."""
     if date_col not in df.columns:
         return []
     dates = pd.to_datetime(df[date_col], errors='coerce')
@@ -484,11 +405,9 @@ def _month_range(df: pd.DataFrame, date_col: str) -> List[str]:
 
 
 def _compute_series_stats(values: List[int]) -> Dict[str, float]:
-    """mean, std, slope(최근 3개월 선형회귀 기울기) 계산."""
     arr = np.array(values, dtype=float)
     mean = float(np.nanmean(arr)) if arr.size else 0.0
     std = float(np.nanstd(arr, ddof=1)) if arr.size > 1 else 0.0
-    # 최근 3개월 기울기
     if arr.size >= 3:
         y = arr[-3:]
         x = np.arange(1, len(y) + 1, dtype=float)
@@ -506,44 +425,21 @@ def generate_nested_series(
     output_dir: Union[str, Path] = DATA_SERIES_PATH,
     date_col: str = '접수일자'
 ) -> int:
-    """
-    Nested Series JSON 생성.
-
-    Grouping Key: [플랜트, 제품범주2, 대분류]
-    Zero-filling: 전체 Min~Max 월 범위 기준으로 월별 카운트 0채우기 (Parent & Children)
-
-    JSON Schema:
-        key: "{Plant}_{Cat2}_{Major}"
-        meta: last_updated, warning_level(0), champion_model(null), parent_stats(mean,std,slope)
-        data.history: 월별 count 리스트 (zero-filled)
-        data.forecast: 빈 리스트
-        children: 각 중분류별 서브 시리즈 (stats + history)
-
-    Returns:
-        생성된 JSON 파일 개수
-    """
+    """Nested Series JSON 생성."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # 전체 월 범위
     all_months = _month_range(df, date_col)
     if not all_months:
         print("[STORAGE] 유효한 월 범위를 산출할 수 없음 (접수일자 비어있음)")
         return 0
 
-    # 월 키 생성 함수
-    def _month_key(ts: pd.Timestamp) -> str:
-        return pd.to_datetime(ts).strftime('%Y-%m')
-
-    # 유효 데이터 마스크 (Lag_Valid=True)
     valid_mask = df['Lag_Valid'] if 'Lag_Valid' in df.columns else pd.Series([True] * len(df))
 
-    # 월별 컬럼 파생 (date_col 기준)
     df = df.copy()
     df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
     df['__month'] = df[date_col].dt.to_period('M').dt.to_timestamp()
 
-    # 그룹핑
     required_cols = ['플랜트', '제품범주2', '대분류', '중분류']
     for col in required_cols:
         if col not in df.columns:
@@ -555,11 +451,9 @@ def generate_nested_series(
     today_str = pd.Timestamp.today().strftime('%Y-%m-%d')
 
     for (plant, cat2, major), gdf in grouped:
-        # Parent 월별 카운트 (전체) 및 유효 데이터 카운트 (통계용)
         parent_counts_all = gdf.groupby('__month').size()
         parent_counts_valid = gdf[valid_mask.loc[gdf.index]].groupby('__month').size()
 
-        # Zero-fill
         parent_history = []
         parent_series_all = {pd.to_datetime(k).strftime('%Y-%m'): int(v) for k, v in parent_counts_all.items()}
         parent_series_valid = {pd.to_datetime(k).strftime('%Y-%m'): int(v) for k, v in parent_counts_valid.items()}
@@ -572,7 +466,6 @@ def generate_nested_series(
 
         parent_stats = _compute_series_stats(parent_values_for_stats)
 
-        # Lag 통계 추가
         if 'Lag_Valid' in gdf.columns and 'Lag_Days' in gdf.columns:
             valid_lags = gdf.loc[gdf['Lag_Valid'] == True, 'Lag_Days']
             avg_lag = valid_lags.mean() if not valid_lags.empty else 0.0
@@ -580,7 +473,6 @@ def generate_nested_series(
         else:
             parent_stats['avg_lag_days'] = 0.0
 
-        # Children (중분류)
         children = []
         child_groups = gdf.groupby('중분류', dropna=False)
         for middle, cgdf in child_groups:
@@ -599,7 +491,6 @@ def generate_nested_series(
 
             child_stats = _compute_series_stats(child_values_for_stats)
 
-            # Lag 통계 추가
             if 'Lag_Valid' in cgdf.columns and 'Lag_Days' in cgdf.columns:
                 valid_lags = cgdf.loc[cgdf['Lag_Valid'] == True, 'Lag_Days']
                 avg_lag = valid_lags.mean() if not valid_lags.empty else 0.0
@@ -613,15 +504,11 @@ def generate_nested_series(
                 "history": child_history
             })
 
-        # 파일명 생성을 위해 각 키 구성요소를 개별적으로 정제
         s_plant = _sanitize_filename(str(plant) if plant is not None else "")
         s_cat2 = _sanitize_filename(str(cat2) if cat2 is not None else "")
         s_major = _sanitize_filename(str(major) if major is not None else "")
         
-        # 정제된 부분들을 조합하여 최종 파일명 키 생성
         filename_key = f"{s_plant}_{s_cat2}_{s_major}"
-
-        # JSON payload에는 원본 키를 저장
         key = f"{str(plant)}_{str(cat2)}_{str(major)}"
         
         payload: Dict[str, Any] = {
@@ -639,7 +526,6 @@ def generate_nested_series(
             "children": children,
         }
 
-        # 파일 저장
         filename = (output_path / f"{filename_key}.json")
         try:
             filename.parent.mkdir(parents=True, exist_ok=True)
@@ -651,3 +537,95 @@ def generate_nested_series(
 
     print(f"[STORAGE] Nested Series JSON 생성 완료: {created}개")
     return created
+
+
+# ============================================================================
+# [NEW] Phase 2.5: 통합 로더 구현 (Single Source of Truth)
+# ============================================================================
+
+def load_and_filter_data(
+    plant: str,
+    start_date: date,
+    end_date: date,
+    search_mode: str,  # "인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)"
+    selected_biz: Optional[List[str]] = None,
+    selected_reasons: Optional[List[str]] = None,
+    selected_grades: Optional[List[str]] = None,
+    selected_categories: Optional[List[str]] = None,
+    data_path: Union[str, Path] = DATA_HUB_PATH
+) -> pd.DataFrame:
+    """
+    분석(Page 3) 및 예측(Page 4)에서 공통으로 사용하는 통합 데이터 로더.
+    
+    동작:
+        1. PyArrow Dataset으로 지연 로딩 연결
+        2. 플랜트 및 날짜 범위 필터링 (메모리 효율화)
+        3. 조회 모드(인입/실적/Custom)에 따른 비즈니스 로직 적용
+        4. 등급 및 대분류 필터링 적용
+        
+    Returns:
+        pd.DataFrame: 모든 필터가 적용된 최종 데이터
+    """
+    try:
+        path = Path(data_path)
+        if not path.exists():
+            print(f"[WARNING] 데이터 경로 없음: {data_path}")
+            return pd.DataFrame(columns=TARGET_54_COLS)
+
+        # 1. Dataset 연결 (Hive Partitioning 자동 감지)
+        dataset = ds.dataset(path, format="parquet", partitioning="hive")
+        
+        # 2. 1차 로드: 전체 데이터 (필터링 편의성을 위해)
+        # 대용량 환경에서는 ds.field() 필터링을 먼저 적용하는 것이 좋으나,
+        # 현재 구조에서는 Pandas 변환 후 처리가 날짜/복합 로직에 유리함.
+        table = dataset.to_table() 
+        df = table.to_pandas()
+        
+        # 날짜 컬럼 변환
+        if '접수일자' not in df.columns:
+            return pd.DataFrame()
+        df['접수일자'] = pd.to_datetime(df['접수일자'])
+        
+        # 3. 기본 범위 필터링 (플랜트 + 기간)
+        mask = (
+            (df['플랜트'] == plant) &
+            (df['접수일자'].dt.date >= start_date) &
+            (df['접수일자'].dt.date <= end_date)
+        )
+        df = df[mask].copy()
+        
+        if df.empty:
+            return df
+            
+        # 4. 조회 모드(Search Mode) 필터링
+        if "인입" in search_mode:
+            # 사업부문(식품, B2B식품) + 불만원인(전체)
+            cond_biz = df['사업부문'].isin(TARGET_BUSINESS_UNITS)
+            cond_reason = df['불만원인'].notna()
+            df = df[cond_biz & cond_reason]
+            
+        elif "실적" in search_mode:
+            # 사업부문(식품, B2B식품) + 불만원인(제조, 고객, 구매)
+            cond_biz = df['사업부문'].isin(TARGET_BUSINESS_UNITS)
+            cond_reason = df['불만원인'].isin(PERFORMANCE_REASONS)
+            df = df[cond_biz & cond_reason]
+            
+        else: # "Custom"
+            if selected_biz:
+                df = df[df['사업부문'].isin(selected_biz)]
+            if selected_reasons:
+                df = df[df['불만원인'].isin(selected_reasons)]
+        
+        # 5. 상세 필터링 (등급, 대분류)
+        if selected_grades:
+            df = df[df['등급기준'].isin(selected_grades)]
+            
+        if selected_categories:
+            df = df[df['대분류'].isin(selected_categories)]
+            
+        return df.reset_index(drop=True)
+
+    except Exception as e:
+        print(f"[ERROR] 통합 데이터 로드 실패: {str(e)}")
+        # 에러 발생 시 빈 데이터프레임 반환
+        return pd.DataFrame(columns=TARGET_54_COLS)
