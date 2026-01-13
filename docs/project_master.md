@@ -1,31 +1,38 @@
-# 🏛️ Project Master Blueprint (v3.0)
+# **🏰 Risk Prediction Model \- Project Master**
 
-## 0. Fundamental Principles
-- **Separation of Concerns**: 운영용 조회와 분석용 연산은 철저히 분리한다. 무거운 연산이 대시보드 속도를 저하시켜선 안 된다.
+## **1\. Project Overview**
 
-## 1. Data Strategy
-- **파티셔닝 규칙**: 모든 허브 데이터는 `data/hub/YYYY/MM/data.parquet` 구조로 연·월 단위 파티셔닝한다.
-- **조회 원칙**: 연·월 필터 없이 전체 데이터셋을 한 번에 적재하지 않는다. 항상 `년(접수년)`, `월(접수월)` 조건을 기준으로 범위를 한정한다.
-- **I/O 유틸**: 기간 조회 시에는 반드시 `core/storage.load_range(start_ym, end_ym)`를 사용하여 효율적인 범위 로딩을 보장한다.
+* **Goal**: 클레임 데이터 기반의 실시간 리스크 모니터링(Diagnosis) 및 미래 물량 예측(Prognosis) 시스템 구축.  
+* **Tech Stack**: Python 3.10+, Streamlit, Plotly, Pandas, Pyarrow, Catboost/Prophet/SARIMAX.  
+* **Architecture**:  
+  * **Core**: storage(I/O), analytics(Risk Logic), forecasting(Engine), etl(Validation).  
+  * **Pages**: 1\_Upload, 2\_Sales, 3\_Analysis, 4\_Simulation.  
+  * **Main**: app.py (Control Tower).
 
-## 2. Prediction Architecture: Two-Track Strategy
+## **2\. Current Status (Phase 2.8 Done)**
 
-### 2.1 Track A: Operational Forecasting (운영용)
-- **Role**: 현황판, 조기 경보.
-- **Engine**: `core/forecasting.py`
-- **Logic**: 
-  - **Ensemble**: `Run-rate`(실적) + `Pattern`(계절성) + `ETS`(추세) 가중 평균.
-  - **Dynamic Weight**: 월초에는 과거 패턴 중시, 월말에는 실적 중시.
-- **Constraint**: 무거운 라이브러리(Torch, Optuna) 사용 금지. 오직 `numpy`, `statsmodels`만 허용.
+* **Data Pipeline**: core.storage를 통한 중앙 집중식 데이터 로드 및 필터링 체계 확립.  
+* **Risk Engine**: Nelson Rules \+ Zero-Filling 기법을 적용하여 0건 \-\> 급증 패턴 정밀 탐지.  
+* **Dashboard**: Action-Oriented UI 및 Color System 적용으로 시인성/사용성 극대화.  
+* **Consistency**: 분석(Page 3)과 예측(Page 4), 대시보드(App) 간의 데이터 및 로직 100% 일치.
 
-### 2.2 Track B: Strategic Simulation (분석용)
-- **Role**: 심층 원인 분석, 미래 설계.
-- **Engine**: `core/engine/trainer.py`
-- **Logic**:
-  - **AutoML**: Optuna를 통해 Hyperparameter(Trend 강도, 계절 주기 등) 자동 최적화.
-  - **Competition**: Prophet vs CatBoost vs LSTM 성능 경합 후 챔피언 모델 선정.
-- **UI UX**: 사용자가 버튼을 눌렀을 때만(On-demand) 연산 시작.
+## **3\. Directory Structure**
 
-## 3. Analysis Intelligence
-- **Risk Scoring**: 단순 건수가 아닌, 포아송 분포 기반의 **희소 사건 확률**과 Nelson Rules를 결합하여 산출 (`core/analytics.py`).
-- **Explainability**: "위험함"이 아니라 "최근 3개월 연속 상승하여 위험함"이라는 구체적 사유 텍스트 생성.
+claim-analysis-engine/  
+├── app.py                  \# Main Dashboard (KPI, Risk Radar, Trend)  
+├── core/  
+│   ├── analytics.py        \# Risk Scoring & Zero-filling Logic  
+│   ├── storage.py          \# Parquet I/O & Unified Loader  
+│   ├── forecasting.py      \# Forecasting Engine Wrapper  
+│   └── engine/             \# ML/DL Training Modules  
+├── pages/  
+│   ├── 3\_플랜트\_분석.py     \# Deep Dive Diagnosis  
+│   └── 4\_예측\_시뮬레이션.py  \# Future Simulation & Allocation  
+├── docs/                   \# Project Documents (Source of Truth)  
+└── data/hub/               \# Parquet Partitioned Data Store
+
+## **4\. Key Checkpoints**
+
+1. **Data Sync**: 모든 페이지는 load\_and\_filter\_data를 사용해야 함.  
+2. **Risk Sync**: 리스크 점수 계산 전 반드시 prepare\_risk\_data를 통과해야 함.  
+3. **UI Standard**: 새로운 기능 추가 시 정의된 Color System(\#EF151E 등)을 준수해야 함.
