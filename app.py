@@ -479,7 +479,8 @@ with col_insight:
             
             for idx, row in critical_lots.iterrows():
                 is_recent = row['last_receipt_str'] == max_date.strftime('%Y-%m-%d')
-                # Excel 다운로드 준비
+                
+                # Excel 다운로드용 데이터 필터링
                 download_data = df_lot[
                     (df_lot['플랜트'] == row['플랜트']) &
                     (df_lot['제품명'] == row['제품명']) &
@@ -487,24 +488,30 @@ with col_insight:
                     (df_lot['소분류'] == row['소분류']) &
                     (df_lot['mfg_str'] == row['mfg_str'])
                 ]
+                
+                # [UI] 정보 추출 및 포맷팅
                 code_str = f"({int(row['제품코드'])})" if pd.notna(row['제품코드']) else ""
-                # 등급기준 추출: 그룹 내 가장 빈도가 높은 값 사용
+                
+                # [FIX] 대분류 정보 추출 (소분류 단독 표시 -> 대분류 > 소분류)
+                try:
+                    cat_main = download_data['대분류'].iloc[0] if '대분류' in download_data.columns else ''
+                    cat_display = f"{cat_main} > {row['소분류']}" if cat_main else row['소분류']
+                except:
+                    cat_display = row['소분류']
+
+                # 등급 기준 배지 스타일링
                 grade_val = "미분류"
                 grade_css = "grade-unclassified"
                 if '등급기준' in download_data.columns and not download_data['등급기준'].dropna().empty:
                     try:
                         g = download_data['등급기준'].mode().iloc[0]
                         grade_val = str(g) if pd.notna(g) and str(g).strip() != '' else '미분류'
-                        if grade_val == '일반':
-                            grade_css = 'grade-normal'
-                        elif grade_val.strip() == '':
-                            grade_val = '미분류'
-                            grade_css = 'grade-unclassified'
-                        else:
-                            grade_css = 'grade-danger'
-                    except Exception:
-                        grade_val = '미분류'
-                        grade_css = 'grade-unclassified'
+                        if grade_val == '일반': grade_css = 'grade-normal'
+                        elif grade_val.strip() == '': grade_css = 'grade-unclassified'
+                        else: grade_css = 'grade-danger'
+                    except: pass
+
+                # 엑셀 파일 생성
                 buffer = BytesIO()
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     download_data.to_excel(writer, index=False, sheet_name='LOT Details')
@@ -514,14 +521,13 @@ with col_insight:
                     "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + download_b64
                 )
 
-                # 단일 flex-row HTML로 좌측 카드와 우측 버튼 높이 일치
+                # [UI] HTML Card 렌더링 (대분류 정보 포함, 버튼은 엑셀만 유지)
                 st.markdown(f"""
                 <div class='lot-row'>
                     <div class='lot-card-container lot-card-left' style='{"background-color: #faf3f0;" if is_recent else ""}'>
                         <div class='lot-title'>🏭 {row['플랜트']} - {code_str}{row['제품명']} </div>
                         <div class='lot-info'>
-                            📦 소분류: {row['소분류']}
-                            {f"<span class='lot-grade-badge {grade_css}'>{grade_val}</span>" if grade_val or grade_css else ''}
+                            📦 분류: {cat_display} {f"<span class='lot-grade-badge {grade_css}'>{grade_val}</span>" if grade_val or grade_css else ''}
                             &nbsp;&nbsp;
                             <span class='lot-count-badge'>{row['count']}건</span>
                         </div>

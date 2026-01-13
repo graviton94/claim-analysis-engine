@@ -58,7 +58,7 @@ from core.analytics import calculate_advanced_risk_score, calculate_lag_stats, d
 
 # --- 0. 설정 및 상수 정의 ---
 st.set_page_config(page_title="플랜트 분석", layout="wide")
-st.title("🏭 Phase 2.5: 플랜트 정밀 분석 (Dual-Track Scoring)")
+st.title("🏭 플랜트 클레임 현황 레포트 생성")
 
 # [CONFIG] 등급 기준 매핑
 CRITICAL_GRADES = ['중대', '위험', '사고']  
@@ -293,7 +293,7 @@ with col_step3:
 st.divider()
 
 # --- 5. Step 4: Pivot & Analysis ---
-st.markdown("#### Step 4: 상세 분석 (Hybrid Table)")
+st.markdown("#### Step 4: 그래프 조정 (Hybrid Table)")
 
 col_p1, col_p2 = st.columns([1, 1])
 
@@ -597,7 +597,7 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", width='stretch
             # 그래프 제목 계산
             start_month = recent_months[0] if recent_months else all_months_in_range[0]
             end_month = recent_months[-1] if recent_months else all_months_in_range[-1]
-            st.markdown(f"#### 📊 2개년 추이 분석 (그래프 상 시작 {start_month} ~ 끝 {end_month})")
+            st.markdown(f"#### 📊 2개년 추이 분석 ({start_month} ~ {end_month})")
             
             # Plotly 선 그래프 구성
             fig = px.line(title=f"2개년 클레임 건수 추이 ({graph_index} 기준)")
