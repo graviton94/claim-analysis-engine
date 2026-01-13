@@ -1,20 +1,41 @@
-# 📅 Development Milestone (v3.0)
+# **📅 Development Milestone (Updated: Phase 2.8 Complete)**
 
-## Phase 1 & 2: Foundation & Intelligence (✅ 완료)
-- [x] 대용량 데이터 파티셔닝 저장 (`core/storage`).
-- [x] **Risk Engine**: Nelson Rules 및 통계적 이상 탐지 구현 (`core/analytics`).
-- [x] **Fast Forecast**: 대시보드용 앙상블 예측 로직 구현 (`forecasting.py`).
+## **Phase 1: Data Foundation & Sales Integration (✅ Complete)**
 
-## Phase 3: Forecast Stabilization (🚧 진행 중 - Priority High)
-- [ ] **Data Guard**: `forecasting.py` 학습 시 '진행 중인 당월 데이터' 자동 제외 로직 적용.
-- [ ] **Weight Logic**: 월초/월말 가중치 동적 변화 로직 튜닝 및 검증.
-- [ ] **UI Connection**: `app.py` 메인 카드에 `forecasting.py` 결과 연동 (에러 핸들링 포함).
+* \[x\] core/storage.py: Partitioned Parquet I/O 구현.  
+* \[x\] core/etl.py: 54개 필드 표준화 및 Validation.  
+* \[x\] pages/1\_데이터\_업로드.py: 대용량 파일 적재 UI.  
+* \[x\] pages/2\_매출수량\_관리.py: 매출 데이터 CRUD UI.
 
-## Phase 4: Simulation Lab Rebuilding (예정 - Next Sprint)
-- [ ] **Legacy Cleanup**: 작동하지 않는 `4_예측_시뮬레이션.py`의 구형 코드를 `core/engine` 구조에 맞춰 리팩토링.
-- [ ] **Lab UI**: 사용자가 기간/모델을 선택하는 제어 패널(Control Panel) 구축.
-- [ ] **Visualizer**: 과거 실제값 vs 시뮬레이션 예측값을 겹쳐보는 **Backtesting 차트** 구현.
+## **Phase 2.5: Integration & Standardization (✅ Complete)**
 
-## Phase 5: Automation (Future)
-- [ ] **Auto-Reporting**: 매월 1일, 고위험군(Red Grade) 자동 리포트 생성.
-- [ ] **Feedback Loop**: 사용자가 예측값을 수정하면 이를 보정 계수로 저장.
+**Goal**: 분석(Page 3)과 예측(Page 4)의 데이터 정합성 100% 일치 및 로직 모듈화
+
+* \[x\] **Core Refactoring**:  
+  * core/storage.py: 통합 로더 load\_and\_filter\_data() 구현.  
+  * core/analytics.py: Zero-filling 및 24개월 데이터 주입 로직 prepare\_risk\_data() 모듈화.  
+* \[x\] **Page 3 (Diagnosis) Optimization**:  
+  * Ad-hoc 필터링 로직 제거 및 Core 모듈 교체.  
+  * Tab 2(Lag), Tab 3(Raw) UI 표준화.  
+* \[x\] **Page 4 (Prognosis) Synchronization**:  
+  * Lazy Loading 제거 및 Core 모듈 기반 데이터 로드 적용.  
+  * Risk Scoring 시 Zero-filling 로직 적용 (Page 3와 점수 일치).
+
+## **Phase 2.8: Dashboard Enhancement (✅ Complete)**
+
+**Goal**: app.py를 Action-Oriented Dashboard로 고도화
+
+* \[x\] **Risk Logic Sync**: app.py에 Core 로직(Zero-Filling) 적용.  
+* \[x\] **Visual Upgrade**: Modern Card UI, Color System(\#EF151E, \#FF9700, \#006ECD) 적용.  
+* \[x\] **Action Items**: 엑셀 다운로드, 정밀 분석/예측 모델 Deep Link 버튼 구현.  
+* \[x\] **Chart Fix**: 실적-예측 라인 분리(Disconnection)로 시인성 확보.
+
+## **Phase 3: ML/DL Engine & Prediction (🚧 Next Step)**
+
+* \[ \] core/engine/trainer.py: Hyperparameter Tuning (Optuna) 고도화.  
+* \[ \] core/engine/models.py: LSTM, Prophet Custom Seasonality 적용.  
+* \[ \] **Predictive Insights**: 예측 결과에 대한 자동 해석(Why) 모듈 개발.
+
+## **Phase 4: System Integration Test (D+7)**
+
+* \[ \] 전체 파이프라인 통합 테스트 및 성능 최적화.
