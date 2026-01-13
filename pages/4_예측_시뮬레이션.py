@@ -12,6 +12,7 @@ import pyarrow as pa
 # Core Engine Loading
 from core.config import DATA_HUB_PATH
 from core.engine.trainer import SimulationEngine
+from core.analytics import calculate_advanced_risk_score, calculate_lag_stats
 
 # ==============================================================================
 # 1. 페이지 설정
@@ -45,7 +46,7 @@ def load_metadata():
         dataset = ds.dataset(DATA_HUB_PATH, format="parquet", partitioning="hive")
         
         # UI 필터링 및 차트 표시에 꼭 필요한 컬럼만 로드
-        cols = ['플랜트', '대분류', '소분류', '접수일자', '건수', '불만원인', '사업부문', '등급기준']
+        cols = ['플랜트', '대분류', '소분류', '접수일자', '건수', '불만원인', '사업부문', '등급기준', '상담번호']
         available_cols = dataset.schema.names
         read_cols = [c for c in cols if c in available_cols]
         
@@ -56,6 +57,9 @@ def load_metadata():
             
         if '건수' not in df.columns:
             df['건수'] = 1
+        
+        if '상담번호' not in df.columns:
+            df['상담번호'] = 1
             
         return df
         
@@ -434,59 +438,114 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
     
     st.divider()
 
-    # --- 4. Risk 현황진단 ---
+    # --- 4. Risk 현황진단 (3_플랜트_분석.py와 동일 로직) ---
     st.markdown("#### 🛡️ Risk 현황진단")
     
     try:
-        # 과거 12개월 + 예측 데이터 조합
-        past_12_months = monthly_df.tail(12).copy() if len(monthly_df) >= 12 else monthly_df.copy()
+        # [Step 1] 12개월 시계열 데이터 + 현재월(실측) 준비
+        df_target_copy = df_target.copy()
+        df_target_copy['접수월'] = df_target_copy['접수일자'].dt.strftime('%Y-%m')
         
-        # 예측 데이터 포함
-        if 'Ensemble' in df_forecast.columns:
-            forecast_with_dates = pd.DataFrame({
-                'ds': df_forecast.index,
-                'y': df_forecast['Ensemble'].values
-            })
-            combined_df = pd.concat([past_12_months, forecast_with_dates], ignore_index=True)
+        cutoff_date = pd.to_datetime(end_date) - relativedelta(months=12)
+        df_12m = df_target_copy[df_target_copy['접수일자'] >= cutoff_date].copy()
+        
+        if df_12m.empty:
+            st.info("12개월 이상의 데이터가 필요합니다.")
         else:
-            combined_df = past_12_months.copy()
-        
-        # 간단한 위험 신호 판단 (변화율 기반)
-        if len(combined_df) >= 2:
-            combined_df['change'] = combined_df['y'].pct_change() * 100
-            combined_df['signal'] = '⚪'
+            # [Step 2] 각 (등급, 대분류, 소분류)별로 시계열 분석
+            agg_col = '상담번호' if '상담번호' in df_12m.columns else df_12m.columns[0]
             
-            # Red: 급증 (>50% 증가) or 급감 (<-30%)
-            combined_df.loc[(combined_df['change'] > 50) | (combined_df['change'] < -30), 'signal'] = '🔴'
-            # Yellow: 중증도 증가 (20-50%) or 중증도 감소 (-30 ~ -10%)
-            combined_df.loc[((combined_df['change'] > 20) & (combined_df['change'] <= 50)) | 
-                           ((combined_df['change'] >= -30) & (combined_df['change'] < -10)), 'signal'] = '🟡'
-        else:
-            combined_df['signal'] = '⚪'
-        
-        # 경보 집계
-        red_count = (combined_df['signal'] == '🔴').sum()
-        yellow_count = (combined_df['signal'] == '🟡').sum()
-        
-        c_left, c_right = st.columns(2)
-        
-        with c_left:
-            st.markdown(f"##### Red(🔴) 경보: {red_count}건")
-            red_df = combined_df[combined_df['signal'] == '🔴']
-            if red_df.empty:
-                st.info("경보 대상이 없습니다.")
+            # 12개월 월별 집계
+            monthly_data = df_12m.groupby(['등급기준', '대분류', '소분류', '접수월']).size().reset_index(name='건수')
+            
+            # 현재월 실측치 (이번 달 = end_date의 월)
+            current_month_str = pd.to_datetime(end_date).strftime('%Y-%m')
+            current_month_data = df_target_copy[
+                df_target_copy['접수월'] == current_month_str
+            ].groupby(['등급기준', '대분류', '소분류']).size().reset_index(name='당월_실측')
+            
+            # 예측 데이터에서 첫 번째 예측월을 가져옴
+            if not alloc_df.empty:
+                first_forecast_month = alloc_df['예측월'].iloc[0]
+                forecast_first_month = alloc_df[
+                    alloc_df['예측월'] == first_forecast_month
+                ].groupby('소분류')['예측건수'].sum().reset_index()
+                forecast_first_month.columns = ['소분류', '첫예측_예측치']
             else:
-                st.dataframe(red_df[['ds', 'y', 'change', 'signal']], use_container_width=True)
-        
-        with c_right:
-            st.markdown(f"##### Yellow(🟡) 주의: {yellow_count}건")
-            yellow_df = combined_df[combined_df['signal'] == '🟡']
-            if yellow_df.empty:
-                st.info("주의 대상이 없습니다.")
+                forecast_first_month = pd.DataFrame()
+            
+            # [Step 3] 각 행별 시계열 분석
+            risk_results = []
+            
+            for (grade, major, minor), group in monthly_data.groupby(['등급기준', '대분류', '소분류']):
+                try:
+                    # 시계열 데이터 (월별 건수)
+                    ts_data = group[['접수월', '건수']].sort_values('접수월')
+                    ts_series = pd.Series(
+                        ts_data['건수'].values,
+                        index=pd.to_datetime(ts_data['접수월'])
+                    )
+                    
+                    # 현재월 실측치
+                    current_actual = current_month_data[
+                        (current_month_data['등급기준'] == grade) &
+                        (current_month_data['대분류'] == major) &
+                        (current_month_data['소분류'] == minor)
+                    ]['당월_실측'].values
+                    current_actual_val = int(current_actual[0]) if len(current_actual) > 0 else 0
+                    
+                    # Risk Scoring
+                    sig, score, reason = calculate_advanced_risk_score(ts_series, current_month_str, grade=grade)
+                    
+                    risk_results.append({
+                        '등급기준': grade,
+                        '대분류': major,
+                        '소분류': minor,
+                        '🚨': sig,
+                        '위험진단': f"[{score}점] {reason}",
+                        '당월_실측': current_actual_val
+                    })
+                
+                except Exception as e:
+                    risk_results.append({
+                        '등급기준': grade,
+                        '대분류': major,
+                        '소분류': minor,
+                        '🚨': '⚪',
+                        '위험진단': f"분석 오류",
+                        '당월_실측': 0
+                    })
+            
+            # [Step 4] 결과 DataFrame 구성
+            if risk_results:
+                result_df = pd.DataFrame(risk_results)
+                
+                # Red/Yellow 필터링
+                red_df = result_df[result_df['🚨'] == '🔴']
+                yellow_df = result_df[result_df['🚨'] == '🟡']
+                
+                # 좌/우 표시
+                c_left, c_right = st.columns(2)
+                
+                with c_left:
+                    st.markdown(f"##### Red(🔴) 경보: {len(red_df)}건")
+                    if red_df.empty:
+                        st.info("경보 대상이 없습니다.")
+                    else:
+                        display_cols = ['등급기준', '대분류', '소분류', '당월_실측', '위험진단']
+                        st.dataframe(red_df[display_cols], use_container_width=True)
+                
+                with c_right:
+                    st.markdown(f"##### Yellow(🟡) 주의: {len(yellow_df)}건")
+                    if yellow_df.empty:
+                        st.info("주의 대상이 없습니다.")
+                    else:
+                        display_cols = ['등급기준', '대분류', '소분류', '당월_실측', '위험진단']
+                        st.dataframe(yellow_df[display_cols], use_container_width=True)
+                
+                st.caption(f"위험 신호는 12개월 시계열 분석 기반입니다 (기준월: {current_month_str}).")
             else:
-                st.dataframe(yellow_df[['ds', 'y', 'change', 'signal']], use_container_width=True)
-        
-        st.caption("위험 신호는 월별 변화율 기준으로 판정됩니다. (과거 12개월 + 예측 데이터 포함)")
+                st.info("분석 결과가 없습니다.")
     
     except Exception as e:
         st.warning(f"Risk 현황진단 생성 중 오류: {e}")
@@ -500,41 +559,83 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
         st.markdown("##### 📊 과거 12개월 + 예측 데이터 피벗 테이블")
         
         try:
-            # 과거 12개월 + 예측 데이터 조합 (소분류 기준 피벗)
+            # 과거 12개월 데이터 피벗 (MultiIndex: 등급기준|대분류|소분류)
             cutoff_date = pd.to_datetime(end_date) - relativedelta(months=12)
             historical_12m = df_target[df_target['접수일자'] >= cutoff_date].copy()
             historical_12m['월'] = historical_12m['접수일자'].dt.strftime('%Y-%m')
             
             if not historical_12m.empty:
+                # 과거 12개월 피벗 생성
                 pivot_hist = pd.pivot_table(
                     historical_12m,
-                    index='소분류',
+                    index=['등급기준', '대분류', '소분류'],
                     columns='월',
                     values='상담번호',
                     aggfunc='count',
                     fill_value=0
                 )
                 
-                # 예측 데이터 추가
-                alloc_pivot = alloc_df.pivot_table(
-                    index='소분류',
-                    columns='예측월',
-                    values='예측건수',
-                    aggfunc='sum',
-                    fill_value=0
-                )
+                # 예측 데이터 안전하게 결합 (3_플랜트_분석.py 패턴 참조)
+                if not alloc_df.empty:
+                    try:
+                        # Step 1: 소분류별 등급기준/대분류 안전 매핑
+                        subclass_mapping = df_target.groupby('소분류')[['등급기준', '대분류']].first()
+                        
+                        # Step 2: alloc_df에 등급기준/대분류 추가
+                        alloc_df_info = alloc_df.copy()
+                        alloc_df_info = alloc_df_info.join(subclass_mapping, on='소분류', how='left')
+                        
+                        # Step 3: 결측치 처리
+                        alloc_df_info['등급기준'] = alloc_df_info['등급기준'].fillna('미지정')
+                        alloc_df_info['대분류'] = alloc_df_info['대분류'].fillna('미지정')
+                        
+                        # Step 4: 예측 피벗 생성
+                        alloc_pivot = pd.pivot_table(
+                            alloc_df_info,
+                            index=['등급기준', '대분류', '소분류'],
+                            columns='예측월',
+                            values='예측건수',
+                            aggfunc='sum',
+                            fill_value=0
+                        )
+                        
+                        # Step 5: 두 피벗 정렬 후 인덱스 통합
+                        pivot_hist_sorted = pivot_hist.sort_index()
+                        alloc_pivot_sorted = alloc_pivot.sort_index()
+                        
+                        # 합집합 인덱스로 정렬
+                        all_indices = pivot_hist_sorted.index.union(alloc_pivot_sorted.index)
+                        hist_aligned = pivot_hist_sorted.reindex(all_indices, fill_value=0)
+                        alloc_aligned = alloc_pivot_sorted.reindex(all_indices, fill_value=0)
+                        
+                        # Step 6: 컬럼 정렬 후 결합 (컬럼명 중복 제거)
+                        hist_cols = sorted(hist_aligned.columns)
+                        pred_cols = sorted(alloc_aligned.columns)
+                        
+                        combined_pivot = pd.concat(
+                            [hist_aligned[hist_cols], alloc_aligned[pred_cols]],
+                            axis=1,
+                            sort=False
+                        )
+                    except Exception as e:
+                        st.warning(f"예측 데이터 결합 오류: {e}")
+                        combined_pivot = pivot_hist
+                else:
+                    combined_pivot = pivot_hist
                 
-                # 결합
-                combined_pivot = pd.concat([pivot_hist, alloc_pivot], axis=1)
-                combined_pivot = combined_pivot.fillna(0)
-                combined_pivot.loc['Total'] = combined_pivot.sum()
+                combined_pivot = combined_pivot.fillna(0).astype('int64')
                 
+                # 총계 행 추가
+                total_row = combined_pivot.sum(axis=0)
+                combined_pivot.loc[('합계', '', '')] = total_row
+                
+                # 포맷 및 표시
                 st.dataframe(
                     combined_pivot.style
-                        .format("{:,.0f}")
-                        .background_gradient(cmap="Blues", subset=(combined_pivot.index[:-1], combined_pivot.columns)),
+                        .format("{:,}")
+                        .background_gradient(cmap="Blues", subset=combined_pivot.columns),
                     use_container_width=True,
-                    height=400
+                    height=500
                 )
             else:
                 st.info("과거 12개월 데이터가 없습니다.")
@@ -545,37 +646,29 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')) 
     with tab2:
         st.markdown("##### ⏱️ Lag 분석 (제조 ~ 접수 소요기간)")
         
-        try:
-            # Lag 계산 (접수일자 기준)
-            if '접수일자' in df_target.columns:
-                df_target['접수일_만'] = df_target['접수일자'].dt.date
-                lag_stats_data = df_target.groupby('접수일_만').size()
-                
-                if len(lag_stats_data) > 0:
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("평균 일일 클레임", f"{lag_stats_data.mean():.1f}")
-                    c2.metric("중앙값", f"{lag_stats_data.median():.1f}")
-                    c3.metric("최대값", f"{lag_stats_data.max():.0f}")
-                    
-                    # 분포 그래프
-                    fig_lag = px.histogram(
-                        df_target.groupby('접수일_만').size().reset_index(name='count'),
-                        x='count',
-                        nbins=30,
-                        title="일일 클레임 건수 분포"
-                    )
-                    st.plotly_chart(fig_lag, use_container_width=True)
-                else:
-                    st.info("Lag 데이터가 없습니다.")
-            else:
-                st.warning("접수일자 컬럼이 없습니다.")
-        
-        except Exception as e:
-            st.warning(f"Lag 분석 생성 오류: {e}")
+        # 3_플랜트_분석.py 패턴과 동일 (calculate_lag_stats 사용)
+        lag_stats = calculate_lag_stats(df_target)
+        if lag_stats and lag_stats.get('count', 0) > 0:
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("평균 Lag", f"{lag_stats['mean']:.1f} 일")
+            with c2:
+                median_val = lag_stats.get('p50', 0)
+                st.metric("중앙값 Lag", f"{median_val:.1f} 일")
+            with c3:
+                st.metric("대상 건수", f"{lag_stats['count']:,} 건")
+            
+            st.caption(f"제조에서 접수까지 소요기간: 평균 {lag_stats['mean']:.1f}일, 최대 {lag_stats.get('max', 0):.0f}일")
+        else:
+            st.info("⏱️ Lag 분석 데이터가 충분하지 않습니다.")
     
     with tab3:
-        st.markdown("##### 📋 필터된 원본 데이터")
-        st.dataframe(df_target, use_container_width=True, height=500)
+        st.markdown("##### 📋 원본 데이터 (전체 Parquet 헤더)")
+        # df_full_backdata는 시뮬레이션 실행 시 로드된 전체 parquet 데이터
+        if df_full_backdata is not None and not df_full_backdata.empty:
+            st.dataframe(df_full_backdata, use_container_width=True, height=500)
+        else:
+            st.info("원본 데이터를 불러오지 못했습니다. 백데이터 로드에 실패했을 수 있습니다.")
 
 elif not btn_run and not st.session_state.get('run_clicked'):
     st.info("👈 위의 Step 1 ~ 3을 설정하고 [시뮬레이션 시작] 버튼을 눌러주세요.")
