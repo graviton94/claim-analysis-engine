@@ -3,7 +3,7 @@
 # ============================================================================
 # 설명: 클레임 데이터를 접수년/접수월 기준으로 파티셔닝하여 저장하고,
 #      다양한 필터 조건에 따라 데이터를 효율적으로 로드합니다.
-#      (Phase 1, 2 기능 포함 + Phase 2.5 통합 로더 추가)
+#      (Phase 1, 2 기능 포함 + Phase 2.5 통합 로더 추가 + Phase 2.9 Raw Mode 추가)
 
 import pandas as pd
 import numpy as np
@@ -547,7 +547,7 @@ def load_and_filter_data(
     plant: str,
     start_date: date,
     end_date: date,
-    search_mode: str,  # "인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)"
+    search_mode: str,  # "인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)", "Raw (전체 원본)"
     selected_biz: Optional[List[str]] = None,
     selected_reasons: Optional[List[str]] = None,
     selected_grades: Optional[List[str]] = None,
@@ -560,7 +560,7 @@ def load_and_filter_data(
     동작:
         1. PyArrow Dataset으로 지연 로딩 연결
         2. 플랜트 및 날짜 범위 필터링 (메모리 효율화)
-        3. 조회 모드(인입/실적/Custom)에 따른 비즈니스 로직 적용
+        3. 조회 모드(인입/실적/Custom/Raw)에 따른 비즈니스 로직 적용
         4. 등급 및 대분류 필터링 적용
         
     Returns:
@@ -587,11 +587,12 @@ def load_and_filter_data(
         df['접수일자'] = pd.to_datetime(df['접수일자'])
         
         # 3. 기본 범위 필터링 (플랜트 + 기간)
-        mask = (
-            (df['플랜트'] == plant) &
-            (df['접수일자'].dt.date >= start_date) &
-            (df['접수일자'].dt.date <= end_date)
-        )
+        mask = (df['접수일자'].dt.date >= start_date) & (df['접수일자'].dt.date <= end_date)
+        
+        # 플랜트 필터링 (빈 문자열이면 전체 조회)
+        if plant:
+            mask = mask & (df['플랜트'] == plant)
+            
         df = df[mask].copy()
         
         if df.empty:
@@ -609,6 +610,10 @@ def load_and_filter_data(
             cond_biz = df['사업부문'].isin(TARGET_BUSINESS_UNITS)
             cond_reason = df['불만원인'].isin(PERFORMANCE_REASONS)
             df = df[cond_biz & cond_reason]
+            
+        elif "Raw" in search_mode:
+            # Raw 모드: 필터링 없이 날짜 범위 데이터 그대로 반환
+            pass
             
         else: # "Custom"
             if selected_biz:

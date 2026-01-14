@@ -45,9 +45,9 @@ def format_diagnosis(diagnosis_str):
 
 def format_top_products(df):
     """해당 그룹 내에서 빈도가 높은 상위 2개 제품명을 백분율로 표시"""
-    if '제품명' not in df.columns: return ""
+    if '제품범주2' not in df.columns: return ""
     
-    product_counts = df['제품명'].value_counts()
+    product_counts = df['제품범주2'].value_counts()
     total_count = len(df)
     
     if total_count == 0 or product_counts.empty: return ""
@@ -89,46 +89,58 @@ st.set_page_config(
 st.markdown(f"""
 <style>
     .block-container {{ padding-top: 1.5rem; padding-bottom: 3rem; }}
+    
+    /* Metric Card */
     div[data-testid="stMetric"] {{
         background-color: white; padding: 15px; border: 1px solid #e5e7eb;
         border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }}
+    
+    /* Common Card Container */
     .card-container {{
         background-color: white; border: 1px solid #e5e7eb;
         border-radius: 12px; padding: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: box-shadow 0.3s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+        transition: box-shadow 0.3s;
+        margin-bottom: 16px;
     }}
     .card-container:hover {{ box-shadow: 0 10px 15px rgba(0,0,0,0.1); }}
     
+    /* Header Layout */
     .risk-header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }}
-    .risk-title {{ font-size: 1.1rem; font-weight: 700; color: #111827; }}
-    .risk-score {{ font-size: 1.5rem; font-weight: 800; }}
     
-    .risk-badges {{ display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }}
-    .badge {{ padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }}
+    /* Badges */
+    .risk-badges {{ display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle; margin-left: 8px; }}
+    .badge {{ padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; }}
     .badge-gray {{ background: #f3f4f6; color: #374151; }}
-    
-    /* New Color System Applied */
     .badge-red {{ background: #fee2e2; color: {COLOR_RED}; }}
     .badge-yellow {{ background: #fff7ed; color: {COLOR_YELLOW}; }}
     .badge-blue {{ background: #e0f2fe; color: {COLOR_BLUE}; }}
+    /* Large pill badge for prominent labels (reduced size) */
+    .badge-large {{ font-size: 1.1rem; padding: 6px 10px; border-radius: 999px; font-weight: 700; }}
+    /* Manufacturing date badge: red background, white text */
+    .mfg-badge {{ font-size: 1.0rem; padding: 4px 8px; border-radius: 8px; font-weight: 600; background: {COLOR_RED}; color: #ffffff; }}
     
-    .risk-content {{ font-size: 0.9rem; color: #4b5563; line-height: 1.5; background: #f9fafb; padding: 10px; border-radius: 8px; }}
-    .risk-footer {{ display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #f3f4f6; }}
+    /* Content Area */
+    .risk-content {{ font-size: 0.95rem; color: #374151; line-height: 1.6; background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; }}
     
+    /* Footer */
+    .risk-footer {{ display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f3f4f6; }}
+    
+    /* Buttons */
     .action-btn {{
         background: white; border: 1px solid #d1d5db; color: #374151;
-        padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 500;
+        padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
         text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
         transition: all 0.2s;
     }}
     .action-btn:hover {{ background: #f3f4f6; border-color: #9ca3af; color: #111827; text-decoration: none;}}
     .download-btn {{
         background: white; border: 1px solid #d1d5db; color: #374151;
-        padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 500;
+        padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
         text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
         transition: all 0.2s;
-        margin-right: 4px;
+        margin-right: 6px;
     }}
     .download-btn:hover {{ background: #f3f4f6; border-color: #9ca3af; color: #111827; text-decoration: none;}}
 </style>
@@ -192,7 +204,7 @@ def load_and_scan_risks_unified(mode='인입'):
     prev_month_str = (max_date.replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
     
     # 2. Risk Data Preparation (Zero-Filling)
-    pivot_keys = ['플랜트', '대분류', '소분류', '등급기준']
+    pivot_keys = ['플랜트', '등급기준', '대분류', '소분류', '제품범주2']
     
     risk_start_date = max_date - relativedelta(months=24)
     df_risk_src = df[df['접수일자'] >= risk_start_date].copy()
@@ -209,7 +221,7 @@ def load_and_scan_risks_unified(mode='인입'):
     last_date_map = df_risk_src.groupby(pivot_keys)['접수일자'].max()
     
     for idx in risk_pivot.index:
-        plant, cat_main, cat_sub, grade = idx
+        plant, grade, cat_main, cat_sub, prod_cat2 = idx
         series = risk_pivot.loc[idx] 
         
         # Risk Score Calculation
@@ -219,24 +231,25 @@ def load_and_scan_risks_unified(mode='인입'):
             last_date_val = last_date_map.get(idx, pd.NaT)
             last_date_str = last_date_val.strftime('%Y-%m-%d') if pd.notnull(last_date_val) else "-"
             
-            # [FILTER] 최신 데이터인지 확인 (마지막 감지일 == 전체 데이터 최신일)
-            if last_date_str == max_date_str:
-                trend_vals = series.tail(6).astype(int).tolist()
-                trend_str = " → ".join(map(str, trend_vals))
-                
-                risk_results.append({
-                    '플랜트': plant,
-                    '유형': f"{cat_main} > {cat_sub}",
-                    '대분류': cat_main,
-                    '소분류': cat_sub,
-                    '등급': grade,
-                    '건수': int(series.iloc[-1]), # 당월 건수
-                    '상태': status,
-                    '점수': score,
-                    '진단': reason,
-                    'Trend_Str': trend_str,
-                    'Last_Date': last_date_str
-                })
+            # [ALL RISKS] 모든 점수 > 0인 리스크 표시 (오늘 감지든 이전 감지든)
+            trend_vals = series.tail(6).astype(int).tolist()
+            trend_str = " → ".join(map(str, trend_vals))
+            
+            risk_results.append({
+                '플랜트': plant,
+                '등급': grade,
+                '유형': f"{cat_main} > {cat_sub}",
+                '대분류': cat_main,
+                '소분류': cat_sub,
+                '제품범주2': prod_cat2,
+                '건수': int(series.iloc[-1]), # 당월 건수
+                '상태': status,
+                '점수': score,
+                '진단': reason,
+                'Trend_Str': trend_str,
+                'Last_Date': last_date_str,
+                'is_today': (last_date_str == max_date_str)  # 오늘 감지 여부 플래그
+            })
             
     risk_df = pd.DataFrame(risk_results)
     if not risk_df.empty:
@@ -252,10 +265,13 @@ def load_and_scan_risks_unified(mode='인입'):
 st.sidebar.markdown("### 📊 분석 모드")
 selected_mode = st.sidebar.radio(
     "조회 모드 선택",
-    options=["인입 (Inflow)", "실적 (Performance)"],
+    options=["인입 (Inflow)", "실적 (Performance)", "Raw (전체 원본)"],
     horizontal=False
 )
-mode = '인입' if selected_mode == "인입 (Inflow)" else '실적'
+
+if selected_mode.startswith("인입"): mode = '인입'
+elif selected_mode.startswith("실적"): mode = '실적'
+else: mode = 'Raw'
 
 # Cache Control
 if 'prev_mode' not in st.session_state:
@@ -368,10 +384,10 @@ with col_chart:
                 f_vals.append(val)
                 f_text.append(f"{m_num}월 예측: {val:,}건")
             
-            # [FIX] 실적 라인과 연결하지 않음 (독립적 렌더링)
+            # [FIX] Disconnected Forecast Line
             if f_months:
                 fig.add_trace(go.Scatter(x=f_months, y=f_vals, name='4개월 예측',
-                                         mode='markers+lines', # 라인은 예측 점들끼리만 연결
+                                         mode='markers+lines',
                                          line=dict(color=COLOR_YELLOW, width=2, dash='dot'),
                                          marker=dict(symbol='diamond', size=8, color=COLOR_YELLOW),
                                          hovertemplate='%{text}<extra></extra>', text=f_text))
@@ -404,9 +420,11 @@ with col_insight:
     df_lot = df_lot.dropna(subset=['mfg_dt'])
     df_lot['mfg_str'] = df_lot['mfg_dt'].dt.strftime('%Y-%m-%d')
     
-    lot_groups = df_lot.groupby(['플랜트', '제품명', '제품코드', '소분류', 'mfg_str']).agg(
+    # Grouping (include necessary fields for display)
+    lot_groups = df_lot.groupby(['플랜트', '제품명', '제품코드', '대분류', '소분류', 'mfg_str']).agg(
         last_receipt=('접수일자', 'max'),
-        count=('접수일자', 'size')
+        count=('접수일자', 'size'),
+        grade=('등급기준', lambda x: x.mode()[0] if not x.mode().empty else '미분류')
     ).reset_index()
     
     critical_lots = lot_groups[lot_groups['count'] >= 3].sort_values('last_receipt', ascending=False)
@@ -417,8 +435,10 @@ with col_insight:
         else:
             for idx, row in critical_lots.iterrows():
                 is_today = row['last_receipt'].strftime('%Y-%m-%d') == max_date.strftime('%Y-%m-%d')
-                bg_color = "#fff7ed" if is_today else "white"
-                border_color = COLOR_YELLOW if is_today else "#e5e7eb"
+                
+                # Dynamic Border Color for urgency
+                border_style = f"4px solid {COLOR_YELLOW}" if is_today else "1px solid #e5e7eb"
+                bg_style = "#fff7ed" if is_today else "white"
                 
                 # Excel Download Logic
                 dl_df = df_lot[
@@ -430,32 +450,40 @@ with col_insight:
                 b64 = base64.b64encode(buf.getvalue()).decode()
                 href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}"
                 
-                # [FIX] Deep Link Logic (Category = Major)
-                cat_main = ""
-                if '대분류' in dl_df.columns and not dl_df['대분류'].empty:
-                    cat_main = dl_df['대분류'].iloc[0]
+                # Deep Link Logic (to Plant Analysis Page with mode)
+                link_url = f"/플랜트_분석?mode={mode}&plant={row['플랜트']}&grade={row['grade']}&category={row['대분류']}&subcategory={row['소분류']}"
                 
-                target_cat = cat_main if cat_main else "All"
-                link_url = f"/플랜트_분석?plant={row['플랜트']}&category={target_cat}&subcategory={row['소분류']}"
+                # Grade Badge Logic
+                grade_cls = "badge-red" if row['grade'] in ['위험', '중대'] else "badge-yellow" if row['grade'] == '일반' else "badge-gray"
+                
+                # Safe conversion
+                try:
+                    prod_code = int(row['제품코드'])
+                except:
+                    prod_code = str(row['제품코드'])
                 
                 st.markdown(f"""
-                <div style='background:{bg_color}; border:1px solid {border_color}; border-radius:8px; padding:12px; margin-bottom:8px;'>
-                    <div style='display:flex; justify-content:space-between; margin-bottom:4px;'>
-                        <div style='font-weight:700; font-size:0.9rem;'>🏭 {row['플랜트']} | {row['제품명']}</div>
-                        <div style='font-weight:800; color:{COLOR_RED};'>{row['count']}건</div>
+                <div class='card-container' style='border-left: {border_style}; background-color: {bg_style}; padding: 16px; margin-bottom: 12px;'>
+                    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'>
+                        <div style='display: flex; align-items: center; flex-wrap: wrap; gap: 6px;'>
+                            <span style='font-size: 1.1rem; font-weight: 700; color: #111827;'>{row['플랜트']}</span>
+                            <span style='color: #d1d5db;'>|</span>
+                            <span class='badge badge-large {grade_cls}'>{row['grade']}</span>
+                            <span class='badge badge-gray badge-large'>{row['대분류']}</span>
+                            <span class='badge badge-gray badge-large'>{row['소분류']}</span>
+                        </div>
+                        <div style='font-size: 1.4rem; font-weight: 800; color: {COLOR_RED}; white-space: nowrap;'>{row['count']}건</div>
                     </div>
-                    <div style='font-size:0.8rem; color:#4b5563; margin-bottom:8px;'>
-                        제조: {row['mfg_str']} | 최근접수: {row['last_receipt'].strftime('%Y-%m-%d')}
+                    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f3f4f6; padding-bottom: 12px;'>
+                        <div style='font-size: 1.0rem; font-weight: 700; color: #000000;'>📦 제품명: ({prod_code}){row['제품명']}</div>
+                        <span class='badge badge-yellow mfg-badge'>제조일자: {row['mfg_str']}</span>
                     </div>
-                    <div style='display:flex; gap:8px;'>
-                        <a href="{href}" download="LOT_{row['mfg_str']}.xlsx" 
-                           style='flex:1; text-align:center; background:white; border:1px solid #d1d5db; border-radius:4px; text-decoration:none; font-size:0.8rem; color:#374151; padding:4px;'>
-                           📥 엑셀
-                        </a>
-                        <a href="{link_url}" target="_self"
-                           style='flex:1; text-align:center; background:{COLOR_BLUE}; border:1px solid {COLOR_BLUE}; border-radius:4px; text-decoration:none; font-size:0.8rem; color:white; padding:4px;'>
-                           🔬 분석
-                        </a>
+                    <div style='display: flex; justify-content: space-between; align-items: center;'>
+                        <span style='font-size: 1.0rem; color: #9ca3af;'>최근접수: {row['last_receipt'].strftime('%Y-%m-%d')}</span>
+                        <div>
+                            <a href="{href}" download="LOT_{row['mfg_str']}.xlsx" class='download-btn'>📥 엑셀</a>
+                            <a href="{link_url}" target="_self" class='action-btn'>🔬 분석</a>
+                        </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -479,54 +507,57 @@ if not risk_report.empty:
         for _, row in df.iterrows():
             # Styling vars
             score_color = COLOR_RED if color_theme == 'red' else COLOR_YELLOW
-            border_color = "#fecaca" if color_theme == 'red' else "#fde68a"
+            # 배경색: 오늘 감지는 강조색, 이전 감지는 흰색
+            if row.get('is_today', False):
+                bg_color = "#fff5f5" if color_theme == 'red' else "#fffbf0"
+            else:
+                bg_color = "white"
             badge_class = "badge-red" if color_theme == 'red' else "badge-yellow"
             
-            # Top Products info (using Product Name)
-            top_prod_info = ""
+            # Top Products info (alert가 나온 해당 제품범주2만 표시)
+            top_prod_info = row['제품범주2'] if pd.notna(row['제품범주2']) and str(row['제품범주2']).strip() else '미분류'
             
-            # Filter raw_df for this risk group (for both top products and download)
+            # Filter group data for Excel download
             group_df = raw_df[
                 (raw_df['플랜트'] == row['플랜트']) &
                 (raw_df['대분류'] == row['대분류']) &
                 (raw_df['소분류'] == row['소분류'])
             ]
-            top_prod_info = format_top_products(group_df)
             
-            # [NEW] Excel Download for Risk Radar (Recent 6 months)
+            # Excel Download
             download_df = group_df[group_df['접수일자'] >= risk_download_start_date]
             buf = BytesIO()
             with pd.ExcelWriter(buf) as writer: download_df.to_excel(writer, index=False)
             b64 = base64.b64encode(buf.getvalue()).decode()
             excel_href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}"
             
-            # Link Logic
-            link_url = f"/플랜트_분석?plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}&subcategory={row['소분류']}"
-            pred_url = f"/예측_시뮬레이션?plant={row['플랜트']}&category={row['대분류']}"
+            # Link Logic (to Plant Analysis Page with mode & grade)
+            link_url = f"/플랜트_분석?mode={mode}&plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}&subcategory={row['소분류']}"
+            pred_url = f"/예측_시뮬레이션?mode={mode}&plant={row['플랜트']}&grade={row['등급']}&category={row['대분류']}"
             
             container.markdown(f"""
-            <div class='card-container' style='border-left: 4px solid {score_color}; margin-bottom: 16px;'>
-                <div class='risk-header'>
-                    <div>
-                        <div class='risk-title'>🏭 {row['플랜트']} - {row['소분류']}</div>
-                        <div class='risk-badges'>
-                            <span class='badge {badge_class}'>{row['등급']}</span>
-                            <span class='badge badge-gray'>{row['대분류']}</span>
-                            <span class='badge badge-blue'>당월 {row['건수']}건</span>
-                        </div>
+            <div class='card-container' style='border-left: 4px solid {score_color}; background-color: {bg_color}; padding: 16px; margin-bottom: 12px;'>
+                <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;'>
+                    <div style='display: flex; align-items: center; flex-wrap: wrap; gap: 6px;'>
+                        <span style='font-size: 1.1rem; font-weight: 700; color: #111827;'>{row['플랜트']}</span>
+                        <span style='color: #d1d5db;'>|</span>
+                        <span class='badge badge-large {badge_class}'>{row['등급']}</span>
+                        <span class='badge badge-large badge-gray'>{row['대분류']}</span>
+                        <span class='badge badge-large badge-gray'>{row['소분류']}</span>
+                        <span class='badge badge-large badge-blue'>당월 {row['건수']}건</span>
                     </div>
-                    <div class='risk-score' style='color:{score_color}'>{row['점수']}점</div>
+                    <div style='font-size: 1.4rem; font-weight: 800; color: {score_color}; white-space: nowrap;'>{row['점수']}점</div>
                 </div>
-                <div class='risk-content'>
+                <div style='font-size: 1.1rem; color: #374151; line-height: 1.6; background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;'>
                     <strong>💡 진단:</strong> {format_diagnosis(row['진단'])}<br>
-                    <strong>📦 주요 제품:</strong> {top_prod_info}<br>
+                    <strong>📦 제품범주2:</strong> {top_prod_info if top_prod_info else '미분류'}<br>
                     <strong>📈 추이:</strong> {format_trend_with_highlight(row['Trend_Str'])}
                 </div>
-                <div class='risk-footer'>
-                    <span style='font-size:0.8rem; color:#6b7280;'>최근감지: {row['Last_Date']}</span>
+                <div style='display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f3f4f6;'>
+                    <span style='font-size: 1.0rem; color: #6b7280;'>감지일자: {row['Last_Date']}</span>
                     <div>
                         <a href="{excel_href}" download="Risk_{row['플랜트']}_{row['소분류']}.xlsx" class='download-btn'>📥 엑셀</a>
-                        <a href="{link_url}" target="_self" class='action-btn' style='margin-right:4px;'>🔬 정밀</a>
+                        <a href="{link_url}" target="_self" class='action-btn' style='margin-right:4px;'>🔬 분석</a>
                         <a href="{pred_url}" target="_self" class='action-btn'>🔮 예측</a>
                     </div>
                 </div>

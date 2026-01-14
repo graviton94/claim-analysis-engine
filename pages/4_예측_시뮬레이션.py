@@ -44,11 +44,62 @@ def load_plant_list():
         return sorted(keys['플랜트'].unique().tolist())
     return []
 
+@st.cache_data(show_spinner=False)
+def get_plant_date_range(plant):
+    """플랜트별 데이터의 실제 날짜 범위 조회"""
+    try:
+        from datetime import date as date_type
+        df = load_and_filter_data(
+            plant=plant,
+            start_date=date_type(2000, 1, 1),  # 매우 오래된 시작
+            end_date=date_type(2100, 12, 31),  # 미래까지
+            search_mode="Raw"  # 필터링 없음
+        )
+        if df.empty:
+            return None, None
+        
+        min_date = df['접수일자'].min().date()
+        max_date = df['접수일자'].max().date()
+        return min_date, max_date
+    except:
+        return None, None
+
 all_plants = load_plant_list()
 
 if not all_plants:
     st.error("❌ 데이터가 없습니다. [1. 데이터 업로드] 페이지에서 데이터를 먼저 적재해주세요.")
     st.stop()
+
+# ==============================================================================
+# 2-1. 쿼리 파라미터 처리 (Risk Radar "예측" 버튼에서 전달)
+# ==============================================================================
+if st.query_params and 'plant' in st.query_params:
+    qp_mode_raw = st.query_params.get('mode', '인입')
+    qp_plant = st.query_params['plant']
+    qp_grade = st.query_params.get('grade', '')
+    qp_category = st.query_params.get('category', '')
+    
+    # Mode 매핑 (쿼리 파라미터 형식 → 라디오 옵션 형식)
+    mode_map = {'인입': '인입 (Inflow)', '실적': '실적 (Performance)', 'Raw': 'Raw (전체 원본)'}
+    qp_mode = mode_map.get(qp_mode_raw, '인입 (Inflow)')
+    
+    # 쿼리 파라미터 고유키 생성 (중복 처리 방지)
+    qp_key = f"{qp_mode}|{qp_plant}|{qp_grade}|{qp_category}"
+    
+    # 마지막으로 적용한 쿼리 파라미터와 다르면 업데이트
+    if st.session_state.get('last_sim_qp_key') != qp_key:
+        st.session_state['sim_plant_select'] = qp_plant if qp_plant in all_plants else all_plants[0]
+        st.session_state['sim_search_mode'] = qp_mode
+        
+        # 등급 필터: 파라미터로 받은 등급만 선택
+        if qp_grade:
+            st.session_state['sim_step3_grades'] = [qp_grade]
+        
+        # 대분류 필터: 파라미터로 받은 대분류만 선택
+        if qp_category:
+            st.session_state['sim_step3_categories'] = [qp_category]
+        
+        st.session_state['last_sim_qp_key'] = qp_key
 
 # ==============================================================================
 # 3. 사이드바: 실험 파라미터
@@ -73,20 +124,37 @@ def on_plant_change():
     # 결과 초기화
     if 'sim_results' in st.session_state: st.session_state['sim_results'] = None
     if 'run_clicked' in st.session_state: st.session_state['run_clicked'] = False
+    
+    # 플랜트 변경 시 감지된 날짜 미리 저장 (에러 상황에 대비)
+    selected = st.session_state.get('sim_plant_select')
+    if selected:
+        min_date, max_date = get_plant_date_range(selected)
+        if min_date and max_date:
+            st.session_state['detected_sim_start_date'] = min_date
+            st.session_state['detected_sim_end_date'] = max_date
+    # 선택된 플랜트의 날짜 범위 조회 및 업데이트
+    plant = st.session_state.get('sim_plant_select')
+    if plant:
+        min_date, max_date = get_plant_date_range(plant)
+        if min_date and max_date:
+            st.session_state['detected_sim_start_date'] = min_date
+            st.session_state['detected_sim_end_date'] = max_date
 
 with col_s1_1:
     sel_plant = st.selectbox("🏭플랜트 선택", all_plants, key='sim_plant_select', on_change=on_plant_change)
 
-# 기간 기본값 (Code B와 동일하게 설정)
-today = datetime.today()
-default_start = (today.replace(day=1) - relativedelta(months=1)).date()
-default_end = (today.replace(day=1) - relativedelta(days=1)).date()
+# 플랜트 선택 시 자동으로 감지된 날짜 범위 사용, 아니면 기본값
+today = datetime.today().date()
+last_year_jan1 = date(today.year - 1, 1, 1)
+
+default_start = st.session_state.get('detected_sim_start_date', last_year_jan1)
+default_end = st.session_state.get('detected_sim_end_date', today)
 
 with col_s1_2:
-    start_date = st.date_input("📅시작일 (Start)", value=default_start, key='sim_start_date')
+    start_date = st.date_input("📅시작일 (Start)", value=default_start)
 
 with col_s1_3:
-    end_date = st.date_input("📅종료일 (End)", value=default_end, key='sim_end_date')
+    end_date = st.date_input("📅종료일 (End)", value=default_end)
 
 # 옵션 갱신용 데이터 로드 (가볍게)
 @st.cache_data(show_spinner=False)
@@ -97,7 +165,13 @@ with st.spinner("옵션 로딩 중..."):
     df_for_options = get_options_data(sel_plant, start_date, end_date)
 
 if df_for_options.empty:
-    st.warning("선택한 범위에 데이터가 없습니다.")
+    st.warning(f"선택한 조건 ({sel_plant}, {start_date}~{end_date})에 해당하는 데이터가 없습니다.")
+    # 에러 발생 시: 플랜트의 전체 범위 안내
+    min_date, max_date = st.session_state.get('detected_sim_start_date'), st.session_state.get('detected_sim_end_date')
+    if min_date and max_date:
+        st.info(f"💡 **해당 플랜트의 데이터 범위**: {min_date} ~ {max_date}")
+        st.info(f"👉 위의 시작일/종료일을 **{min_date}** ~ **{max_date}**로 변경해주세요.")
+    st.stop()
 else:
     st.info(f"📋 **요약**: `{sel_plant}` | `{start_date} ~ {end_date}` | 대상 **{len(df_for_options):,}** 건")
 
@@ -114,41 +188,39 @@ sim_sel_categories = []
 
 with col_step2:
     st.markdown("#### Step 2: 조회 모드")
-    
-    def reset_sim_custom_selections():
-        if 'sim_sel_biz' in st.session_state: del st.session_state['sim_sel_biz']
-        if 'sim_sel_reason' in st.session_state: del st.session_state['sim_sel_reason']
-    
+
     search_mode = st.radio(
         "조회 모드를 선택하세요:",
-        ("인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)"),
+        ("인입 (Inflow)", "실적 (Performance)", "Raw (전체 원본)"),
         horizontal=True,
-        key='sim_search_mode',
-        on_change=reset_sim_custom_selections
+        key='sim_search_mode'
     )
-    
+
     if search_mode == "인입 (Inflow)":
         st.caption(f"ℹ️ **인입 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인(전체)")
     elif search_mode == "실적 (Performance)":
         st.caption(f"ℹ️ **실적 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인({', '.join(PERFORMANCE_REASONS)})")
-    else: # Custom
-        col_c1, col_c2 = st.columns(2)
-        with col_c1:
-            opts_biz = sorted(df_for_options['사업부문'].dropna().unique())
-            sim_sel_biz = st.multiselect("사업부문 선택", opts_biz, key='sim_sel_biz')
-        with col_c2:
-            opts_reason = sorted(df_for_options['불만원인'].dropna().unique())
-            sim_sel_reason = st.multiselect("불만원인 선택", opts_reason, key='sim_sel_reason')
+    else: # Raw
+        st.caption("ℹ️ **Raw 기준**: 모든 필터링 없이 선택한 기간의 전체 클레임 데이터")
 
 with col_step3:
     st.markdown("#### Step 3: 등급, 대분류 필터")
     
     # 1. 등급 필터
     grade_options = sorted(df_for_options['등급기준'].dropna().unique())
+    
+    # 쿼리 파라미터로 설정된 기본값 또는 전체 선택
     if 'sim_step3_grades' not in st.session_state:
         st.session_state['sim_step3_grades'] = grade_options
-        
-    sim_sel_grades = st.multiselect("분석할 등급을 선택하세요:", grade_options, key='sim_step3_grades')
+    
+    # 다중선택에서 쿼리 파라미터의 등급만 기본으로 선택되도록
+    default_grades = st.session_state.get('sim_step3_grades', grade_options)
+    sim_sel_grades = st.multiselect(
+        "분석할 등급을 선택하세요:", 
+        grade_options, 
+        default=default_grades,
+        key='sim_step3_grades'
+    )
     
     # 2. 대분류 필터
     st.markdown("")
@@ -157,10 +229,23 @@ with col_step3:
         temp_df = temp_df[temp_df['등급기준'].isin(sim_sel_grades)]
         
     category_options = sorted(temp_df['대분류'].dropna().unique())
+    
     if 'sim_step3_categories' not in st.session_state:
         st.session_state['sim_step3_categories'] = category_options
-        
-    sim_sel_categories = st.multiselect("분석할 대분류를 선택하세요:", category_options, key='sim_step3_categories')
+    
+    # 다중선택에서 쿼리 파라미터의 대분류만 기본으로 선택되도록
+    default_categories = st.session_state.get('sim_step3_categories', category_options)
+    # 필터링된 카테고리 중에 기본값이 있는지 확인
+    default_categories = [cat for cat in default_categories if cat in category_options]
+    if not default_categories:  # 기본값이 필터링되었으면 전체
+        default_categories = category_options
+    
+    sim_sel_categories = st.multiselect(
+        "분석할 대분류를 선택하세요:", 
+        category_options, 
+        default=default_categories,
+        key='sim_step3_categories'
+    )
     
     # 카운트 미리보기
     # (여기서는 정확한 필터링 카운트보다 UX 흐름이 중요하므로 생략하거나 df_for_options 기반 추정 가능)

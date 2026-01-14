@@ -21,17 +21,26 @@ PERFORMANCE_REASONS = ['제조불만', '고객불만족', '구매불만']
 
 # Query Parameter Handling (Navigation from Main Dashboard)
 if st.query_params and 'plant' in st.query_params:
+    qp_mode_raw = st.query_params.get('mode', '인입')  # mode 파라미터 추가
     qp_plant = st.query_params['plant']
     qp_grade = st.query_params.get('grade', '')
     qp_category = st.query_params.get('category', '')
     qp_subcategory = st.query_params.get('subcategory', '')
     qp_key = f"{qp_plant}|{qp_grade}|{qp_category}|{qp_subcategory}"
 
+    # mode 값을 radio 옵션 형식으로 변환
+    mode_map = {
+        '인입': '인입 (Inflow)',
+        '실적': '실적 (Performance)',
+        'Raw': 'Raw (전체 원본)'
+    }
+    qp_mode = mode_map.get(qp_mode_raw, '인입 (Inflow)')
+
     if st.session_state.get('last_qp_key') != qp_key:
         st.session_state['last_qp_key'] = qp_key
         st.session_state['target_plant'] = qp_plant
         st.session_state['plant_changed'] = False
-        st.session_state['search_mode'] = "Custom (직접 선택)"
+        st.session_state['search_mode'] = qp_mode  # mode 적용 (radio 옵션 형식)
         st.session_state['custom_select_all'] = True
         st.session_state['step3_grades'] = [qp_grade] if qp_grade else []
         st.session_state['step3_categories'] = [qp_category] if qp_category else []
@@ -41,6 +50,7 @@ if st.query_params and 'plant' in st.query_params:
         st.session_state['pivot_indices'] = ['등급기준', '대분류', '소분류', '제품범주2']
         st.session_state['trigger_analysis'] = True
         st.session_state['from_risk_card'] = True
+        st.session_state['highlight_subcategory'] = qp_subcategory  # 하이라이트 대상 저장
         
         if 'prev_grades' in st.session_state: del st.session_state['prev_grades']
         if 'prev_categories' in st.session_state: del st.session_state['prev_categories']
@@ -54,39 +64,66 @@ def load_plant_list():
         return sorted(keys['플랜트'].unique().tolist())
     return []
 
+@st.cache_data(show_spinner=False)
+def get_plant_date_range(plant):
+    """플랜트별 데이터의 실제 날짜 범위 조회"""
+    try:
+        from datetime import date as date_type
+        df = load_and_filter_data(
+            plant=plant,
+            start_date=date_type(2000, 1, 1),  # 매우 오래된 시작
+            end_date=date_type(2100, 12, 31),  # 미래까지
+            search_mode="Raw"  # 필터링 없음
+        )
+        if df.empty:
+            return None, None
+        
+        min_date = df['접수일자'].min().date()
+        max_date = df['접수일자'].max().date()
+        return min_date, max_date
+    except:
+        return None, None
+
 all_plants = load_plant_list()
 
 if not all_plants:
     st.error("⚠️ 데이터가 없습니다. 먼저 '데이터 업로드' 페이지에서 파일을 저장해주세요.")
     st.stop()
 
-# --- 2. Step 1: Scope (플랜트 및 기간) ---
+# --- Step 1: 범위 설정 (플랜트 + 기간) ---
 st.markdown("#### Step 1: 분석 범위 설정")
 col_s1_1, col_s1_2, col_s1_3 = st.columns([1, 1, 1])
 
 def on_plant_change():
-    st.session_state['plant_changed'] = True
     # 필터 초기화
     keys_to_clear = ['step3_grades', 'step3_categories', 'step3_subcategories', 
                      'graph_last_index', 'graph_selected_values', 'pivot_indices']
     for k in keys_to_clear:
         if k in st.session_state:
             del st.session_state[k]
+    
+    # 선택된 플랜트의 날짜 범위 조회 및 업데이트
+    plant = st.session_state.get('target_plant')
+    if plant:
+        min_date, max_date = get_plant_date_range(plant)
+        if min_date and max_date:
+            st.session_state['detected_start_date'] = min_date
+            st.session_state['detected_end_date'] = max_date
 
 with col_s1_1:
     selected_plant = st.selectbox(
         "🏭플랜트 선택", 
         all_plants, 
-        key='target_plant' if st.session_state.get('target_plant') else None,
+        key='target_plant',
         on_change=on_plant_change
     )
 
-# [Auto-Range] 기간 설정은 일단 기본값(전월/당월 등) 혹은 로직으로 처리
-# 전체 데이터를 읽지 않으므로, 메타데이터가 없다면 datetime.now() 기준 설정
-# 여기서는 심플하게 오늘 기준 전월 1일 ~ 말일 로직 적용 or 세션 유지
-today = datetime.today()
-default_start = (today.replace(day=1) - relativedelta(months=1)).date()
-default_end = (today.replace(day=1) - relativedelta(days=1)).date()
+# 플랜트 선택 시 자동으로 감지된 날짜 범위 사용, 아니면 기본값
+today = datetime.today().date()
+last_year_jan1 = date(today.year - 1, 1, 1)
+
+default_start = st.session_state.get('detected_start_date', last_year_jan1)
+default_end = st.session_state.get('detected_end_date', today)
 
 with col_s1_2:
     start_date = st.date_input("📅시작일 (Start)", value=default_start)
@@ -94,13 +131,9 @@ with col_s1_2:
 with col_s1_3:
     end_date = st.date_input("📅종료일 (End)", value=default_end)
 
-# Step 1 필터링된 데이터 로드 (옵션 갱신용)
-# *주의: 여기서 전체를 다 가져오는게 아니라, 필터 옵션을 채우기 위한 가벼운 로드가 이상적이나,
-#       통합 로더를 사용하여 일관성을 유지함.
-#       사용자가 'Custom' 모드 등에서 옵션을 보기 위해선 해당 기간의 데이터가 필요함.
+# 옵션 갱신용 데이터 로드 (가볍게)
 @st.cache_data(show_spinner=False)
 def get_options_data(plant, s_date, e_date):
-    # 옵션용 데이터는 기본 모드(전체)로 로드하여 가능한 모든 옵션을 보여줌
     return load_and_filter_data(plant, s_date, e_date, search_mode="Custom")
 
 with st.spinner("데이터 조회 중..."):
@@ -108,6 +141,11 @@ with st.spinner("데이터 조회 중..."):
 
 if df_for_options.empty:
     st.warning(f"선택한 조건 ({selected_plant}, {start_date}~{end_date})에 해당하는 데이터가 없습니다.")
+    # 에러 발생 시: 플랜트의 전체 범위 안내
+    min_date, max_date = st.session_state.get('detected_start_date'), st.session_state.get('detected_end_date')
+    if min_date and max_date:
+        st.info(f"💡 **해당 플랜트의 데이터 범위**: {min_date} ~ {max_date}")
+        st.info(f"👉 위의 시작일/종료일을 **{min_date}** ~ **{max_date}**로 변경해주세요.")
     st.stop()
 else:
     st.info(f"📋 **요약**: `{selected_plant}` | `{start_date} ~ {end_date}` | 대상 **{len(df_for_options):,}** 건 (옵션 갱신용)")
@@ -125,42 +163,22 @@ selected_category_list = []
 
 with col_step2:
     st.markdown("#### Step 2: 검색 옵션 (Mode)")
-    
-    def reset_custom_selections():
-        if 'sel_biz' in st.session_state: del st.session_state['sel_biz']
-        if 'sel_reason' in st.session_state: del st.session_state['sel_reason']
 
     search_mode = st.radio(
         "조회 모드를 선택하세요:",
-        ("인입 (Inflow)", "실적 (Performance)", "Custom (직접 선택)"),
+        ("인입 (Inflow)", "실적 (Performance)", "Raw (전체 원본)"),
         horizontal=True,
-        key='search_mode',
-        on_change=reset_custom_selections
+        key='search_mode'
     )
 
     if search_mode == "인입 (Inflow)":
         st.caption(f"ℹ️ **인입 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인(전체)")
-        # Core 로더 내부에서 처리하므로 리스트는 None으로 둠 (또는 명시적 전달 가능)
         
     elif search_mode == "실적 (Performance)":
         st.caption(f"ℹ️ **실적 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인({', '.join(PERFORMANCE_REASONS)})")
         
-    else: # Custom
-        col_c1, col_c2 = st.columns(2)
-        with col_c1:
-            opts_biz = sorted(df_for_options['사업부문'].dropna().unique())
-            if st.session_state.get('custom_select_all', False) and 'sel_biz' not in st.session_state:
-                st.session_state['sel_biz'] = opts_biz
-            selected_biz_list = st.multiselect("사업부문 선택", opts_biz, key='sel_biz')
-        
-        with col_c2:
-            opts_reason = sorted(df_for_options['불만원인'].dropna().unique())
-            if st.session_state.get('custom_select_all', False) and 'sel_reason' not in st.session_state:
-                st.session_state['sel_reason'] = opts_reason
-            selected_reason_list = st.multiselect("불만원인 선택", opts_reason, key='sel_reason')
-        
-        if st.session_state.get('custom_select_all', False):
-            st.session_state['custom_select_all'] = False
+    else: # Raw
+        st.caption("ℹ️ **Raw 기준**: 모든 필터링 없이 선택한 기간의 전체 클레임 데이터")
 
 with col_step3:
     st.markdown("#### Step 3: 등급, 대분류 필터")
@@ -596,14 +614,18 @@ if st.button("📊 분석 시작 (Run Analysis)", type="primary", width='stretch
                 
                 if is_subtotal:
                     styles.loc[idx, :] = 'background-color: #f0f0f0; font-weight: bold'
+                    continue
                 
-                if '🚨' in df.columns and target_col in df.columns:
-                    if styles.loc[idx, target_col] == '':
-                        sig = df.loc[idx, '🚨']
-                        if sig == "🔴":
-                            styles.loc[idx, target_col] = 'background-color: #ffcccc; color: #b91c1c; font-weight: bold'
-                        elif sig == "🟡":
-                            styles.loc[idx, target_col] = 'background-color: #fff3cd; color: #856404; font-weight: bold'
+                # 리스크 신호에 따라 전체 행 색칠
+                if '🚨' in df.columns:
+                    sig = df.loc[idx, '🚨']
+                    if sig == "🔴":
+                        # Red: 옅은 붉은색 (전체 행)
+                        styles.loc[idx, :] = 'background-color: #fee2e2'
+                    elif sig == "🟡":
+                        # Yellow: 옅은 노란색 (전체 행)
+                        styles.loc[idx, :] = 'background-color: #fef3c7'
+            
             return styles
 
         format_dict = {
