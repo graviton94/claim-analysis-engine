@@ -1,10 +1,11 @@
 """
-🧪 Simulation Lab Engine (Track B - v6.0 Dynamic Ensemble)
+🧪 Simulation Lab Engine (Track B - v6.1 Zero-Trend Guard)
 ==========================================================
 Logic:
-1. Validation Phase: Hide last 3 months -> Train -> Predict -> Calculate MAE.
-2. Weighting: Calculate dynamic weights based on Inverse Error (1/MAE).
-3. Final Phase: Retrain on full data -> Forecast Future -> Apply Weights.
+1. Dead Check: If recent history is flat zero, skip training and predict 0.
+2. Validation Phase: Hide last 3 months -> Train -> Predict -> Calculate MAE.
+3. Weighting: Calculate dynamic weights based on Inverse Error (1/MAE).
+4. Final Phase: Retrain on full data -> Forecast Future -> Apply Weights.
 """
 
 import pandas as pd
@@ -24,6 +25,7 @@ except ImportError:
 try:
     import lightgbm as lgb
     import optuna
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
     HAS_ML = True
 except ImportError:
     HAS_ML = False
@@ -45,54 +47,93 @@ class SimulationEngine:
         # 월별 집계
         self.ts = self.raw_df.set_index(date_col).resample('M')[val_col].sum().asfreq('M', fill_value=0)
         
-        # 전체 데이터 (Final 학습용)
-        self.full_data = self.ts
+        # [FIX] 미마감 당월 제외 (노이즈 방지)
+        last_date = self.raw_df[date_col].max()
+        last_day_of_month = pd.Timestamp(last_date.year, last_date.month, 1) + pd.offsets.MonthEnd(0)
+        is_month_complete = (last_date.date() == last_day_of_month.date())
         
-        # [FIX] UI 호환성을 위해 'train_data' 속성 추가 (전체 데이터와 동일하게 매핑)
-        self.train_data = self.ts 
-        
-        # 검증용 데이터 분할 (최근 3개월을 검증셋으로 사용)
-        if len(self.ts) > 12:
-            self.train_val = self.ts.iloc[:-3]  # 학습용 (검증 단계)
-            self.test_val = self.ts.iloc[-3:]   # 평가용 (검증 단계)
+        if not is_month_complete and len(self.ts) > 0:
+            # 미마감 당월 제외
+            self.full_data = self.ts.iloc[:-1]
+            self.current_partial = self.ts.iloc[-1]  # 당월 부분 데이터 (참고용)
         else:
-            # 데이터가 너무 적으면 분할 없이 진행
-            self.train_val = self.ts
-            self.test_val = self.ts.iloc[-1:]
+            self.full_data = self.ts
+            self.current_partial = 0
+        
+        self.train_data = self.full_data  # UI 호환용
+        
+        # 검증용 데이터 분할 (최근 3개월)
+        if len(self.full_data) > 12:
+            self.train_val = self.full_data.iloc[:-3]
+            self.test_val = self.full_data.iloc[-3:]
+        else:
+            self.train_val = self.full_data
+            self.test_val = self.full_data.iloc[-1:] if len(self.full_data) > 0 else self.full_data
 
-        self.model_weights = {} # 계산된 가중치 저장
+        self.model_weights = {} 
+        
+        # [NEW] 소멸(Dead) 판정
+        # 최근 12개월 중 0건인 달이 10개월 이상이거나, 최근 6개월 연속 0건이면 Dead로 간주
+        self.is_dead = self._check_dead_signal(self.full_data)
+
+    def _check_dead_signal(self, data: pd.Series) -> bool:
+        """최근 데이터가 소멸 추세인지 확인"""
+        if len(data) < 6: return False
+        
+        # Rule 1: 최근 6개월 연속 0건
+        recent_6m = data.tail(6)
+        if recent_6m.sum() == 0:
+            return True
+            
+        # Rule 2: 최근 12개월 중 90%가 0건이고 합계가 5건 미만 (간헐적 발생도 무시)
+        if len(data) >= 12:
+            recent_12m = data.tail(12)
+            zero_count = (recent_12m == 0).sum()
+            total_sum = recent_12m.sum()
+            if zero_count >= 10 and total_sum < 5:
+                return True
+                
+        return False
+
     # =========================================================================
-    # [Core] Individual Model Runners (Generic)
+    # [Core] Individual Model Runners
     # =========================================================================
     
     def _run_prophet_internal(self, train_data, periods) -> List[float]:
         if not HAS_PROPHET: return []
+        # Dead Guard
+        if self._check_dead_signal(train_data): return [0.0] * periods
+        
         try:
             df_p = train_data.reset_index()
             df_p.columns = ['ds', 'y']
+            
+            # Cap floor at 0 (Logistic growth/decay requires cap/floor, linear doesn't but we force max(0))
             m = Prophet(seasonality_mode='multiplicative', yearly_seasonality=True)
             m.fit(df_p)
             future = m.make_future_dataframe(periods=periods, freq='M')
             fcst = m.predict(future)
-            return [max(0, x) for x in fcst.tail(periods)['yhat'].values]
+            preds = fcst.tail(periods)['yhat'].values
+            return [max(0, x) for x in preds]
         except:
             return []
 
     def _run_automl_internal(self, train_data, periods) -> List[float]:
         if not HAS_ML: return []
+        # Dead Guard
+        if self._check_dead_signal(train_data): return [0.0] * periods
+        
         try:
-            # Feature Engineering
-            df = pd.DataFrame(train_data)
-            df.columns = ['y']
-            for lag in [1, 2, 3, 12]: df[f'lag_{lag}'] = df['y'].shift(lag)
+            df = pd.DataFrame({'y': train_data})
+            for lag in [1, 2, 3, 6, 12]:
+                df[f'lag_{lag}'] = df['y'].shift(lag)
             df = df.dropna()
             
-            if len(df) < 5: return [] # 데이터 부족
+            if len(df) < 5: return []
             
             X = df.drop(columns=['y'])
             y = df['y']
             
-            # Optuna (Fast Mode)
             def objective(trial):
                 param = {
                     'objective': 'regression', 'metric': 'mae', 'verbosity': -1,
@@ -100,7 +141,6 @@ class SimulationEngine:
                     'learning_rate': trial.suggest_float('learning_rate', 0.05, 0.2),
                     'num_leaves': trial.suggest_int('num_leaves', 20, 40),
                 }
-                # Simple Split for speed
                 split = int(len(X) * 0.8)
                 model = lgb.LGBMRegressor(**param)
                 model.fit(X.iloc[:split], y.iloc[:split])
@@ -113,26 +153,35 @@ class SimulationEngine:
             best_model = lgb.LGBMRegressor(**study.best_params)
             best_model.fit(X, y)
             
-            # Recursive Forecast
             curr_ts = train_data.copy()
             preds = []
             for _ in range(periods):
-                tmp = pd.DataFrame({'y': curr_ts})
                 idx = curr_ts.index[-1] + pd.DateOffset(months=1)
+                tmp = pd.DataFrame({'y': curr_ts})
                 tmp.loc[idx] = 0
-                for lag in [1, 2, 3, 12]: tmp[f'lag_{lag}'] = tmp['y'].shift(lag)
+                for lag in [1, 2, 3, 6, 12]: 
+                    tmp[f'lag_{lag}'] = tmp['y'].shift(lag)
+                
                 feat = tmp.iloc[[-1]].drop(columns=['y'])
                 val = max(0, best_model.predict(feat)[0])
                 preds.append(val)
-                curr_ts.loc[idx] = val
+                curr_ts = pd.concat([curr_ts, pd.Series([val], index=[idx])])
+                
             return preds
         except:
             return []
 
     def _run_sarima_internal(self, train_data, periods) -> List[float]:
         if not HAS_STATS: return []
+        # Dead Guard
+        if self._check_dead_signal(train_data): return [0.0] * periods
+        
         try:
-            # Robust Order (1,1,1)x(1,1,0,12)
+            # Enforce stationarity check or simple model if data is sparse
+            if (train_data == 0).mean() > 0.5:
+                # 데이터 절반 이상이 0이면 SARIMA 수렴 어려움 -> 0 반환
+                return [0.0] * periods
+                
             model = SARIMAX(train_data, order=(1,1,1), seasonal_order=(1,1,0,12))
             fit = model.fit(disp=False)
             return [max(0, x) for x in fit.forecast(steps=periods)]
@@ -143,50 +192,33 @@ class SimulationEngine:
     # [Logic] Dynamic Weight Calculation (Backtesting)
     # =========================================================================
     def _calculate_weights(self) -> Dict[str, float]:
-        """
-        검증셋(Hold-out)을 통해 각 모델의 MAE를 계산하고, 역수 가중치를 산출함.
-        """
+        if self.is_dead:
+            return {'Prophet': 0.33, 'AutoML': 0.33, 'SARIMAX': 0.33}
+            
         errors = {}
         val_len = len(self.test_val)
         
-        # 1. Validation Run
         p_pred = self._run_prophet_internal(self.train_val, val_len)
         m_pred = self._run_automl_internal(self.train_val, val_len)
         s_pred = self._run_sarima_internal(self.train_val, val_len)
         
         y_true = self.test_val.values
         
-        # 2. Calculate MAE
-        if p_pred and len(p_pred) == val_len:
-            errors['Prophet'] = mean_absolute_error(y_true, p_pred)
-        else:
-            errors['Prophet'] = float('inf') # 실패 시 무한대 에러
-            
-        if m_pred and len(m_pred) == val_len:
-            errors['AutoML'] = mean_absolute_error(y_true, m_pred)
-        else:
-            errors['AutoML'] = float('inf')
-            
-        if s_pred and len(s_pred) == val_len:
-            errors['SARIMAX'] = mean_absolute_error(y_true, s_pred)
-        else:
-            errors['SARIMAX'] = float('inf')
-            
-        # 3. Inverse Weighting (에러가 작을수록 가중치 큼)
-        # Weight = (1/MAE) / Sum(1/MAE)
+        for name, pred in [('Prophet', p_pred), ('AutoML', m_pred), ('SARIMAX', s_pred)]:
+            if pred and len(pred) == val_len:
+                errors[name] = mean_absolute_error(y_true, pred)
+            else:
+                errors[name] = float('inf')
+                
         inverse_errors = {}
         for k, v in errors.items():
-            if v == 0: v = 1e-6 # 0 나누기 방지
-            if v == float('inf'):
-                inverse_errors[k] = 0
-            else:
-                inverse_errors[k] = 1 / v
-                
+            if v == 0: v = 1e-6
+            if v == float('inf'): inverse_errors[k] = 0
+            else: inverse_errors[k] = 1 / v
+            
         total_inv = sum(inverse_errors.values())
-        
         weights = {}
         if total_inv == 0:
-            # 모두 실패했으면 균등 배분
             weights = {'Prophet': 0.33, 'AutoML': 0.33, 'SARIMAX': 0.33}
         else:
             for k, v in inverse_errors.items():
@@ -198,32 +230,30 @@ class SimulationEngine:
     # [Main] Competition & Ensemble
     # =========================================================================
     def run_competition(self, periods=4) -> pd.DataFrame:
-        """
-        1. Backtest로 가중치 계산
-        2. 전체 데이터로 재학습 & 예측
-        3. 앙상블 적용
-        """
-        # 1. Calculate Dynamic Weights
+        last_date = self.full_data.index[-1]
+        future_dates = [last_date + pd.DateOffset(months=i+1) for i in range(periods)]
+        result_df = pd.DataFrame({'Date': future_dates}).set_index('Date')
+
+        # 1. Check Dead Signal First
+        if self.is_dead:
+            result_df['Prophet'] = 0.0
+            result_df['AutoML'] = 0.0
+            result_df['SARIMAX'] = 0.0
+            result_df['Ensemble'] = 0.0
+            self.model_weights = {'Prophet': 0.33, 'AutoML': 0.33, 'SARIMAX': 0.33} # Dummy
+            return result_df
+
+        # 2. Normal Process
         self.model_weights = self._calculate_weights()
         
-        # 2. Final Forecast (Retrain on Full Data)
         p_final = self._run_prophet_internal(self.full_data, periods)
         m_final = self._run_automl_internal(self.full_data, periods)
         s_final = self._run_sarima_internal(self.full_data, periods)
         
-        # 3. Organize DataFrame
-        last_date = self.full_data.index[-1]
-        future_dates = [last_date + pd.DateOffset(months=i+1) for i in range(periods)]
-        
-        result_df = pd.DataFrame({'Date': future_dates}).set_index('Date')
-        
-        # 각 모델 결과 담기
         if p_final: result_df['Prophet'] = p_final
         if m_final: result_df['AutoML'] = m_final
         if s_final: result_df['SARIMAX'] = s_final
         
-        # 4. Apply Ensemble
-        # 가중치 적용하여 최종 'Ensemble' 컬럼 생성
         ensemble_vals = np.zeros(periods)
         valid_weight_sum = 0
         
@@ -231,60 +261,93 @@ class SimulationEngine:
             if model_name in result_df.columns:
                 ensemble_vals += result_df[model_name].values * weight
                 valid_weight_sum += weight
-        
-        # 결과 정규화 (혹시 모델 하나가 실패해서 가중치 합이 1이 안 될 경우 대비)
+                
         if valid_weight_sum > 0:
             result_df['Ensemble'] = ensemble_vals / valid_weight_sum
         else:
-            # 모든 모델 실패 시 0
             result_df['Ensemble'] = 0
             
         return result_df
 
     # =========================================================================
-    # [Allocation] Top-down using Ensemble
+    # [Allocation] Time-Weighted Distribution (4_예측_시뮬레이션과 로직 통일)
     # =========================================================================
     def predict_with_allocation(self, plant, major_category, sub_df, periods=3, forecast_df=None) -> pd.DataFrame:
-        """
-        앙상블 결과('Ensemble')를 사용하여 하위 배분 수행
-        """
+        """시간 가중 분배 로직 (지수 감쇠 + 소멸 추세 감지)"""
         if forecast_df is None or 'Ensemble' not in forecast_df.columns:
             return pd.DataFrame()
             
         future_preds = forecast_df['Ensemble'].values
-        
-        if len(future_preds) == 0: 
+        if len(future_preds) == 0 or sub_df.empty:
             return pd.DataFrame()
         
-        future_dates = forecast_df.index
+        # 소분류별 시간 가중 비율 계산
+        if not pd.api.types.is_datetime64_any_dtype(sub_df['접수일자']):
+            sub_df['접수일자'] = pd.to_datetime(sub_df['접수일자'])
+        
+        # 월별 데이터 생성
+        df_monthly = sub_df.copy()
+        df_monthly['년월'] = df_monthly['접수일자'].dt.to_period('M')
+        
+        # 소분류 × 년월 피벗
+        monthly_pivot = pd.pivot_table(
+            df_monthly,
+            index='소분류',
+            columns='년월',
+            values='건수',
+            aggfunc='sum',
+            fill_value=0
+        )
+        
+        if monthly_pivot.empty:
+            return pd.DataFrame()
+        
+        # 시간 가중치 계산 (지수 감쇠)
+        n_months = len(monthly_pivot.columns)
+        decay_rate = 0.92
+        time_weights = np.array([decay_rate ** (n_months - i - 1) for i in range(n_months)])
+        time_weights = time_weights / time_weights.sum()
+        
+        # 각 소분류별 가중 평균 계산
+        weighted_totals = (monthly_pivot.values * time_weights).sum(axis=1)
+        weighted_series = pd.Series(weighted_totals, index=monthly_pivot.index)
+        
+        # 소멸 추세 감지
+        recent_12m = monthly_pivot.iloc[:, -12:] if monthly_pivot.shape[1] >= 12 else monthly_pivot
+        recent_avg = recent_12m.mean(axis=1)
+        historical_avg = monthly_pivot.mean(axis=1)
+        extinction_ratio = recent_avg / historical_avg.replace(0, 1)
+        is_extinct = extinction_ratio < 0.2
+        
+        # 가중치 조정: 소멸 추세면 최근 데이터만 사용
+        final_ratios = weighted_series.copy()
+        for idx in weighted_series.index:
+            if is_extinct.loc[idx]:
+                recent_6m = recent_12m.loc[idx].tail(6)
+                final_ratios.loc[idx] = recent_6m.mean()
+        
+        # 정규화
+        total_sum = final_ratios.sum()
+        if total_sum > 0:
+            ratios = final_ratios / total_sum
+        else:
+            # 모든 소분류가 0이면 균등 분배
+            ratios = pd.Series(1.0 / len(final_ratios), index=final_ratios.index)
+        
+        # 예측 결과 생성
         allocation_results = []
+        future_dates = forecast_df.index
         
         for date_obj, total_pred in zip(future_dates, future_preds):
-            target_month = date_obj.month
-            
-            # Ratio Calculation
-            if not pd.api.types.is_datetime64_any_dtype(sub_df['접수일자']):
-                sub_df['접수일자'] = pd.to_datetime(sub_df['접수일자'])
-                
-            history_same_month = sub_df[sub_df['접수일자'].dt.month == target_month]
-            if history_same_month.empty:
-                recent = sub_df['접수일자'].max() - pd.DateOffset(months=3)
-                history_same_month = sub_df[sub_df['접수일자'] >= recent]
-                
-            sub_agg = history_same_month.groupby('소분류')['건수'].sum().reset_index()
-            total_hist = sub_agg['건수'].sum()
-            
-            if total_hist > 0: sub_agg['ratio'] = sub_agg['건수'] / total_hist
-            else: sub_agg['ratio'] = 1.0 / len(sub_agg) if len(sub_agg) > 0 else 0
-                
-            for _, row in sub_agg.iterrows():
-                allocation_results.append({
-                    '플랜트': plant,
-                    '대분류': major_category,
-                    '소분류': row['소분류'],
-                    '예측월': date_obj.strftime('%Y-%m'),
-                    '예측건수': round(total_pred * row['ratio'], 1),
-                    '점유율': f"{row['ratio']:.1%}"
-                })
+            for sub_category, ratio in ratios.items():
+                if ratio > 0:  # 비율이 0보다 큰 경우만
+                    allocation_results.append({
+                        '플랜트': plant,
+                        '대분류': major_category,
+                        '소분류': sub_category,
+                        '예측월': date_obj.strftime('%Y-%m'),
+                        '예측건수': round(total_pred * ratio, 1),
+                        '점유율': f"{ratio:.1%}"
+                    })
                 
         return pd.DataFrame(allocation_results)

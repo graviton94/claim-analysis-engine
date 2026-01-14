@@ -131,7 +131,7 @@ st.markdown(f"""
     /* Large pill badge for prominent labels (reduced size) */
     .badge-large {{ font-size: 1.1rem; padding: 6px 10px; border-radius: 999px; font-weight: 700; }}
     /* Manufacturing date badge: red background, white text */
-    .mfg-badge {{ font-size: 1.0rem; padding: 4px 8px; border-radius: 8px; font-weight: 600; background: {COLOR_RED}; color: #ffffff; }}
+    .mfg-badge {{ font-size: 1.1rem; padding: 4px 8px; border-radius: 8px; font-weight: 600; background: {COLOR_RED}; color: #ffffff; }}
     
     /* Content Area */
     .risk-content {{ font-size: 0.95rem; color: #374151; line-height: 1.6; background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; }}
@@ -670,12 +670,12 @@ if not risk_filtered.empty:
 
     with c_red:
         st.markdown(f"#### 🔴 Danger ({cnt_r}건)")
-        with st.container(height=600, border=True):
+        with st.container(height=1000, border=True):
             render_risk_cards(st, risk_sorted[risk_sorted['상태']=='🔴'], 'red')
             
     with c_yel:
         st.markdown(f"#### 🟡 Caution ({cnt_y}건)")
-        with st.container(height=600, border=True):
+        with st.container(height=1000, border=True):
             render_risk_cards(st, risk_sorted[risk_sorted['상태']=='🟡'], 'yellow')
 
 else:

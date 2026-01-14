@@ -11,7 +11,7 @@ Implementation Level: Phase 2.9 (Statistical Refinement)
 
 import numpy as np
 import pandas as pd
-from scipy.stats import poisson, nbinom
+from scipy.stats import poisson, nbinom, linregress
 from typing import Dict, Tuple, List, Union, Optional
 import statsmodels.api as sm
 from datetime import datetime, date
@@ -421,3 +421,321 @@ def detect_outliers_iqr(df: pd.DataFrame) -> pd.DataFrame:
     result = pd.DataFrame(False, index=df.index, columns=df.columns)
     result[is_outlier.columns] = is_outlier
     return result
+
+
+# ============================================================================
+# Phase 3.0: ForecastRiskAnalyzer (예측 시뮬레이션용 진단 엔진)
+# ============================================================================
+
+class ForecastRiskAnalyzer:
+    """
+    예측 시뮬레이션용 진단 엔진 (Phase 3.0)
+    과거-현재-미래를 잇는 시계열 관점에서 리스크를 진단합니다.
+    
+    분석 기준:
+    - 과거(Historical): 과거 추세
+    - 현재(Current): 최근 월의 수준
+    - 미래(Forecast): 예측 기간의 추세 및 수준
+    """
+    
+    def __init__(self, 
+                 historical_series: pd.Series,  # 과거 데이터 (최근 12개월 권장)
+                 current_value: float,          # 당월 실적 (확정치 또는 예상치)
+                 forecast_series: pd.Series,    # 예측 데이터 (향후 N개월)
+                 grade: str = '미분류'):
+        
+        self.hist = historical_series.sort_index() if not historical_series.empty else pd.Series(dtype=float)
+        self.curr = current_value
+        self.fcst = forecast_series.sort_index() if not forecast_series.empty else pd.Series(dtype=float)
+        self.grade = grade
+        
+        # 통계치 미리 계산 (과거만 기반)
+        self.hist_mean = self.hist.mean() if not self.hist.empty else 0
+        self.hist_std = self.hist.std() if len(self.hist) > 1 else 0
+        self.hist_max = self.hist.max() if not self.hist.empty else 0
+        self.hist_min = self.hist.min() if not self.hist.empty else 0
+        self.hist_median = self.hist.median() if not self.hist.empty else 0
+        
+        # 미래 통계
+        self.fcst_mean = self.fcst.mean() if not self.fcst.empty else 0
+        self.fcst_std = self.fcst.std() if len(self.fcst) > 1 else 0
+        self.fcst_max = self.fcst.max() if not self.fcst.empty else 0
+        
+        # 신뢰도 계산 (데이터 포인트 수)
+        self.hist_data_pts = len(self.hist)
+        self.fcst_data_pts = len(self.fcst)
+        self.confidence_hist = min(1.0, self.hist_data_pts / 24.0)  # 24개월 기준
+        self.confidence_fcst = min(1.0, self.fcst_data_pts / 12.0)  # 12개월 기준
+
+    def _calculate_slope(self, series: pd.Series) -> float:
+        """선형 회귀 기울기 계산"""
+        if len(series) < 2: return 0.0
+        try:
+            y = series.values.astype(float)
+            x = np.arange(len(y))
+            slope, _, _, _, _ = linregress(x, y)
+            return float(slope)
+        except:
+            return 0.0
+    
+    def _calculate_acceleration(self, series: pd.Series) -> float:
+        """가속도 계산 (기울기의 변화율)"""
+        if len(series) < 4: return 0.0
+        mid = len(series) // 2
+        slope_first = self._calculate_slope(series.iloc[:mid])
+        slope_second = self._calculate_slope(series.iloc[mid:])
+        return slope_second - slope_first
+    
+    def _calculate_volatility(self, series: pd.Series) -> float:
+        """변동성 (CV: Coefficient of Variation)"""
+        if series.mean() == 0: return 0.0
+        return series.std() / series.mean() if series.mean() > 0 else 0.0
+    
+    def _calculate_jump_rate(self, series: pd.Series) -> float:
+        """점프율: 연속 두 값의 최대 변화율"""
+        if len(series) < 2: return 0.0
+        diffs = series.pct_change().dropna()
+        return diffs.abs().max() if not diffs.empty else 0.0
+
+    def _calculate_mean_delta_score(self) -> Tuple[float, str]:
+        """과거 평균 대비 예측 평균 상승률을 점수화"""
+        if self.hist_mean <= 0: return 0.0, ""
+        ratio = self.fcst_mean / self.hist_mean if self.hist_mean > 0 else 0
+        if ratio <= 1.0: return 0.0, ""
+        if ratio >= 2.0: return 30.0, "예측 평균 2배↑"
+        if ratio >= 1.5: return 20.0, "예측 평균 50%↑"
+        if ratio >= 1.25: return 12.0, "예측 평균 25%↑"
+        if ratio >= 1.1: return 5.0, "예측 평균 10%↑"
+        return 0.0, ""
+    
+    def _analyze_trend_signals(self) -> Dict:
+        """트렌드 신호 분석"""
+        signals = {
+            'past_slope': 0,
+            'future_slope': 0,
+            'acceleration': 0,
+            'trend_text': '안정',
+            'signal_count': 0  # 경고 신호 개수
+        }
+        
+        # 최근/미래 기울기를 평균 규모로 정규화하여 민감도 개선
+        mean_scale = max(self.hist_mean, 1.0)
+        if len(self.hist) >= 4:
+            signals['past_slope'] = self._calculate_slope(self.hist.tail(4)) / mean_scale
+        
+        if len(self.fcst) >= 3:
+            signals['future_slope'] = self._calculate_slope(self.fcst.head(3)) / mean_scale
+            signals['acceleration'] = self._calculate_acceleration(self.fcst) / mean_scale
+        
+        # 트렌드 분류 기준(정규화된 기울기 기반, 더 민감하게 조정)
+        threshold_rising = 0.1
+        threshold_falling = -0.1
+        accel_threshold = 0.05
+        
+        if signals['future_slope'] > threshold_rising:
+            if signals['past_slope'] > threshold_rising:
+                signals['trend_text'] = '상승 가속' if signals['acceleration'] > accel_threshold else '상승 지속'
+                signals['signal_count'] += 2
+            else:
+                signals['trend_text'] = '상승 반전'
+                signals['signal_count'] += 1
+        elif signals['future_slope'] < threshold_falling:
+            if signals['past_slope'] > threshold_rising:
+                signals['trend_text'] = '하락 반전'
+                signals['signal_count'] += 1
+            else:
+                signals['trend_text'] = '하락 지속'
+        else:
+            signals['trend_text'] = '안정'
+        
+        return signals
+    
+    def _analyze_level_signals(self) -> Dict:
+        """수준 신호 분석 (평균 기반)"""
+        signals = {
+            'level_text': '정상',
+            'level_score': 0,
+            'threshold_warning': self.hist_mean + (1.5 * self.hist_std) if self.hist_std > 0 else self.hist_mean * 1.5,
+            'threshold_critical': self.hist_mean + (3.0 * self.hist_std) if self.hist_std > 0 else self.hist_mean * 3.0,
+        }
+        
+        if self.fcst_mean > signals['threshold_critical']:
+            signals['level_text'] = '초위험(3σ 초과)'
+            signals['level_score'] = 85
+        elif self.fcst_mean > signals['threshold_warning']:
+            signals['level_text'] = '주의(1.5σ 초과)'
+            signals['level_score'] = 50
+        elif self.fcst_mean > self.curr * 1.2:  # 현재 대비 20% 상승
+            signals['level_text'] = '소폭 상승'
+            signals['level_score'] = 25
+        else:
+            signals['level_text'] = '정상'
+            signals['level_score'] = 0
+        
+        return signals
+    
+    def _analyze_peak_signals(self) -> Dict:
+        """최고점 신호 분석"""
+        signals = {
+            'is_new_record': False,
+            'record_breach_ratio': 0.0,
+            'peak_score': 0
+        }
+        
+        if self.hist_max > 0:
+            signals['is_new_record'] = self.fcst_max > self.hist_max
+            signals['record_breach_ratio'] = (self.fcst_max - self.hist_max) / self.hist_max if self.hist_max > 0 else 0
+            
+            if signals['is_new_record']:
+                if signals['record_breach_ratio'] > 0.5:  # 50% 이상 초과
+                    signals['peak_score'] = 40
+                else:
+                    signals['peak_score'] = 25
+        
+        return signals
+    
+    def _analyze_volatility_signals(self) -> Dict:
+        """변동성 신호 분석"""
+        signals = {
+            'hist_cv': self._calculate_volatility(self.hist) if not self.hist.empty else 0,
+            'fcst_cv': self._calculate_volatility(self.fcst) if not self.fcst.empty else 0,
+            'hist_jump': self._calculate_jump_rate(self.hist) if not self.hist.empty else 0,
+            'fcst_jump': self._calculate_jump_rate(self.fcst) if not self.fcst.empty else 0,
+            'volatility_score': 0
+        }
+        
+        # 변동성 증가 감지
+        if signals['fcst_cv'] > signals['hist_cv'] * 1.5:
+            signals['volatility_score'] += 15  # 변동성 증가
+        
+        # 점프 위험 감지
+        if signals['fcst_jump'] > 1.0:  # 100% 이상 변화
+            signals['volatility_score'] += 20
+        elif signals['fcst_jump'] > 0.5:  # 50% 이상 변화
+            signals['volatility_score'] += 10
+        
+        return signals
+    
+    def _analyze_grade_impact(self, base_score: float) -> Tuple[float, str]:
+        """등급별 가중치 적용"""
+        weight_map = {
+            '위험': 1.4,
+            '중대': 1.25,
+            '일반': 1.0,
+            '미분류': 1.0
+        }
+        
+        weight = weight_map.get(self.grade, 1.0)
+        adjusted_score = base_score * weight
+        
+        grade_text = f"({self.grade} 등급)" if self.grade != '미분류' else ""
+        
+        return min(100, adjusted_score), grade_text
+
+    def analyze(self) -> Dict:
+        """
+        종합 분석 수행
+        
+        반환:
+        - status: 🔴/🟡/🟢 (위험도 아이콘)
+        - score: 0~100 (예측 리스크 점수)
+        - trend: 트렌드 분석 결과
+        - signals: 개별 신호 상세 정보
+        - insight: 종합 해석 텍스트
+        - confidence: 분석 신뢰도 (0~1)
+        """
+        
+        # 1. 모든 신호 수집
+        trend_sig = self._analyze_trend_signals()
+        level_sig = self._analyze_level_signals()
+        peak_sig = self._analyze_peak_signals()
+        vol_sig = self._analyze_volatility_signals()
+        delta_score, delta_text = self._calculate_mean_delta_score()
+        
+        # 2. 기본 점수 계산
+        base_score = 0
+        
+        # 수준 신호 (최대 85점)
+        base_score += level_sig['level_score']
+        base_score += delta_score
+        
+        # 트렌드 신호 (최대 30점)
+        if trend_sig['trend_text'] == '상승 가속':
+            base_score += 30
+        elif trend_sig['trend_text'] == '상승 반전':
+            base_score += 20
+        elif trend_sig['trend_text'] == '상승 지속':
+            base_score += 15
+        
+        # 최고점 신호 (최대 40점)
+        base_score += peak_sig['peak_score']
+        
+        # 변동성 신호 (최대 20점)
+        base_score += vol_sig['volatility_score']
+        
+        # 3. 등급 가중치 적용
+        final_score, grade_text = self._analyze_grade_impact(base_score)
+        
+        # 4. 상태 아이콘 결정
+        status_icon = "🟢"
+        if final_score >= 80:
+            status_icon = "🔴"
+        elif final_score >= 50:
+            status_icon = "🟡"
+        
+        # 5. 신뢰도 계산
+        confidence = (self.confidence_hist + self.confidence_fcst) / 2
+        
+        # 6. 종합 Insight 생성
+        insight_parts = []
+        
+        # 과거-현재 비교
+        if self.curr > 0 and self.hist_mean > 0:
+            curr_ratio = self.curr / self.hist_mean
+            if curr_ratio > 1.3:
+                insight_parts.append(f"현재 수준 +{(curr_ratio-1)*100:.0f}%")
+            elif curr_ratio < 0.7:
+                insight_parts.append(f"현재 수준 {(curr_ratio-1)*100:.0f}%")
+        
+        # 추세
+        insight_parts.append(f"추세: {trend_sig['trend_text']}")
+        
+        # 미래 전망
+        if self.fcst_mean > self.hist_mean:
+            fcst_ratio = self.fcst_mean / self.hist_mean
+            insight_parts.append(f"예측 평균 +{(fcst_ratio-1)*100:.0f}%")
+        if delta_text:
+            insight_parts.append(delta_text)
+        
+        # 최고점
+        if peak_sig['is_new_record']:
+            insight_parts.append(f"❗ 최고점 갱신 +{peak_sig['record_breach_ratio']*100:.0f}%")
+        
+        # 변동성
+        if vol_sig['volatility_score'] > 15:
+            insight_parts.append("⚠️ 변동성 증가")
+        
+        insight_str = " | ".join(insight_parts)
+        
+        # 7. 세부 신호 반환
+        return {
+            'status': status_icon,
+            'score': int(final_score),
+            'trend': trend_sig['trend_text'],
+            'insight': insight_str,
+            'grade_text': grade_text,
+            'confidence': round(confidence, 2),
+            'signals': {
+                'trend': trend_sig,
+                'level': level_sig,
+                'peak': peak_sig,
+                'volatility': vol_sig
+            },
+            'components': {
+                'score_level': level_sig['level_score'],
+                'score_mean_delta': delta_score,
+                'score_trend': min(30, base_score - level_sig['level_score'] - peak_sig['peak_score'] - vol_sig['volatility_score']),
+                'score_peak': peak_sig['peak_score'],
+                'score_volatility': vol_sig['volatility_score']
+            }
+        }

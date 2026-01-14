@@ -12,7 +12,7 @@ import pyarrow.dataset as ds
 from core.config import DATA_HUB_PATH
 from core.storage import load_and_filter_data, get_claim_keys
 from core.engine.trainer import SimulationEngine
-from core.analytics import calculate_advanced_risk_score, calculate_lag_stats, prepare_risk_data
+from core.analytics import calculate_advanced_risk_score, calculate_lag_stats, prepare_risk_data, ForecastRiskAnalyzer
 
 # ==============================================================================
 # 1. 페이지 설정
@@ -209,16 +209,21 @@ with col_step3:
     # 1. 등급 필터
     grade_options = sorted(df_for_options['등급기준'].dropna().unique())
     
-    # 쿼리 파라미터로 설정된 기본값 또는 전체 선택
+    # 세션 상태 초기화 (첫 진입 또는 플랜트 변경 시)
     if 'sim_step3_grades' not in st.session_state:
         st.session_state['sim_step3_grades'] = grade_options
     
-    # 다중선택에서 쿼리 파라미터의 등급만 기본으로 선택되도록
-    default_grades = st.session_state.get('sim_step3_grades', grade_options)
+    # 세션 상태의 값이 현재 옵션에 없으면 초기화
+    current_grades = st.session_state.get('sim_step3_grades', grade_options)
+    current_grades = [g for g in current_grades if g in grade_options]
+    if not current_grades:
+        current_grades = grade_options
+        st.session_state['sim_step3_grades'] = current_grades
+    
+    # key가 있으면 default 파라미터를 사용하지 말 것 (Streamlit이 자동으로 세션 상태에서 읽음)
     sim_sel_grades = st.multiselect(
         "분석할 등급을 선택하세요:", 
         grade_options, 
-        default=default_grades,
         key='sim_step3_grades'
     )
     
@@ -230,20 +235,21 @@ with col_step3:
         
     category_options = sorted(temp_df['대분류'].dropna().unique())
     
+    # 세션 상태 초기화 (첫 진입 또는 플랜트 변경 시)
     if 'sim_step3_categories' not in st.session_state:
         st.session_state['sim_step3_categories'] = category_options
     
-    # 다중선택에서 쿼리 파라미터의 대분류만 기본으로 선택되도록
-    default_categories = st.session_state.get('sim_step3_categories', category_options)
-    # 필터링된 카테고리 중에 기본값이 있는지 확인
-    default_categories = [cat for cat in default_categories if cat in category_options]
-    if not default_categories:  # 기본값이 필터링되었으면 전체
-        default_categories = category_options
+    # 세션 상태의 값이 현재 옵션에 없으면 초기화
+    current_categories = st.session_state.get('sim_step3_categories', category_options)
+    current_categories = [c for c in current_categories if c in category_options]
+    if not current_categories:
+        current_categories = category_options
+        st.session_state['sim_step3_categories'] = current_categories
     
+    # key가 있으면 default 파라미터를 사용하지 말 것
     sim_sel_categories = st.multiselect(
         "분석할 대분류를 선택하세요:", 
         category_options, 
-        default=default_categories,
         key='sim_step3_categories'
     )
     
@@ -265,7 +271,7 @@ def run_simulation():
 
 # 실행 가능 여부 체크
 can_run = not df_for_options.empty
-btn_run = st.button("🚀 시뮬레이션 시작", type="primary", use_container_width=True, disabled=not can_run, on_click=run_simulation)
+btn_run = st.button("🚀 시뮬레이션 시작", type="primary", width='stretch', disabled=not can_run, on_click=run_simulation)
 
 st.divider()
 
@@ -377,19 +383,51 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
 
     fig_pred = go.Figure()
     
-    # History
-    recent_hist = engine.train_data.tail(12)
-    last_date = recent_hist.index[-1] if not recent_hist.empty else monthly_df['ds'].iloc[-1]
-    last_val = recent_hist.values[-1] if not recent_hist.empty else monthly_df['y'].iloc[-1]
+    # History - 그래프도 테이블과 동일한 범위 사용 (당월 제외, 작년 1월부터 시작)
+    end_month_start = pd.to_datetime(end_date).replace(day=1)
+    start_anchor = pd.Timestamp(end_month_start.year - 1, 1, 1)
+    hist_df = df_target[(df_target['접수일자'] >= start_anchor) & (df_target['접수일자'] < end_month_start)]
+    monthly_hist_series = hist_df.groupby(hist_df['접수일자'].dt.to_period('M')).size()
+    monthly_hist_series.index = monthly_hist_series.index.to_timestamp()
+    recent_hist = monthly_hist_series.tail(12)
     
     if not recent_hist.empty:
-        fig_pred.add_trace(go.Scatter(
-            x=recent_hist.index, y=recent_hist.values,
-            mode='lines+markers', name='실적 History',
-            line=dict(color='black', width=2), marker=dict(size=6)
-        ))
+        last_date = recent_hist.index[-1]
+        last_val = recent_hist.values[-1]
         
-    # Forecast
+        # 미마감 당월이 있으면 실적과 연결 (예측 첫 달 x축과 동일하게 맞춤)
+        if hasattr(engine, 'current_partial') and engine.current_partial > 0:
+            current_month = df_forecast.index[0] if not df_forecast.empty else last_date + pd.DateOffset(months=1)
+            
+            # 실적 History + 당월 진행중을 하나의 선으로 (검은색 점선)
+            combined_x = list(recent_hist.index) + [current_month]
+            combined_y = list(recent_hist.values) + [engine.current_partial]
+            
+            fig_pred.add_trace(go.Scatter(
+                x=combined_x, y=combined_y,
+                mode='lines+markers',
+                name='실적 (진행중 포함)',
+                line=dict(color='black', width=2, dash='dot'),
+                marker=dict(size=6)
+            ))
+            
+            # 예측은 당월 마감(다음 달) 이후부터 시작 - 진행중과 연결하지 않음
+            forecast_start_date = None  # 예측 첫 달부터 독립적으로 시작
+        else:
+            # 미마감 당월이 없으면 실적만 표시
+            fig_pred.add_trace(go.Scatter(
+                x=recent_hist.index, y=recent_hist.values,
+                mode='lines+markers', name='실적 History',
+                line=dict(color='black', width=2), marker=dict(size=6)
+            ))
+            forecast_start_date = None
+    else:
+        # 데이터가 없으면 monthly_df 기준
+        last_date = monthly_df['ds'].iloc[-1] if not monthly_df.empty else pd.Timestamp.now()
+        last_val = monthly_df['y'].iloc[-1] if not monthly_df.empty else 0
+        forecast_start_date = None
+        
+    # Forecast - 예측 시작점부터 연결
     model_styles = {
         'Ensemble': {'color': '#6200ea', 'width': 5, 'dash': 'solid'},
         'AutoML':   {'color': '#e74c3c', 'width': 2, 'dash': 'dot'},
@@ -401,27 +439,62 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
     
     for model_name in cols_sorted:
         style = model_styles.get(model_name, {'color': 'gray', 'width': 1, 'dash': 'dot'})
-        pred_x = [last_date] + list(df_forecast.index)
-        pred_y = [last_val] + list(df_forecast[model_name].values)
         mode_style = 'lines+markers' if model_name == 'Ensemble' else 'lines'
         
+        # 예측은 독립적으로 표시 (당월 진행중과 연결하지 않음)
         fig_pred.add_trace(go.Scatter(
-            x=pred_x, y=pred_y, mode=mode_style, name=f'{model_name} 예측',
+            x=df_forecast.index,
+            y=df_forecast[model_name].values,
+            mode=mode_style,
+            name=f'{model_name} 예측',
             line=dict(color=style['color'], width=style['width'], dash=style['dash']),
             opacity=1.0 if model_name == 'Ensemble' else 0.5
         ))
         
     fig_pred.update_layout(
-        height=500, legend=dict(orientation="h", y=1.02, x=1),
-        hovermode="x unified", xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
+        height=500, 
+        legend=dict(
+            orientation="v", 
+            yanchor="top", 
+            y=0.99, 
+            xanchor="right", 
+            x=0.99,
+            bgcolor="rgba(255, 255, 255, 0.8)",
+            bordercolor="rgba(0, 0, 0, 0.2)",
+            borderwidth=1
+        ),
+        hovermode="x unified", 
+        xaxis=dict(showgrid=False), 
+        yaxis=dict(showgrid=True, gridcolor='#f0f0f0', rangemode='tozero'),
         plot_bgcolor='white'
     )
-    fig_pred.add_vline(x=last_date, line_width=1, line_dash="dash", line_color="gray")
-    st.plotly_chart(fig_pred, use_container_width=True)
+    
+    # 예측 시작 시점 표시 (미마감 당월 마감 = 첫 예측 시점)
+    if not df_forecast.empty:
+        first_forecast = df_forecast.index[0]
+        fig_pred.add_shape(
+            type="line",
+            x0=first_forecast, x1=first_forecast,
+            y0=0, y1=1,
+            yref="paper",
+            line=dict(color="red", width=2, dash="dash")
+        )
+        fig_pred.add_annotation(
+            x=first_forecast,
+            y=1.0,
+            yref="paper",
+            text="예측 시작",
+            showarrow=False,
+            yshift=10,
+            font=dict(color="red", size=10)
+        )
+    
+    st.plotly_chart(fig_pred, width='stretch')
     
     if 'Ensemble' in df_forecast.columns:
         avg_pred = df_forecast['Ensemble'].mean()
-        st.success(f"🏆 최종 앙상블(Ensemble) 예측 결과, 향후 월평균 **{avg_pred:.0f}건**이 예상됩니다.")
+        pred_period = f"{df_forecast.index[0].strftime('%Y-%m')} ~ {df_forecast.index[-1].strftime('%Y-%m')}"
+        st.success(f"🏆 최종 앙상블(Ensemble) 예측 결과\n- 예측 기간: {pred_period}\n- 월평균: **{avg_pred:.0f}건**")
         
     st.divider()
     
@@ -432,9 +505,20 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
     with tab1:
         st.markdown("##### 📊 과거 실적 + 예측 시뮬레이션 통합 테이블")
         try:
-            # 1. Base History Pivot
-            cutoff_date = pd.to_datetime(end_date) - relativedelta(months=12)
-            historical_12m = df_target[df_target['접수일자'] >= cutoff_date].copy()
+            # 0. 전체 기간 패턴 계산 (예측 분배용)
+            full_period_pivot = pd.DataFrame()
+            if not df_target.empty:
+                full_period_pivot = pd.pivot_table(
+                    df_target,
+                    index=['등급기준', '대분류', '소분류'],
+                    values='건수', aggfunc='sum', fill_value=0
+                )
+            
+            # 1. Base History Pivot (표시용 - 작년 1월부터 당월 직전까지)
+            end_month_start = pd.to_datetime(end_date).replace(day=1)
+            start_anchor = pd.Timestamp(end_month_start.year - 1, 1, 1)
+            historical_12m = df_target[(df_target['접수일자'] >= start_anchor) & (df_target['접수일자'] < end_month_start)].copy()
+            
             historical_12m['월'] = historical_12m['접수일자'].dt.strftime('%Y-%m')
             
             pivot_hist = pd.DataFrame()
@@ -446,34 +530,167 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
                     values='건수', aggfunc='sum', fill_value=0
                 )
             
-            # 2. Risk Scoring (Code B Logic: Zero-Filled Data)
-            # risk_pivot_df는 이미 Zero-filled & MultiIndex 상태임
+            # 1.5. Forecast Data Pivot - 시간 가중 패턴 기반 예측 분배 (당월도 예측값으로 포함)
+            pivot_pred = pd.DataFrame()
+            pivot_curr_actual = pd.DataFrame()
+            pivot_curr_pred = pd.DataFrame()
+            if not alloc_df.empty and not df_target.empty:
+                # === 시간 가중 비율 계산 (최근 데이터 중시, 당월 제외) ===
+                # 월별 데이터 생성 (당월 제외)
+                df_monthly = df_target.copy()
+                df_monthly['접수월'] = df_monthly['접수일자'].dt.to_period('M')
+                
+                # 기간 제한: 작년 1월부터 당월 직전까지
+                end_month = pd.to_datetime(end_date).to_period('M')
+                start_anchor = pd.Timestamp(end_month.year - 1, 1, 1)
+                df_monthly = df_monthly[
+                    (df_monthly['접수일자'] >= start_anchor) &
+                    (df_monthly['접수월'] != end_month)
+                ]
+                
+                df_monthly['년월'] = df_monthly['접수일자'].dt.to_period('M')
+                
+                # 등급기준|대분류|소분류 × 년월 피벗
+                monthly_pivot = pd.pivot_table(
+                    df_monthly,
+                    index=['등급기준', '대분류', '소분류'],
+                    columns='년월',
+                    values='건수',
+                    aggfunc='sum',
+                    fill_value=0
+                )
+                
+                if not monthly_pivot.empty:
+                    # 시간 가중치 계산 (지수 감쇠: 최근일수록 높은 가중치)
+                    n_months = len(monthly_pivot.columns)
+                    # decay_rate: 0.9 = 최근 12개월에 높은 가중치, 과거는 급격히 감소
+                    decay_rate = 0.92
+                    time_weights = np.array([decay_rate ** (n_months - i - 1) for i in range(n_months)])
+                    time_weights = time_weights / time_weights.sum()  # 정규화
+                    
+                    # 각 조합별 가중 평균 계산
+                    weighted_totals = (monthly_pivot.values * time_weights).sum(axis=1)
+                    weighted_series = pd.Series(weighted_totals, index=monthly_pivot.index)
+                    
+                    # 소멸 추세 감지 및 비율 조정
+                    recent_12m = monthly_pivot.iloc[:, -12:] if monthly_pivot.shape[1] >= 12 else monthly_pivot
+                    recent_avg = recent_12m.mean(axis=1)
+                    historical_avg = monthly_pivot.mean(axis=1)
+                    
+                    # 소멸 비율 계산 (최근 평균 / 전체 평균)
+                    extinction_ratio = recent_avg / historical_avg.replace(0, 1)
+                    
+                    # 소멸 추세 감지 (최근 평균이 전체 평균의 20% 이하)
+                    is_extinct = extinction_ratio < 0.2
+                    
+                    # 가중치 조정: 소멸 추세면 최근 데이터만 사용
+                    final_ratios = weighted_series.copy()
+                    for idx in weighted_series.index:
+                        if is_extinct.loc[idx]:
+                            # 소멸 추세: 최근 6개월만 사용
+                            recent_6m = recent_12m.loc[idx].tail(6)
+                            final_ratios.loc[idx] = recent_6m.mean()
+                    
+                    # 전체 합으로 정규화하여 비율 계산
+                    total_sum = final_ratios.sum()
+                    if total_sum > 0:
+                        hist_ratio = final_ratios / total_sum
+                    else:
+                        hist_ratio = pd.Series(0, index=final_ratios.index)
+                    
+                    # 예측 총량 추출 (Ensemble 기준)
+                    if 'Ensemble' in df_forecast.columns:
+                        forecast_totals = df_forecast['Ensemble']
+                    else:
+                        forecast_totals = df_forecast.mean(axis=1)
+                    
+                    # 예측 월별 컬럼 생성
+                    pred_data = []
+                    for idx in hist_ratio.index:
+                        ratio = hist_ratio.loc[idx]
+                        if ratio > 0:  # 비율이 0보다 큰 경우만 예측 생성
+                            for month_idx, month_dt in enumerate(df_forecast.index):
+                                month_str = month_dt.strftime('%Y-%m')
+                                pred_val = forecast_totals.iloc[month_idx] * ratio
+                                
+                                pred_data.append({
+                                    '등급기준': idx[0],
+                                    '대분류': idx[1],
+                                    '소분류': idx[2],
+                                    '예측월': month_str,
+                                    '예측건수': pred_val
+                                })
+                    
+                    if pred_data:
+                        pred_df = pd.DataFrame(pred_data)
+                        pivot_pred = pd.pivot_table(
+                            pred_df,
+                            index=['등급기준', '대분류', '소분류'],
+                            columns='예측월',
+                            values='예측건수',
+                            aggfunc='sum',
+                            fill_value=0
+                        )
+
+            # Current month actual/forecast columns
+            current_month = pd.to_datetime(end_date).to_period('M')
+            current_month_str = current_month.strftime('%Y-%m')
+            current_actual_col = f"{current_month_str}(실제)"
+            current_pred_col = f"{current_month_str}(예측)"
+
+            # Actual current month pivot
+            current_month_df = df_target[df_target['접수일자'].dt.to_period('M') == current_month]
+            if not current_month_df.empty:
+                pivot_curr_actual = pd.pivot_table(
+                    current_month_df,
+                    index=['등급기준', '대분류', '소분류'],
+                    values='건수', aggfunc='sum', fill_value=0
+                )
+                pivot_curr_actual.columns = [current_actual_col]
+
+            # Forecast current month pivot (renamed) and remove original column to avoid duplicates
+            if not pivot_pred.empty and current_month_str in pivot_pred.columns:
+                pivot_curr_pred = pivot_pred[[current_month_str]].rename(columns={current_month_str: current_pred_col})
+                pivot_pred = pivot_pred.drop(columns=[current_month_str])
+            
+            # 2. Risk Scoring (Forecast 기반 예측 진단)
             risk_data = []
             target_month_str = pd.to_datetime(end_date).strftime('%Y-%m')
             
-            # loop over base pivot indices (or alloc_mapped indices if needed)
-            # 여기서는 pivot_hist의 인덱스를 기준으로 함
-            # (만약 alloc_df에만 있는 신규 항목이 있다면 추가 로직 필요하지만, 보통 과거 이력 기반임)
-            
             target_indices = pivot_hist.index if not pivot_hist.empty else []
-            if not pivot_hist.empty and not alloc_df.empty:
-                # Merge indices from history and forecast
-                # (생략: 복잡도 증가 방지, History 있는 항목 위주)
-                pass
 
             for idx in target_indices:
                 grade, major, minor = idx
                 try:
-                    # Risk Pivot에서 데이터 추출 (없으면 0)
-                    if idx in risk_pivot_df.index:
-                        series_data = risk_pivot_df.loc[idx]
+                    # 과거 데이터 추출 (최근 12개월)
+                    if idx in pivot_hist.index:
+                        hist_series = pivot_hist.loc[idx]
                     else:
-                        series_data = pd.Series(0, index=risk_pivot_df.columns)
+                        hist_series = pd.Series(0, index=pivot_hist.columns)
                     
-                    # Risk Engine 호출
-                    sig, score, reason = calculate_advanced_risk_score(series_data, target_month_str, grade=grade)
+                    # 현재 값 (당월 실적 = 과거 데이터의 마지막 값)
+                    current_value = hist_series.iloc[-1] if len(hist_series) > 0 else 0
+                    
+                    # 미래 예측 데이터 추출
+                    if idx in pivot_pred.index:
+                        fcst_series = pivot_pred.loc[idx]
+                    else:
+                        fcst_series = pd.Series(0, index=pivot_pred.columns)
+                    
+                    # ForecastRiskAnalyzer 호출
+                    analyzer = ForecastRiskAnalyzer(
+                        historical_series=hist_series,
+                        current_value=current_value,
+                        forecast_series=fcst_series,
+                        grade=grade
+                    )
+                    result = analyzer.analyze()
+                    
+                    sig = result['status']
+                    reason = result['insight']
+                    
                 except Exception as e:
-                    sig, score, reason = ('⚪', 0, f"Err: {str(e)}")
+                    sig, reason = ('⚪', f"분석오류: {str(e)}")
                 
                 risk_data.append({'등급기준': grade, '대분류': major, '소분류': minor, '🚨': sig, '진단': reason})
             
@@ -481,58 +698,151 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
             if not df_risk.empty:
                 df_risk = df_risk.set_index(['등급기준', '대분류', '소분류'])
             
-            # 3. Forecast Data Pivot
-            pivot_pred = pd.DataFrame()
-            if not alloc_df.empty:
-                mapping = df_target[['소분류', '등급기준']].drop_duplicates().set_index('소분류')
-                alloc_mapped = alloc_df.copy()
-                # 등급기준이 누락되었을 수 있으므로 매핑
-                alloc_mapped['등급기준'] = alloc_mapped['소분류'].map(mapping['등급기준']).fillna('미지정')
-                
-                pivot_pred = pd.pivot_table(
-                    alloc_mapped,
-                    index=['등급기준', '대분류', '소분류'],
-                    columns='예측월',
-                    values='예측건수', aggfunc='sum', fill_value=0
-                )
-            
-            # 4. Final Merge
+            # 3. Final Merge
             dfs = []
             if not df_risk.empty: dfs.append(df_risk)
             if not pivot_hist.empty: dfs.append(pivot_hist)
+            if not pivot_curr_actual.empty: dfs.append(pivot_curr_actual)
+            if not pivot_curr_pred.empty: dfs.append(pivot_curr_pred)
             if not pivot_pred.empty: dfs.append(pivot_pred)
             
             if dfs:
                 final_view = pd.concat(dfs, axis=1).fillna(0)
                 
-                # Column Sort
+                # Column Sort (meta first, then past year → past-year avg → current actual/pred → future fcst → fcst avg)
                 meta = ['🚨', '진단']
-                others = sorted([c for c in final_view.columns if c not in meta])
-                final_view = final_view[meta + others]
+                hist_cols_order = [c for c in sorted(pivot_hist.columns) if c in final_view.columns]
+                curr_cols = [c for c in [current_actual_col, current_pred_col] if c in final_view.columns]
+                pred_cols_order = [c for c in sorted(pivot_pred.columns) if c in final_view.columns]
+                ordered = hist_cols_order + curr_cols + pred_cols_order
+                # keep any remaining columns (e.g., averages to be appended later)
+                ordered += [c for c in final_view.columns if c not in meta and c not in ordered]
+                final_view = final_view[meta + ordered]
                 
                 # Value Restoration
                 final_view['🚨'] = final_view['🚨'].replace(0, '⚪')
                 final_view['진단'] = final_view['진단'].replace(0, '-')
+
+                # 평균 컬럼 추가 (과거연도 라벨은 실제 연도로 표시)
+                hist_cols = [c for c in pivot_hist.columns if c in final_view.columns]
+                pred_cols = [c for c in pivot_pred.columns if c in final_view.columns]
+                hist_base_year = pd.Timestamp(pd.to_datetime(end_date).year - 1, 1, 1).year
+                hist_avg_col = f"{hist_base_year}년 월평균"
+                if hist_cols:
+                    final_view[hist_avg_col] = final_view[hist_cols].mean(axis=1)
+                if pred_cols:
+                    final_view['예측 월평균'] = final_view[pred_cols].mean(axis=1)
+
+                # Column re-order after adding averages: past year → past-year avg → current actual/pred → future fcst → fcst avg
+                hist_cols_order = [c for c in sorted(pivot_hist.columns) if c in final_view.columns]
+                curr_cols = [c for c in [current_actual_col, current_pred_col] if c in final_view.columns]
+                pred_cols_order = [c for c in sorted(pivot_pred.columns) if c in final_view.columns]
+                ordered = []
+                ordered += hist_cols_order
+                if hist_avg_col in final_view.columns: ordered.append(hist_avg_col)
+                ordered += curr_cols
+                ordered += [c for c in pred_cols_order if c not in ordered]
+                if '예측 월평균' in final_view.columns: ordered.append('예측 월평균')
+                # include any remaining columns (fallback)
+                ordered += [c for c in final_view.columns if c not in meta and c not in ordered]
+                final_view = final_view[meta + ordered]
                 
-                # Total Row
+                # 소계 및 합계 추가
                 numeric_cols = final_view.select_dtypes(include=[np.number]).columns
-                total_vals = final_view[numeric_cols].sum()
-                total_idx = ('합계', '-', '-')
-                final_view.loc[total_idx, numeric_cols] = total_vals
-                final_view.loc[total_idx, ['🚨', '진단']] = ['-', '-']
+                
+                # 등급기준|대분류별 소계 삽입
+                result_data = []
+                subtotal_counter = 0
+                
+                for (grade, major), group in final_view.groupby(level=[0, 1]):
+                    # 그룹 데이터 추가
+                    for idx, row in group.iterrows():
+                        result_data.append({
+                            '등급기준': idx[0],
+                            '대분류': idx[1],
+                            '소분류': idx[2],
+                            **row.to_dict()
+                        })
+                    
+                    # 소계 행 생성 (axis=0으로 행을 합산, numeric_only로 숫자만 처리)
+                    subtotal_vals = group[numeric_cols].sum(axis=0, numeric_only=True)
+                    subtotal_dict = {
+                        '등급기준': grade,
+                        '대분류': major,
+                        '소분류': f'소계_{subtotal_counter}',  # 고유 인덱스
+                        '🚨': '',
+                        '진단': ''
+                    }
+                    for col in numeric_cols:
+                        subtotal_dict[col] = subtotal_vals.get(col, 0)
+                    result_data.append(subtotal_dict)
+                    subtotal_counter += 1
+                
+                # 재구성
+                final_view = pd.DataFrame(result_data)
+                final_view = final_view.set_index(['등급기준', '대분류', '소분류'])
+                
+                # 전체 합계 추가 (소계 행 제외하고 실제 데이터 행만 계산)
+                mask_data = ~final_view.index.get_level_values(2).astype(str).str.startswith('소계_')
+                total_vals = final_view.loc[mask_data, numeric_cols].sum(axis=0, numeric_only=True)
+                total_dict = {
+                    '등급기준': '합계',
+                    '대분류': '-',
+                    '소분류': '-',
+                    '🚨': '-',
+                    '진단': '-'
+                }
+                for col in numeric_cols:
+                    total_dict[col] = total_vals.get(col, 0)
+                
+                # 합계를 DataFrame으로 추가
+                total_df = pd.DataFrame([total_dict]).set_index(['등급기준', '대분류', '소분류'])
+                final_view = pd.concat([final_view, total_df])
+                
+                # 당월 열 및 예측 컬럼 식별
+                target_month_str = current_actual_col
+                pred_cols = [c for c in pivot_pred.columns if c in final_view.columns]
+                if current_pred_col in final_view.columns:
+                    pred_cols.append(current_pred_col)
                 
                 # Styling
                 def highlight_risk(row):
-                    if row.name == total_idx:
-                        return ['background-color: #f3f4f6; font-weight: bold'] * len(row)
-                    sig = row['🚨']
-                    if sig == '🔴': return ['background-color: #fee2e2; color: #991b1b'] * len(row)
-                    elif sig == '🟡': return ['background-color: #fef3c7; color: #92400e'] * len(row)
-                    return [''] * len(row)
+                    styles = []
+                    hist_avg = row.get(hist_avg_col, np.nan)
+                    for col in final_view.columns:
+                        style_parts = []
+                        if isinstance(row.name, tuple) and len(row.name) >= 3:
+                            if str(row.name[2]).startswith('소계_'):
+                                style_parts.append('background-color: #e5e7eb; font-weight: bold; font-size: 0.9em')
+                            elif row.name[0] == '합계':
+                                style_parts.append('background-color: #f3f4f6; font-weight: bold')
+                        sig = row.get('🚨', '')
+                        if sig == '🔴':
+                            style_parts.append('background-color: #fee2e2; color: #991b1b')
+                        elif sig == '🟡':
+                            style_parts.append('background-color: #fef3c7; color: #92400e')
+                        if col == target_month_str:
+                            style_parts.append('color: darkred; font-weight: bold')
+                        if col in pred_cols and pd.notnull(hist_avg):
+                            cell_val = row.get(col, np.nan)
+                            if pd.notnull(cell_val):
+                                diff = cell_val - hist_avg
+                                if diff > 0 and hist_avg > 0:
+                                    ratio = min(1.0, diff / hist_avg)
+                                    alpha = 0.3 + 0.3 * ratio  # 0.3~0.6 사이 투명도
+                                    style_parts.append(f'background-color: rgba(248, 113, 113, {alpha:.2f}); color: #7f1d1d')
+                        styles.append('; '.join(style_parts))
+                    return styles
+                
+                # 포맷팅할 컬럼만 필터링 (실제 숫자 타입만)
+                format_dict = {}
+                for c in numeric_cols:
+                    if c in final_view.columns and pd.api.types.is_numeric_dtype(final_view[c]):
+                        format_dict[c] = "{:,.1f}"
                 
                 st.dataframe(
-                    final_view.style.format({c: "{:,.1f}" for c in numeric_cols}).apply(highlight_risk, axis=1),
-                    use_container_width=True, height=500
+                    final_view.style.format(format_dict).apply(highlight_risk, axis=1),
+                    width='stretch', height=500
                 )
                 
                 csv = final_view.to_csv().encode('utf-8-sig')
@@ -564,7 +874,7 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
     # [Tab 3] 원본 데이터 (Code B와 완전 동일)
     with tab3:
         st.markdown("##### 📋 원본 데이터 (필터링 적용)")
-        st.dataframe(df_target, use_container_width=True, height=500)
+        st.dataframe(df_target, width='stretch', height=500)
         st.caption(f"※ 조회된 데이터 건수: {len(df_target):,}건")
 
 elif not btn_run and not st.session_state.get('run_clicked'):
