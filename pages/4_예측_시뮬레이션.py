@@ -80,8 +80,8 @@ if st.query_params and 'plant' in st.query_params:
     qp_category = st.query_params.get('category', '')
     
     # Mode 매핑 (쿼리 파라미터 형식 → 라디오 옵션 형식)
-    mode_map = {'인입': '인입 (Inflow)', '실적': '실적 (Performance)', 'Raw': 'Raw (전체 원본)'}
-    qp_mode = mode_map.get(qp_mode_raw, '인입 (Inflow)')
+    mode_map = {'인입': '인입', '실적': '실적', 'Raw': 'Raw data'}
+    qp_mode = mode_map.get(qp_mode_raw, '인입')
     
     # 쿼리 파라미터 고유키 생성 (중복 처리 방지)
     qp_key = f"{qp_mode}|{qp_plant}|{qp_grade}|{qp_category}"
@@ -191,17 +191,17 @@ with col_step2:
 
     search_mode = st.radio(
         "조회 모드를 선택하세요:",
-        ("인입 (Inflow)", "실적 (Performance)", "Raw (전체 원본)"),
+        ("인입", "실적", "Raw data"),
         horizontal=True,
         key='sim_search_mode'
     )
 
-    if search_mode == "인입 (Inflow)":
-        st.caption(f"ℹ️ **인입 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인(전체)")
-    elif search_mode == "실적 (Performance)":
-        st.caption(f"ℹ️ **실적 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인({', '.join(PERFORMANCE_REASONS)})")
-    else: # Raw
-        st.caption("ℹ️ **Raw 기준**: 모든 필터링 없이 선택한 기간의 전체 클레임 데이터")
+    if search_mode == "인입":
+        st.caption(f"📋 사업부문: {', '.join(TARGET_BUSINESS_UNITS)} | 불만유형: 전체")
+    elif search_mode == "실적":
+        st.caption(f"📋 사업부문: {', '.join(TARGET_BUSINESS_UNITS)} | 불만유형: {', '.join(PERFORMANCE_REASONS)}")
+    else: # Raw data
+        st.caption("📋 CIS 기준 상담구분: 클레임 전체")
 
 with col_step3:
     st.markdown("#### Step 3: 등급, 대분류 필터")
@@ -374,10 +374,7 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
     # 1. 제목
     selected_grades_str = ", ".join(sim_sel_grades) if sim_sel_grades else "전체 등급"
     st.subheader(f"📈 시뮬레이션 결과 ({selected_grades_str} / {search_mode})")
-    
-    # 2. 모델 경합 그래프
-    st.markdown(f"#### 🏁 모델 경합 (Model Competition)")
-    
+
     fig_pred = go.Figure()
     
     # History

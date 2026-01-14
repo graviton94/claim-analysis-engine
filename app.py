@@ -20,7 +20,7 @@ from core.forecasting import ForecastEngine
 COLOR_RED = "#EF151E"
 COLOR_YELLOW = "#FF9700"
 COLOR_BLUE = "#006ECD"
-COLOR_GRAY = "#9ca3af"
+COLOR_GRAY = "#2f3339"
 
 # --- 0. Helper Functions (UI & Data) ---
 
@@ -77,6 +77,18 @@ def format_trend_with_highlight(trend_str):
     if normal_parts: return f'{normal_text} → {highlighted_text}'
     else: return highlighted_text
 
+def get_grade_badge_class(grade):
+    """등급에 따른 배지 클래스 반환 (일반=노란색, 중대/위험/사고=빨간색)"""
+    if not grade or grade == '미분류':
+        return 'badge-gray'
+    grade_str = str(grade).strip()
+    if grade_str == '일반':
+        return 'badge-yellow'
+    elif grade_str in ['중대', '위험', '사고']:
+        return 'badge-red'
+    else:
+        return 'badge-gray'
+
 # --- 0. 페이지 설정 ---
 st.set_page_config(
     page_title="Quality Control Tower",
@@ -113,8 +125,8 @@ st.markdown(f"""
     .risk-badges {{ display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle; margin-left: 8px; }}
     .badge {{ padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; }}
     .badge-gray {{ background: #f3f4f6; color: #374151; }}
-    .badge-red {{ background: #fee2e2; color: {COLOR_RED}; }}
-    .badge-yellow {{ background: #fff7ed; color: {COLOR_YELLOW}; }}
+    .badge-red {{ background: {COLOR_RED}; color: #ffffff; }}
+    .badge-yellow {{ background: {COLOR_YELLOW}; color: #ffffff; }}
     .badge-blue {{ background: #e0f2fe; color: {COLOR_BLUE}; }}
     /* Large pill badge for prominent labels (reduced size) */
     .badge-large {{ font-size: 1.1rem; padding: 6px 10px; border-radius: 999px; font-weight: 700; }}
@@ -134,7 +146,7 @@ st.markdown(f"""
         text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
         transition: all 0.2s;
     }}
-    .action-btn:hover {{ background: #f3f4f6; border-color: #9ca3af; color: #111827; text-decoration: none;}}
+    .action-btn:hover {{ background: #f3f4f6; border-color: #2f3339; color: #111827; text-decoration: none;}}
     .download-btn {{
         background: white; border: 1px solid #d1d5db; color: #374151;
         padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
@@ -142,7 +154,7 @@ st.markdown(f"""
         transition: all 0.2s;
         margin-right: 6px;
     }}
-    .download-btn:hover {{ background: #f3f4f6; border-color: #9ca3af; color: #111827; text-decoration: none;}}
+    .download-btn:hover {{ background: #f3f4f6; border-color: #2f3339; color: #111827; text-decoration: none;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -232,7 +244,7 @@ def load_and_scan_risks_unified(mode='인입'):
             last_date_str = last_date_val.strftime('%Y-%m-%d') if pd.notnull(last_date_val) else "-"
             
             # [ALL RISKS] 모든 점수 > 0인 리스크 표시 (오늘 감지든 이전 감지든)
-            trend_vals = series.tail(6).astype(int).tolist()
+            trend_vals = series.tail(12).astype(int).tolist()
             trend_str = " → ".join(map(str, trend_vals))
             
             risk_results.append({
@@ -262,16 +274,45 @@ def load_and_scan_risks_unified(mode='인입'):
 # --- 2. Dashboard Logic ---
 
 # Sidebar
+st.sidebar.markdown("### 🏭 플랜트 선택")
+if 'raw_df_temp' not in st.session_state:
+    # 임시로 데이터 로드하여 플랜트 리스트 확보
+    try:
+        end_date = datetime.today().date()
+        start_date = end_date - relativedelta(years=3)
+        temp_df = load_and_filter_data(
+            plant="", start_date=start_date, end_date=end_date,
+            search_mode='인입', data_path=DATA_HUB_PATH
+        )
+        if not temp_df.empty:
+            st.session_state.raw_df_temp = temp_df
+    except:
+        pass
+
+if 'raw_df_temp' in st.session_state:
+    plant_list = ['전체'] + sorted(st.session_state.raw_df_temp['플랜트'].unique().tolist())
+else:
+    plant_list = ['전체']
+
+selected_plant = st.sidebar.selectbox("플랜트", plant_list, index=0, key='global_plant_filter')
+
 st.sidebar.markdown("### 📊 분석 모드")
 selected_mode = st.sidebar.radio(
     "조회 모드 선택",
-    options=["인입 (Inflow)", "실적 (Performance)", "Raw (전체 원본)"],
+    options=["인입", "실적", "Raw data"],
     horizontal=False
 )
 
-if selected_mode.startswith("인입"): mode = '인입'
-elif selected_mode.startswith("실적"): mode = '실적'
-else: mode = 'Raw'
+# 모드별 설명 캡션
+if selected_mode == "인입":
+    st.sidebar.caption("1️⃣사업부문: 식품, B2B식품  \n2️⃣불만유형: 전체")
+    mode = '인입'
+elif selected_mode == "실적":
+    st.sidebar.caption("1️⃣사업부문: 식품, B2B식품  \n2️⃣불만유형: 제조불만, 구매불만, 고객불만족")
+    mode = '실적'
+else:
+    st.sidebar.caption("1️⃣CIS 상담구분: 클레임 전체")
+    mode = 'Raw'
 
 # Cache Control
 if 'prev_mode' not in st.session_state:
@@ -289,15 +330,30 @@ if raw_df is None:
     st.error("데이터 로드 실패.")
     st.stop()
 
+# Update plant list in session state
+if not raw_df.empty:
+    st.session_state.raw_df_temp = raw_df
+
 # Header
-c1, c2 = st.columns([3, 1])
-c1.title("📡 Quality Control Tower")
+st.title("📡 Quality Control Tower")
+
 mode_label = f"【{selected_mode}】"
-c1.caption(f"기준년월일: {current_date_str} | 전사 통합 모니터링 {mode_label}")
-c2.markdown(f"<div style='text-align:right; padding-top:20px; color:gray;'>Last Update: {last_updated}</div>", unsafe_allow_html=True)
+st.caption(f"기준년월일: {current_date_str} | Last Update: {last_updated}")
+
+# Apply Global Plant Filter
+if selected_plant != '전체':
+    df_filtered = raw_df[raw_df['플랜트'] == selected_plant].copy()
+    risk_filtered = risk_report[risk_report['플랜트'] == selected_plant].copy()
+    plant_label = selected_plant
+else:
+    df_filtered = raw_df.copy()
+    risk_filtered = risk_report.copy()
+    plant_label = "전사"
+
+st.divider()
 
 # KPI Section
-max_date = raw_df['접수일자'].max()
+max_date = df_filtered['접수일자'].max()
 day_of_month = max_date.day
 current_month_start = max_date.replace(day=1)
 prev_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
@@ -318,10 +374,10 @@ def get_kpi_dynamic(df, grade=None):
     mom = ((curr - past)/past * 100) if past > 0 else 0
     return curr, mom
 
-total_v, total_m = get_kpi_dynamic(raw_df)
-danger_v, danger_m = get_kpi_dynamic(raw_df, "위험")
-crit_v, crit_m = get_kpi_dynamic(raw_df, "중대")
-gen_v, gen_m = get_kpi_dynamic(raw_df, "일반")
+total_v, total_m = get_kpi_dynamic(df_filtered)
+danger_v, danger_m = get_kpi_dynamic(df_filtered, "위험")
+crit_v, crit_m = get_kpi_dynamic(df_filtered, "중대")
+gen_v, gen_m = get_kpi_dynamic(df_filtered, "일반")
 
 def render_metric(col, label, val, delta):
     color = COLOR_RED if delta > 0 else COLOR_BLUE if delta < 0 else COLOR_GRAY
@@ -333,9 +389,33 @@ def render_metric(col, label, val, delta):
     </div>
     """, unsafe_allow_html=True)
 
-st.subheader(f"📊 전사 클레임 현황 ({max_date.strftime('%Y-%m-%d')} 기준)")
+# KPI Header with Excel Download
+col_kpi_title, col_kpi_download = st.columns([3, 1])
+
+with col_kpi_title:
+    st.subheader(f"📊 {plant_label} 월간 클레임 현황 ({max_date.strftime('%Y-%m-%d')} {mode_label.strip('【】')} 기준)")
+
+with col_kpi_download:
+    # 해당 월 데이터 필터링
+    month_data = df_filtered[(df_filtered['접수일자'] >= current_month_start) & (df_filtered['접수일자'] <= max_date)]
+    buf = BytesIO()
+    with pd.ExcelWriter(buf) as writer:
+        month_data.to_excel(writer, index=False)
+    b64 = base64.b64encode(buf.getvalue()).decode()
+    excel_href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}"
+    
+    st.markdown(f"""
+    <div style='text-align: right; padding-top: 8px;'>
+        <a href="{excel_href}" download="{plant_label}_{max_date.strftime('%Y%m')}_{mode}.xlsx" 
+           style='background: {COLOR_BLUE}; color: white; padding: 10px 20px; border-radius: 8px; 
+                  text-decoration: none; font-size: 1.0rem; font-weight: 600; display: inline-block;'>
+            📥 클레임원장 다운로드
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
 k1, k2, k3, k4 = st.columns(4)
-render_metric(k1, f"전사({mode})", total_v, total_m)
+render_metric(k1, f"{plant_label}({mode})", total_v, total_m)
 render_metric(k2, "위험", danger_v, danger_m)
 render_metric(k3, "중대", crit_v, crit_m)
 render_metric(k4, "일반", gen_v, gen_m)
@@ -348,8 +428,8 @@ col_chart, col_insight = st.columns([3, 2])
 with col_chart:
     st.markdown("#### 📈 전사 트렌드 (3개년 & 4개월 예측)")
     with st.container(border=True, height=450):
-        # Trend Data Prep
-        trend = raw_df.groupby('접수일자').size().reset_index(name='건수')
+        # Trend Data Prep (필터된 데이터 사용)
+        trend = df_filtered.groupby('접수일자').size().reset_index(name='건수')
         trend['Year'] = trend['접수일자'].dt.year
         trend['Month'] = trend['접수일자'].dt.month
         
@@ -368,23 +448,34 @@ with col_chart:
         fig.add_trace(go.Scatter(x=df_this.index, y=df_this.values, name=f"{tgt_year}", 
                                  mode='lines+markers', line=dict(color=COLOR_RED, width=3)))
         
-        # Forecast (ForecastEngine 활용)
+        # Forecast (필터된 데이터로 새로 생성)
         try:
-            fcst_res = forecast_engine.forecast_4m()
+            # 필터된 데이터로 ForecastEngine 생성
+            forecast_engine_filtered = ForecastEngine(df_filtered, date_col='접수일자')
+            fcst_res = forecast_engine_filtered.forecast_4m()
             future_map = fcst_res['future_4m']
             
             f_months = []
             f_vals = []
             f_text = []
             
+            current_month = max_date.month
+            
             for d_str in sorted(future_map.keys()):
                 m_num = int(d_str.split('-')[1])
                 val = future_map[d_str]
-                f_months.append(m_num)
+                
+                # 연도를 넘어가는 경우 처리: 12월 다음 1월은 13으로 표시
+                if m_num < current_month:
+                    x_pos = m_num + 12
+                else:
+                    x_pos = m_num
+                
+                f_months.append(x_pos)
                 f_vals.append(val)
                 f_text.append(f"{m_num}월 예측: {val:,}건")
             
-            # [FIX] Disconnected Forecast Line
+            # [FIX] Disconnected Forecast Line - 연도 경계 처리
             if f_months:
                 fig.add_trace(go.Scatter(x=f_months, y=f_vals, name='4개월 예측',
                                          mode='markers+lines',
@@ -396,8 +487,8 @@ with col_chart:
             
         fig.update_layout(
             height=380, margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(tickvals=list(range(1,13)), showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor='#f3f4f6'),
+            xaxis=dict(tickvals=list(range(1,16)), ticktext=[str(i) if i <= 12 else str(i-12) for i in range(1,16)], showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor='#f3f4f6', rangemode='tozero'),
             legend=dict(orientation="h", y=1.1),
             plot_bgcolor='white'
         )
@@ -406,9 +497,9 @@ with col_chart:
 with col_insight:
     st.markdown("#### ⚠️ Critical LOT Check (동일 제조일 3건+)")
     
-    # LOT Logic
+    # LOT Logic (필터된 데이터 사용)
     start_dt = max_date - timedelta(days=90)
-    df_lot = raw_df[raw_df['접수일자'] >= start_dt].copy()
+    df_lot = df_filtered[df_filtered['접수일자'] >= start_dt].copy()
     
     # Clean Mfg Date
     def clean_mfg(x):
@@ -423,11 +514,16 @@ with col_insight:
     # Grouping (include necessary fields for display)
     lot_groups = df_lot.groupby(['플랜트', '제품명', '제품코드', '대분류', '소분류', 'mfg_str']).agg(
         last_receipt=('접수일자', 'max'),
+        mfg_dt_max=('mfg_dt', 'max'),
         count=('접수일자', 'size'),
         grade=('등급기준', lambda x: x.mode()[0] if not x.mode().empty else '미분류')
     ).reset_index()
     
-    critical_lots = lot_groups[lot_groups['count'] >= 3].sort_values('last_receipt', ascending=False)
+    # Multi-level Sorting: 최근접수 순 > 제조일자 최근 순 > 건수 순
+    critical_lots = lot_groups[lot_groups['count'] >= 3].sort_values(
+        by=['last_receipt', 'mfg_dt_max', 'count'],
+        ascending=[False, False, False]
+    )
     
     with st.container(border=True, height=450):
         if critical_lots.empty:
@@ -453,8 +549,8 @@ with col_insight:
                 # Deep Link Logic (to Plant Analysis Page with mode)
                 link_url = f"/플랜트_분석?mode={mode}&plant={row['플랜트']}&grade={row['grade']}&category={row['대분류']}&subcategory={row['소분류']}"
                 
-                # Grade Badge Logic
-                grade_cls = "badge-red" if row['grade'] in ['위험', '중대'] else "badge-yellow" if row['grade'] == '일반' else "badge-gray"
+                # Grade Badge Logic (일반=노란색, 중대/위험/사고=빨간색)
+                grade_cls = get_grade_badge_class(row['grade'])
                 
                 # Safe conversion
                 try:
@@ -469,17 +565,17 @@ with col_insight:
                             <span style='font-size: 1.1rem; font-weight: 700; color: #111827;'>{row['플랜트']}</span>
                             <span style='color: #d1d5db;'>|</span>
                             <span class='badge badge-large {grade_cls}'>{row['grade']}</span>
-                            <span class='badge badge-gray badge-large'>{row['대분류']}</span>
-                            <span class='badge badge-gray badge-large'>{row['소분류']}</span>
+                        <span class='badge badge-large {grade_cls}'>{row['대분류']}</span>
+                        <span class='badge badge-large {grade_cls}'>{row['소분류']}</span>
                         </div>
-                        <div style='font-size: 1.4rem; font-weight: 800; color: {COLOR_RED}; white-space: nowrap;'>{row['count']}건</div>
+                        <div style='font-size: 1.4rem; font-weight: 800; color: {COLOR_RED}; white-space: nowrap;'>{row['count']}건 발생</div>
                     </div>
                     <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f3f4f6; padding-bottom: 12px;'>
                         <div style='font-size: 1.0rem; font-weight: 700; color: #000000;'>📦 제품명: ({prod_code}){row['제품명']}</div>
                         <span class='badge badge-yellow mfg-badge'>제조일자: {row['mfg_str']}</span>
                     </div>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
-                        <span style='font-size: 1.0rem; color: #9ca3af;'>최근접수: {row['last_receipt'].strftime('%Y-%m-%d')}</span>
+                        <span style='font-size: 1.0rem; color: #2f3339;'>✅ 최근접수: {row['last_receipt'].strftime('%Y-%m-%d')}</span>
                         <div>
                             <a href="{href}" download="LOT_{row['mfg_str']}.xlsx" class='download-btn'>📥 엑셀</a>
                             <a href="{link_url}" target="_self" class='action-btn'>🔬 분석</a>
@@ -490,9 +586,15 @@ with col_insight:
 
 st.subheader("🚨 Risk Radar (Action Dashboard)")
 
-if not risk_report.empty:
-    cnt_r = risk_report[risk_report['상태']=='🔴'].shape[0]
-    cnt_y = risk_report[risk_report['상태']=='🟡'].shape[0]
+if not risk_filtered.empty:
+    # Multi-level Sorting: 감지일자 순 > 점수 순 > 당월 건 순
+    risk_sorted = risk_filtered.sort_values(
+        by=['Last_Date', '점수', '건수'],
+        ascending=[False, False, False]
+    )
+    
+    cnt_r = risk_sorted[risk_sorted['상태']=='🔴'].shape[0]
+    cnt_y = risk_sorted[risk_sorted['상태']=='🟡'].shape[0]
     
     c_red, c_yel = st.columns(2)
     
@@ -512,16 +614,18 @@ if not risk_report.empty:
                 bg_color = "#fff5f5" if color_theme == 'red' else "#fffbf0"
             else:
                 bg_color = "white"
-            badge_class = "badge-red" if color_theme == 'red' else "badge-yellow"
+            
+            # 등급별 배지 클래스 (일반=노란색, 중대/위험/사고=빨간색)
+            grade_badge_class = get_grade_badge_class(row['등급'])
             
             # Top Products info (alert가 나온 해당 제품범주2만 표시)
             top_prod_info = row['제품범주2'] if pd.notna(row['제품범주2']) and str(row['제품범주2']).strip() else '미분류'
             
             # Filter group data for Excel download
-            group_df = raw_df[
-                (raw_df['플랜트'] == row['플랜트']) &
-                (raw_df['대분류'] == row['대분류']) &
-                (raw_df['소분류'] == row['소분류'])
+            group_df = df_filtered[
+                (df_filtered['플랜트'] == row['플랜트']) &
+                (df_filtered['대분류'] == row['대분류']) &
+                (df_filtered['소분류'] == row['소분류'])
             ]
             
             # Excel Download
@@ -541,9 +645,9 @@ if not risk_report.empty:
                     <div style='display: flex; align-items: center; flex-wrap: wrap; gap: 6px;'>
                         <span style='font-size: 1.1rem; font-weight: 700; color: #111827;'>{row['플랜트']}</span>
                         <span style='color: #d1d5db;'>|</span>
-                        <span class='badge badge-large {badge_class}'>{row['등급']}</span>
-                        <span class='badge badge-large badge-gray'>{row['대분류']}</span>
-                        <span class='badge badge-large badge-gray'>{row['소분류']}</span>
+                        <span class='badge badge-large {grade_badge_class}'>{row['등급']}</span>
+                        <span class='badge badge-large {grade_badge_class}'>{row['대분류']}</span>
+                        <span class='badge badge-large {grade_badge_class}'>{row['소분류']}</span>
                         <span class='badge badge-large badge-blue'>당월 {row['건수']}건</span>
                     </div>
                     <div style='font-size: 1.4rem; font-weight: 800; color: {score_color}; white-space: nowrap;'>{row['점수']}점</div>
@@ -554,7 +658,7 @@ if not risk_report.empty:
                     <strong>📈 추이:</strong> {format_trend_with_highlight(row['Trend_Str'])}
                 </div>
                 <div style='display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f3f4f6;'>
-                    <span style='font-size: 1.0rem; color: #6b7280;'>감지일자: {row['Last_Date']}</span>
+                    <span style='font-size: 1.0rem; color: #2f3339;'>✅ 감지일자: {row['Last_Date']}</span>
                     <div>
                         <a href="{excel_href}" download="Risk_{row['플랜트']}_{row['소분류']}.xlsx" class='download-btn'>📥 엑셀</a>
                         <a href="{link_url}" target="_self" class='action-btn' style='margin-right:4px;'>🔬 분석</a>
@@ -567,12 +671,12 @@ if not risk_report.empty:
     with c_red:
         st.markdown(f"#### 🔴 Danger ({cnt_r}건)")
         with st.container(height=600, border=True):
-            render_risk_cards(st, risk_report[risk_report['상태']=='🔴'], 'red')
+            render_risk_cards(st, risk_sorted[risk_sorted['상태']=='🔴'], 'red')
             
     with c_yel:
         st.markdown(f"#### 🟡 Caution ({cnt_y}건)")
         with st.container(height=600, border=True):
-            render_risk_cards(st, risk_report[risk_report['상태']=='🟡'], 'yellow')
+            render_risk_cards(st, risk_sorted[risk_sorted['상태']=='🟡'], 'yellow')
 
 else:
     st.success("🎉 현재 감지된 리스크가 없습니다. 안정적입니다.")

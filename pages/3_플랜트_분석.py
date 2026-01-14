@@ -30,9 +30,9 @@ if st.query_params and 'plant' in st.query_params:
 
     # mode 값을 radio 옵션 형식으로 변환
     mode_map = {
-        '인입': '인입 (Inflow)',
-        '실적': '실적 (Performance)',
-        'Raw': 'Raw (전체 원본)'
+        '인입': '인입',
+        '실적': '실적',
+        'Raw': 'Raw data'
     }
     qp_mode = mode_map.get(qp_mode_raw, '인입 (Inflow)')
 
@@ -152,7 +152,7 @@ else:
 
 st.divider()
 
-# --- Step 2 & 3: 검색 옵션 및 등급 필터 ---
+# --- Step 2 & 3: 조회 모드 및 등급 필터 ---
 col_step2, col_step3 = st.columns(2)
 
 # 필터링 변수 초기화
@@ -162,23 +162,23 @@ selected_grade_list = []
 selected_category_list = []
 
 with col_step2:
-    st.markdown("#### Step 2: 검색 옵션 (Mode)")
+    st.markdown("#### Step 2: 조회 모드")
 
     search_mode = st.radio(
         "조회 모드를 선택하세요:",
-        ("인입 (Inflow)", "실적 (Performance)", "Raw (전체 원본)"),
+        ("인입", "실적", "Raw data"),
         horizontal=True,
         key='search_mode'
     )
 
-    if search_mode == "인입 (Inflow)":
-        st.caption(f"ℹ️ **인입 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인(전체)")
+    if search_mode == "인입":
+        st.caption(f"📋 사업부문: {', '.join(TARGET_BUSINESS_UNITS)} | 불만유형: 전체")
         
-    elif search_mode == "실적 (Performance)":
-        st.caption(f"ℹ️ **실적 기준**: 사업부문({', '.join(TARGET_BUSINESS_UNITS)}) + 불만원인({', '.join(PERFORMANCE_REASONS)})")
+    elif search_mode == "실적":
+        st.caption(f"📋 사업부문: {', '.join(TARGET_BUSINESS_UNITS)} | 불만유형: {', '.join(PERFORMANCE_REASONS)}")
         
-    else: # Raw
-        st.caption("ℹ️ **Raw 기준**: 모든 필터링 없이 선택한 기간의 전체 클레임 데이터")
+    else: # Raw data
+        st.caption("📋 CIS 기준 상담구분: 클레임 전체")
 
 with col_step3:
     st.markdown("#### Step 3: 등급, 대분류 필터")
