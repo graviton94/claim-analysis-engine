@@ -498,6 +498,48 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
         
     st.divider()
     
+    # [Risk 현황진단 - Tab 위에 표시]
+    st.markdown("#### 🛡️ Risk 현황진단")
+    if 'sim_final_view' in st.session_state and st.session_state['sim_final_view'] is not None:
+        try:
+            final_view = st.session_state['sim_final_view']
+            risk_rows = final_view.reset_index()
+            def _is_subtotal_row(row):
+                val_minor = str(row.get('소분류', ''))
+                if val_minor.startswith('소계_'): return True
+                val_grade = str(row.get('등급기준', ''))
+                if val_grade in ['합계']: return True
+                return False
+            
+            risk_rows['__subtotal__'] = risk_rows.apply(_is_subtotal_row, axis=1)
+            alerts_df = risk_rows[(risk_rows['🚨'].isin(['🔴','🟡'])) & (~risk_rows['__subtotal__'])]
+            
+            if not alerts_df.empty:
+                c_left, c_right = st.columns(2)
+                display_cols = ['등급기준', '대분류', '소분류', '진단']
+                
+                red_df = alerts_df[alerts_df['🚨'] == '🔴']
+                yellow_df = alerts_df[alerts_df['🚨'] == '🟡']
+                
+                with c_left:
+                    st.markdown(f"##### Red(🔴) 경보: {len(red_df)}건")
+                    if not red_df.empty: 
+                        st.dataframe(red_df[display_cols], width='stretch', hide_index=True)
+                    else: 
+                        st.info("레드 패턴 없음")
+                with c_right:
+                    st.markdown(f"##### Yellow(🟡) 주의: {len(yellow_df)}건")
+                    if not yellow_df.empty: 
+                        st.dataframe(yellow_df[display_cols], width='stretch', hide_index=True)
+                    else: 
+                        st.info("옐로우 패턴 없음")
+            else:
+                st.info("현재 경보 또는 주의 대상이 없습니다.")
+        except Exception as e:
+            st.warning(f"Risk 진단 오류: {e}")
+    
+    st.divider()
+    
     # 3. 상세 분석 탭
     tab1, tab2, tab3 = st.tabs(["📊 통합 분석 테이블", "⏱️ Lag 분석", "📋 원본 데이터"])
     
@@ -669,7 +711,12 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
                         hist_series = pd.Series(0, index=pivot_hist.columns)
                     
                     # 현재 값 (당월 실적 = 과거 데이터의 마지막 값)
-                    current_value = hist_series.iloc[-1] if len(hist_series) > 0 else 0
+                    current_actual = hist_series.iloc[-1] if len(hist_series) > 0 else 0
+                    
+                    # 당월 예측값 추출
+                    current_forecast = 0
+                    if idx in pivot_curr_pred.index:
+                        current_forecast = pivot_curr_pred.loc[idx, current_pred_col] if current_pred_col in pivot_curr_pred.columns else 0
                     
                     # 미래 예측 데이터 추출
                     if idx in pivot_pred.index:
@@ -680,7 +727,8 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
                     # ForecastRiskAnalyzer 호출
                     analyzer = ForecastRiskAnalyzer(
                         historical_series=hist_series,
-                        current_value=current_value,
+                        current_actual=current_actual,
+                        current_forecast=current_forecast,
                         forecast_series=fcst_series,
                         grade=grade
                     )
@@ -809,6 +857,17 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
                 def highlight_risk(row):
                     styles = []
                     hist_avg = row.get(hist_avg_col, np.nan)
+                    
+                    # 예측 열 중 상위 2개월만 히트맵 적용
+                    top_2_pred_cols = []
+                    if len(pred_cols) >= 2:
+                        # 해당 행의 예측값 추출 및 내림차순 정렬
+                        pred_vals = {col: row.get(col, 0) for col in pred_cols}
+                        top_2_pred_cols = sorted(pred_vals.items(), key=lambda x: x[1], reverse=True)[:2]
+                        top_2_pred_cols = [col for col, val in top_2_pred_cols]
+                    elif len(pred_cols) == 1:
+                        top_2_pred_cols = pred_cols
+
                     for col in final_view.columns:
                         style_parts = []
                         if isinstance(row.name, tuple) and len(row.name) >= 3:
@@ -823,7 +882,11 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
                             style_parts.append('background-color: #fef3c7; color: #92400e')
                         if col == target_month_str:
                             style_parts.append('color: darkred; font-weight: bold')
-                        if col in pred_cols and pd.notnull(hist_avg):
+                        # 작년 월 평균 열에 회색 배경
+                        if col == hist_avg_col:
+                            style_parts.append('background-color: #f3f4f6; font-weight: bold')
+                        # 예측 열 중 상위 2개월만 히트맵 (rgba 점진적 색칠)
+                        if col in top_2_pred_cols and pd.notnull(hist_avg):
                             cell_val = row.get(col, np.nan)
                             if pd.notnull(cell_val):
                                 diff = cell_val - hist_avg
@@ -847,6 +910,11 @@ if (st.session_state.get('run_clicked') or st.session_state.get('sim_results')):
                 
                 csv = final_view.to_csv().encode('utf-8-sig')
                 st.download_button("📥 통합 분석 결과 다운로드 (CSV)", csv, f"Simulation_Result.csv", "text/csv")
+                
+                # final_view를 session_state에 저장 (Tab 외부에서 사용)
+                st.session_state['sim_final_view'] = final_view
+                st.session_state['sim_hist_avg_col'] = hist_avg_col
+                
             else:
                 st.info("표시할 데이터가 없습니다.")
                 
