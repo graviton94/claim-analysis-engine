@@ -17,6 +17,7 @@ import statsmodels.api as sm
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass
+import calendar
 
 # --- 1. Configuration Management (Refined) ---
 @dataclass
@@ -429,44 +430,44 @@ def detect_outliers_iqr(df: pd.DataFrame) -> pd.DataFrame:
 
 class ForecastRiskAnalyzer:
     """
-    예측 시뮬레이션용 진단 엔진 (Phase 3.0)
-    과거-현재-미래를 잇는 시계열 관점에서 리스크를 진단합니다.
+    [Phase 3.0 Hybrid] 예측 시뮬레이션용 정밀 진단 엔진
     
-    분석 기준:
-    - 과거(Historical): 과거 추세
-    - 현재(Current): 최근 월의 수준
-    - 미래(Forecast): 예측 기간의 추세 및 수준
+    특징:
+    1. Statistical Rigor: 기존 엔진의 회귀분석(Slope), 가속도(Acceleration), 변동성(CV) 로직 계승
+    2. Structural Analysis: 신규 요구사항인 데이터 6분할 및 레벨 변동(Level Shift) 분석 적용
+    3. Reality Check (Upgraded): 
+       - Time-Aware: 월 중 진행률(Progress Ratio)을 반영하여 당월 예측값을 보정 후 비교
+       - Noise Filter: 미미한 절대 수량 차이(5 미만)에 의한 과도한 알람 방지
     """
     
     def __init__(self, 
-                 historical_series: pd.Series,  # 과거 데이터 (최근 12개월 권장)
-                 current_value: float,          # 당월 실적 (확정치 또는 예상치)
-                 forecast_series: pd.Series,    # 예측 데이터 (향후 N개월)
-                 grade: str = '미분류'):
+                 historical_series: pd.Series, 
+                 current_actual: float,
+                 current_forecast: float,
+                 forecast_series: pd.Series,
+                 grade: str = '미분류',
+                 reference_date: Optional[datetime] = None):
         
+        # 1. Data Segregation
         self.hist = historical_series.sort_index() if not historical_series.empty else pd.Series(dtype=float)
-        self.curr = current_value
-        self.fcst = forecast_series.sort_index() if not forecast_series.empty else pd.Series(dtype=float)
+        self.curr_act = float(current_actual)
+        self.curr_fcst = float(current_forecast)
+        self.future = forecast_series.sort_index() if not forecast_series.empty else pd.Series(dtype=float)
         self.grade = grade
+        self.ref_date = reference_date if reference_date else datetime.now()
         
-        # 통계치 미리 계산 (과거만 기반)
-        self.hist_mean = self.hist.mean() if not self.hist.empty else 0
-        self.hist_std = self.hist.std() if len(self.hist) > 1 else 0
-        self.hist_max = self.hist.max() if not self.hist.empty else 0
-        self.hist_min = self.hist.min() if not self.hist.empty else 0
-        self.hist_median = self.hist.median() if not self.hist.empty else 0
+        # 2. Statistics Baseline
+        self.hist_mean = self.hist.mean() if not self.hist.empty else 0.0
+        self.hist_std = self.hist.std() if len(self.hist) > 1 else 0.0
+        self.hist_max = self.hist.max() if not self.hist.empty else 0.0
         
-        # 미래 통계
-        self.fcst_mean = self.fcst.mean() if not self.fcst.empty else 0
-        self.fcst_std = self.fcst.std() if len(self.fcst) > 1 else 0
-        self.fcst_max = self.fcst.max() if not self.fcst.empty else 0
+        self.future_mean = self.future.mean() if not self.future.empty else 0.0
+        self.future_max = self.future.max() if not self.future.empty else 0.0
         
-        # 신뢰도 계산 (데이터 포인트 수)
-        self.hist_data_pts = len(self.hist)
-        self.fcst_data_pts = len(self.fcst)
-        self.confidence_hist = min(1.0, self.hist_data_pts / 24.0)  # 24개월 기준
-        self.confidence_fcst = min(1.0, self.fcst_data_pts / 12.0)  # 12개월 기준
+        # 3. Confidence Factor
+        self.data_sufficiency = min(1.0, (len(self.hist) + len(self.future)) / 24.0)
 
+    # --- [Core Math Methods] ---
     def _calculate_slope(self, series: pd.Series) -> float:
         """선형 회귀 기울기 계산"""
         if len(series) < 2: return 0.0
@@ -479,263 +480,188 @@ class ForecastRiskAnalyzer:
             return 0.0
     
     def _calculate_acceleration(self, series: pd.Series) -> float:
-        """가속도 계산 (기울기의 변화율)"""
+        """가속도 계산"""
         if len(series) < 4: return 0.0
         mid = len(series) // 2
         slope_first = self._calculate_slope(series.iloc[:mid])
         slope_second = self._calculate_slope(series.iloc[mid:])
         return slope_second - slope_first
-    
+
     def _calculate_volatility(self, series: pd.Series) -> float:
-        """변동성 (CV: Coefficient of Variation)"""
+        """변동성 (CV)"""
         if series.mean() == 0: return 0.0
         return series.std() / series.mean() if series.mean() > 0 else 0.0
-    
-    def _calculate_jump_rate(self, series: pd.Series) -> float:
-        """점프율: 연속 두 값의 최대 변화율"""
-        if len(series) < 2: return 0.0
-        diffs = series.pct_change().dropna()
-        return diffs.abs().max() if not diffs.empty else 0.0
 
-    def _calculate_mean_delta_score(self) -> Tuple[float, str]:
-        """과거 평균 대비 예측 평균 상승률을 점수화"""
-        if self.hist_mean <= 0: return 0.0, ""
-        ratio = self.fcst_mean / self.hist_mean if self.hist_mean > 0 else 0
-        if ratio <= 1.0: return 0.0, ""
-        if ratio >= 2.0: return 30.0, "예측 평균 2배↑"
-        if ratio >= 1.5: return 20.0, "예측 평균 50%↑"
-        if ratio >= 1.25: return 12.0, "예측 평균 25%↑"
-        if ratio >= 1.1: return 5.0, "예측 평균 10%↑"
-        return 0.0, ""
-    
-    def _analyze_trend_signals(self) -> Dict:
-        """트렌드 신호 분석"""
-        signals = {
-            'past_slope': 0,
-            'future_slope': 0,
-            'acceleration': 0,
-            'trend_text': '안정',
-            'signal_count': 0  # 경고 신호 개수
-        }
-        
-        # 최근/미래 기울기를 평균 규모로 정규화하여 민감도 개선
-        mean_scale = max(self.hist_mean, 1.0)
-        if len(self.hist) >= 4:
-            signals['past_slope'] = self._calculate_slope(self.hist.tail(4)) / mean_scale
-        
-        if len(self.fcst) >= 3:
-            signals['future_slope'] = self._calculate_slope(self.fcst.head(3)) / mean_scale
-            signals['acceleration'] = self._calculate_acceleration(self.fcst) / mean_scale
-        
-        # 트렌드 분류 기준(정규화된 기울기 기반, 더 민감하게 조정)
-        threshold_rising = 0.1
-        threshold_falling = -0.1
-        accel_threshold = 0.05
-        
-        if signals['future_slope'] > threshold_rising:
-            if signals['past_slope'] > threshold_rising:
-                signals['trend_text'] = '상승 가속' if signals['acceleration'] > accel_threshold else '상승 지속'
-                signals['signal_count'] += 2
-            else:
-                signals['trend_text'] = '상승 반전'
-                signals['signal_count'] += 1
-        elif signals['future_slope'] < threshold_falling:
-            if signals['past_slope'] > threshold_rising:
-                signals['trend_text'] = '하락 반전'
-                signals['signal_count'] += 1
-            else:
-                signals['trend_text'] = '하락 지속'
-        else:
-            signals['trend_text'] = '안정'
-        
-        return signals
-    
-    def _analyze_level_signals(self) -> Dict:
-        """수준 신호 분석 (평균 기반)"""
-        signals = {
-            'level_text': '정상',
-            'level_score': 0,
-            'threshold_warning': self.hist_mean + (1.5 * self.hist_std) if self.hist_std > 0 else self.hist_mean * 1.5,
-            'threshold_critical': self.hist_mean + (3.0 * self.hist_std) if self.hist_std > 0 else self.hist_mean * 3.0,
-        }
-        
-        if self.fcst_mean > signals['threshold_critical']:
-            signals['level_text'] = '초위험(3σ 초과)'
-            signals['level_score'] = 85
-        elif self.fcst_mean > signals['threshold_warning']:
-            signals['level_text'] = '주의(1.5σ 초과)'
-            signals['level_score'] = 50
-        elif self.fcst_mean > self.curr * 1.2:  # 현재 대비 20% 상승
-            signals['level_text'] = '소폭 상승'
-            signals['level_score'] = 25
-        else:
-            signals['level_text'] = '정상'
-            signals['level_score'] = 0
-        
-        return signals
-    
-    def _analyze_peak_signals(self) -> Dict:
-        """최고점 신호 분석"""
-        signals = {
-            'is_new_record': False,
-            'record_breach_ratio': 0.0,
-            'peak_score': 0
-        }
-        
-        if self.hist_max > 0:
-            signals['is_new_record'] = self.fcst_max > self.hist_max
-            signals['record_breach_ratio'] = (self.fcst_max - self.hist_max) / self.hist_max if self.hist_max > 0 else 0
+    # --- [New Logic: Hybrid Analysis] ---
+
+    def _analyze_trend_structure(self) -> Dict:
+        """[Hybrid Logic] 추세(Trend)와 구조(Structure) 동시 분석"""
+        # 1. Level Shift
+        level_ratio = 0.0
+        if self.hist_mean > 0:
+            level_ratio = (self.future_mean - self.hist_mean) / self.hist_mean
             
-            if signals['is_new_record']:
-                if signals['record_breach_ratio'] > 0.5:  # 50% 이상 초과
-                    signals['peak_score'] = 40
-                else:
-                    signals['peak_score'] = 25
+        # 2. Trend Dynamics
+        mean_scale = max(self.hist_mean, 1.0)
+        future_slope = self._calculate_slope(self.future) / mean_scale
+        acceleration = self._calculate_acceleration(self.future) / mean_scale
         
-        return signals
-    
-    def _analyze_volatility_signals(self) -> Dict:
-        """변동성 신호 분석"""
-        signals = {
-            'hist_cv': self._calculate_volatility(self.hist) if not self.hist.empty else 0,
-            'fcst_cv': self._calculate_volatility(self.fcst) if not self.fcst.empty else 0,
-            'hist_jump': self._calculate_jump_rate(self.hist) if not self.hist.empty else 0,
-            'fcst_jump': self._calculate_jump_rate(self.fcst) if not self.fcst.empty else 0,
-            'volatility_score': 0
-        }
+        score = 0
+        pattern = "보합"
         
-        # 변동성 증가 감지
-        if signals['fcst_cv'] > signals['hist_cv'] * 1.5:
-            signals['volatility_score'] += 15  # 변동성 증가
+        if level_ratio > 0.5:
+            pattern = "구조적 급등"
+            score += 40
+        elif level_ratio > 0.2:
+            pattern = "레벨 상승"
+            score += 25
+            
+        if future_slope > 0.1:
+            if acceleration > 0.05:
+                pattern += " (가속)"
+                score += 15
+            else:
+                pattern += " (지속)"
+                score += 10
+        elif future_slope < -0.1:
+            pattern = "하락 반전" if level_ratio > 0 else "하락세"
+            
+        return {"pattern": pattern, "score": score, "level_ratio": level_ratio}
+
+    def _analyze_reality_gap(self) -> Dict:
+        """
+        [Upgraded Logic] 현실 괴리율 (Reality Gap)
+        1. Time-Aware: 월 진행률(일자 기준)을 반영하여 '현재 시점의 기대 예측치' 산출
+        2. Noise Filter: 절대 차이가 작으면(5 미만) 비율이 높아도 무시
+        """
+        # A. 진행률 계산 (Current Day / Days in Month)
+        try:
+            year, month = self.ref_date.year, self.ref_date.month
+            _, last_day = calendar.monthrange(year, month)
+            current_day = self.ref_date.day
+            # 진행률 (최소 3% ~ 최대 100%)
+            progress_ratio = max(0.03, min(1.0, current_day / last_day))
+        except:
+            progress_ratio = 1.0
+
+        # B. 타겟 예측값 보정 (당월 총 예측값 * 진행률)
+        target_fcst = self.curr_fcst * progress_ratio
         
-        # 점프 위험 감지
-        if signals['fcst_jump'] > 1.0:  # 100% 이상 변화
-            signals['volatility_score'] += 20
-        elif signals['fcst_jump'] > 0.5:  # 50% 이상 변화
-            signals['volatility_score'] += 10
+        gap_score = 0
+        status = "적정"
+        gap_ratio = 0.0
         
-        return signals
-    
-    def _analyze_grade_impact(self, base_score: float) -> Tuple[float, str]:
-        """등급별 가중치 적용"""
-        weight_map = {
-            '위험': 1.4,
-            '중대': 1.25,
-            '일반': 1.0,
-            '미분류': 1.0
-        }
+        # C. Noise Filter (절대량 5건 미만 차이는 무시)
+        abs_diff = self.curr_act - target_fcst
+        if abs(abs_diff) < 5.0:
+            return {
+                "gap_ratio": 0.0, 
+                "gap_score": 0, 
+                "status": "적정 (미미함)", 
+                "target_fcst": target_fcst
+            }
+
+        # D. 괴리율 계산 (Zero Handling)
+        if target_fcst < 1.0: 
+            # 예측은 0인데 실적이 유의미하게(5건 이상) 발생한 경우
+            if self.curr_act >= 5.0:
+                 gap_ratio = 5.0 # Cap ratio
+                 status = "돌발 발생 (예측없음)"
+                 gap_score = 30
+        else:
+            gap_ratio = (self.curr_act - target_fcst) / target_fcst
+
+        # E. 리스크 판정 (실적이 예측 속도를 크게 상회할 때만 점수 부여)
+        if gap_ratio > 0.5: # 50% 이상 초과 Pace
+            gap_score = 30
+            status = f"예측 괴리 심각(가속 {gap_ratio*100:.0f}%)"
+        elif gap_ratio > 0.2: # 20% 이상 초과
+            gap_score = 15
+            status = "실적 상회"
+            
+        return {"gap_ratio": gap_ratio, "gap_score": gap_score, "status": status, "target_fcst": target_fcst}
+
+    def _analyze_volatility_and_peak(self) -> Dict:
+        """[Hybrid Logic] 변동성 및 전고점 돌파"""
+        vol_score = 0
+        signals = []
         
-        weight = weight_map.get(self.grade, 1.0)
-        adjusted_score = base_score * weight
-        
-        grade_text = f"({self.grade} 등급)" if self.grade != '미분류' else ""
-        
-        return min(100, adjusted_score), grade_text
+        # 1. 3-Sigma Breach
+        if self.hist_std > 0:
+            threshold = self.hist_mean + (3 * self.hist_std)
+            if self.future_max > threshold:
+                vol_score += 20
+                signals.append("3σ 임계초과")
+                
+        # 2. Historical Peak Breach
+        if self.hist_max > 0 and self.future_max > self.hist_max:
+            breach_ratio = (self.future_max - self.hist_max) / self.hist_max
+            if breach_ratio > 0.2:
+                vol_score += 15
+                signals.append(f"전고점 갱신(+{breach_ratio*100:.0f}%)")
+                
+        # 3. Volatility Expansion
+        hist_cv = self._calculate_volatility(self.hist)
+        future_cv = self._calculate_volatility(self.future)
+        if future_cv > hist_cv * 1.5:
+            vol_score += 10
+            signals.append("변동성 확대")
+            
+        return {"vol_score": vol_score, "signals": signals}
 
     def analyze(self) -> Dict:
-        """
-        종합 분석 수행
+        """종합 진단 수행"""
+        # 1. Component Analysis
+        trend_res = self._analyze_trend_structure()
+        gap_res = self._analyze_reality_gap()
+        vol_res = self._analyze_volatility_and_peak()
         
-        반환:
-        - status: 🔴/🟡/🟢 (위험도 아이콘)
-        - score: 0~100 (예측 리스크 점수)
-        - trend: 트렌드 분석 결과
-        - signals: 개별 신호 상세 정보
-        - insight: 종합 해석 텍스트
-        - confidence: 분석 신뢰도 (0~1)
-        """
+        # 2. Base Score Calculation
+        total_score = trend_res['score'] + gap_res['gap_score'] + vol_res['vol_score']
         
-        # 1. 모든 신호 수집
-        trend_sig = self._analyze_trend_signals()
-        level_sig = self._analyze_level_signals()
-        peak_sig = self._analyze_peak_signals()
-        vol_sig = self._analyze_volatility_signals()
-        delta_score, delta_text = self._calculate_mean_delta_score()
+        # 3. Grade Weighting
+        weight = 1.25 if self.grade in ['위험', '중대'] else 1.0
+        final_score = min(100, int(total_score * weight))
         
-        # 2. 기본 점수 계산
-        base_score = 0
-        
-        # 수준 신호 (최대 85점)
-        base_score += level_sig['level_score']
-        base_score += delta_score
-        
-        # 트렌드 신호 (최대 30점)
-        if trend_sig['trend_text'] == '상승 가속':
-            base_score += 30
-        elif trend_sig['trend_text'] == '상승 반전':
-            base_score += 20
-        elif trend_sig['trend_text'] == '상승 지속':
-            base_score += 15
-        
-        # 최고점 신호 (최대 40점)
-        base_score += peak_sig['peak_score']
-        
-        # 변동성 신호 (최대 20점)
-        base_score += vol_sig['volatility_score']
-        
-        # 3. 등급 가중치 적용
-        final_score, grade_text = self._analyze_grade_impact(base_score)
-        
-        # 4. 상태 아이콘 결정
-        status_icon = "🟢"
+        # 4. Status Determination
         if final_score >= 80:
-            status_icon = "🔴"
+            icon = "🔴"
+            desc = "위험"
         elif final_score >= 50:
-            status_icon = "🟡"
+            icon = "🟡"
+            desc = "주의"
+        else:
+            icon = "🟢"
+            desc = "안정"
+            
+        # 5. Insight Generation
+        insights = []
+        if gap_res['gap_score'] > 0:
+            insights.append(f"실적 페이스 {gap_res['gap_ratio']*100:.0f}% 초과")
         
-        # 5. 신뢰도 계산
-        confidence = (self.confidence_hist + self.confidence_fcst) / 2
-        
-        # 6. 종합 Insight 생성
-        insight_parts = []
-        
-        # 과거-현재 비교
-        if self.curr > 0 and self.hist_mean > 0:
-            curr_ratio = self.curr / self.hist_mean
-            if curr_ratio > 1.3:
-                insight_parts.append(f"현재 수준 +{(curr_ratio-1)*100:.0f}%")
-            elif curr_ratio < 0.7:
-                insight_parts.append(f"현재 수준 {(curr_ratio-1)*100:.0f}%")
-        
-        # 추세
-        insight_parts.append(f"추세: {trend_sig['trend_text']}")
-        
-        # 미래 전망
-        if self.fcst_mean > self.hist_mean:
-            fcst_ratio = self.fcst_mean / self.hist_mean
-            insight_parts.append(f"예측 평균 +{(fcst_ratio-1)*100:.0f}%")
-        if delta_text:
-            insight_parts.append(delta_text)
-        
-        # 최고점
-        if peak_sig['is_new_record']:
-            insight_parts.append(f"❗ 최고점 갱신 +{peak_sig['record_breach_ratio']*100:.0f}%")
-        
-        # 변동성
-        if vol_sig['volatility_score'] > 15:
-            insight_parts.append("⚠️ 변동성 증가")
-        
-        insight_str = " | ".join(insight_parts)
-        
-        # 7. 세부 신호 반환
+        if trend_res['level_ratio'] > 0.2:
+            insights.append(f"레벨 {trend_res['level_ratio']*100:.0f}% 상승 예상")
+        elif trend_res['pattern'] != "보합":
+            insights.append(f"{trend_res['pattern']}")
+            
+        if vol_res['signals']:
+            insights.append(f"{vol_res['signals'][0]}")
+            
+        insight_text = " | ".join(insights) if insights else "특이사항 없음"
+
         return {
-            'status': status_icon,
-            'score': int(final_score),
-            'trend': trend_sig['trend_text'],
-            'insight': insight_str,
-            'grade_text': grade_text,
-            'confidence': round(confidence, 2),
-            'signals': {
-                'trend': trend_sig,
-                'level': level_sig,
-                'peak': peak_sig,
-                'volatility': vol_sig
+            "status": icon,
+            "score": max(0, final_score), # Ensure non-negative
+            "trend": trend_res['pattern'],
+            "insight": insight_text,
+            "details": {
+                "level_shift": trend_res['level_ratio'],
+                "reality_gap": gap_res['gap_ratio'],
+                "volatility_signals": vol_res['signals']
             },
-            'components': {
-                'score_level': level_sig['level_score'],
-                'score_mean_delta': delta_score,
-                'score_trend': min(30, base_score - level_sig['level_score'] - peak_sig['peak_score'] - vol_sig['volatility_score']),
-                'score_peak': peak_sig['peak_score'],
-                'score_volatility': vol_sig['volatility_score']
+            "components": {
+                "trend_score": trend_res['score'],
+                "gap_score": gap_res['gap_score'],
+                "vol_score": vol_res['vol_score']
             }
         }
