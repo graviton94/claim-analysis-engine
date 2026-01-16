@@ -446,7 +446,9 @@ with col_chart:
         fig.add_trace(go.Scatter(x=df_last.index, y=df_last.values, name=f"{tgt_year-1}", 
                                  line=dict(color='skyblue', width=2, dash='dot')))
         fig.add_trace(go.Scatter(x=df_this.index, y=df_this.values, name=f"{tgt_year}", 
-                                 mode='lines+markers', line=dict(color=COLOR_RED, width=3)))
+                                 mode='lines+markers+text', line=dict(color=COLOR_RED, width=3),
+                                 text=df_this.values, textposition="top center",
+                                 textfont=dict(size=16, color=COLOR_RED)))
         
         # Forecast (필터된 데이터로 새로 생성)
         try:
@@ -562,17 +564,17 @@ with col_insight:
                 <div class='card-container' style='border-left: {border_style}; background-color: {bg_style}; padding: 16px; margin-bottom: 12px;'>
                     <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'>
                         <div style='display: flex; align-items: center; flex-wrap: wrap; gap: 6px;'>
-                            <span style='font-size: 1.1rem; font-weight: 700; color: #111827;'>{row['플랜트']}</span>
+                            <span style='font-size: 1.2rem; font-weight: 700; color: #111827;'>🏭 {row['플랜트']}</span>
                             <span style='color: #d1d5db;'>|</span>
                             <span class='badge badge-large {grade_cls}'>{row['grade']}</span>
                         <span class='badge badge-large {grade_cls}'>{row['대분류']}</span>
                         <span class='badge badge-large {grade_cls}'>{row['소분류']}</span>
                         </div>
-                        <div style='font-size: 1.4rem; font-weight: 800; color: {COLOR_RED}; white-space: nowrap;'>{row['count']}건 발생</div>
+                        <div style='font-size: 1.3rem; font-weight: 800; color: {COLOR_RED}; white-space: nowrap;'>📅 LOT: {row['mfg_str']}</div>
                     </div>
                     <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f3f4f6; padding-bottom: 12px;'>
-                        <div style='font-size: 1.0rem; font-weight: 700; color: #000000;'>📦 제품명: ({prod_code}){row['제품명']}</div>
-                        <span class='badge badge-yellow mfg-badge'>제조일자: {row['mfg_str']}</span>
+                        <blockquote style='margin: 0; padding: 6px 12px; background: #f9fafb; border-left: 4px solid #9c9c9c; font-size: 1.1rem; font-weight: 600; color: #000000 !important; vertical-align: middle;'>📦 제품명: ({prod_code}){row['제품명']}</blockquote>
+                        <span class='badge badge-large' style='background: {COLOR_RED}; color: #ffffff;'>⚠️ {row['count']}건 </span>
                     </div>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
                         <span style='font-size: 1.0rem; color: #2f3339;'>✅ 최근접수: {row['last_receipt'].strftime('%Y-%m-%d')}</span>
@@ -643,18 +645,18 @@ if not risk_filtered.empty:
             <div class='card-container' style='border-left: 4px solid {score_color}; background-color: {bg_color}; padding: 16px; margin-bottom: 12px;'>
                 <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;'>
                     <div style='display: flex; align-items: center; flex-wrap: wrap; gap: 6px;'>
-                        <span style='font-size: 1.1rem; font-weight: 700; color: #111827;'>{row['플랜트']}</span>
+                        <span style='font-size: 1.2rem; font-weight: 700; color: #111827;'>🏭 {row['플랜트']}</span>
                         <span style='color: #d1d5db;'>|</span>
                         <span class='badge badge-large {grade_badge_class}'>{row['등급']}</span>
                         <span class='badge badge-large {grade_badge_class}'>{row['대분류']}</span>
                         <span class='badge badge-large {grade_badge_class}'>{row['소분류']}</span>
                         <span class='badge badge-large badge-blue'>당월 {row['건수']}건</span>
                     </div>
-                    <div style='font-size: 1.4rem; font-weight: 800; color: {score_color}; white-space: nowrap;'>{row['점수']}점</div>
+                    <div style='font-size: 1.4rem; font-weight: 800; color: {score_color}; white-space: nowrap;'>⚠️ Risk Score: {row['점수']}</div>
                 </div>
                 <div style='font-size: 1.1rem; color: #374151; line-height: 1.6; background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;'>
                     <strong>💡 진단:</strong> {format_diagnosis(row['진단'])}<br>
-                    <strong>📦 제품범주2:</strong> {top_prod_info if top_prod_info else '미분류'}<br>
+                    <strong>📦 제품범주2: {top_prod_info if top_prod_info else '미분류'}</strong><br>
                     <strong>📈 추이:</strong> {format_trend_with_highlight(row['Trend_Str'])}
                 </div>
                 <div style='display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f3f4f6;'>
