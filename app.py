@@ -426,7 +426,7 @@ st.divider()
 col_chart, col_insight = st.columns([3, 2])
 
 with col_chart:
-    st.markdown("#### 📈 전사 트렌드 (3개년 & 4개월 예측)")
+    st.markdown("#### 📈 전사 트렌드 (3개년 현황 & 4개월 예측)")
     with st.container(border=True, height=450):
         # Trend Data Prep (필터된 데이터 사용)
         trend = df_filtered.groupby('접수일자').size().reset_index(name='건수')
