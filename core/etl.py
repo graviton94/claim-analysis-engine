@@ -35,7 +35,21 @@ def load_raw_file(
     
     try:
         if suffix == ".csv":
-            df = pd.read_csv(file_path, encoding=encoding, low_memory=False)
+            # CSV 인코딩 자동 감지 (한국어 파일 대응)
+            encodings_to_try = [encoding, 'cp949', 'euc-kr', 'utf-8', 'utf-8-sig', 'latin1']
+            last_error = None
+            
+            for enc in encodings_to_try:
+                try:
+                    df = pd.read_csv(file_path, encoding=enc, low_memory=False)
+                    return df
+                except (UnicodeDecodeError, LookupError) as e:
+                    last_error = e
+                    continue
+            
+            # 모든 인코딩 실패 시 마지막 에러 발생
+            raise RuntimeError(f"파일 로드 실패 (모든 인코딩 시도 실패): {str(last_error)}")
+            
         elif suffix in [".xlsx", ".xls"]:
             df = pd.read_excel(file_path, sheet_name=sheet_name)
         else:
