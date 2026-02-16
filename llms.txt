@@ -1,0 +1,98 @@
+# Claim Analysis Engine - AI Context Map
+
+## Project Summary
+A hybrid intelligence platform for food safety quality control that combines real-time operational monitoring with ML-powered risk prediction. The system tracks manufacturing defects via LOT analysis, detects anomalies using statistical process control (Nelson Rules, CUSUM), and generates 4-month ensemble forecasts using Prophet, LightGBM, and SARIMAX models. Built for Korean food manufacturers to enable early warning systems and data-driven resource allocation.
+
+## File Map
+
+### Core Application
+- app.py - Main Streamlit dashboard (Quality Control Tower); real-time risk monitoring with drill-down navigation
+- requirements.txt - Python dependencies (Streamlit, PyArrow, CatBoost, PyTorch, Optuna, Statsmodels)
+
+### Business Logic (core/)
+- core/config.py - System constants (54-field schema, thresholds, color codes)
+- core/storage.py - Parquet I/O layer; unified data loader with PyArrow Dataset lazy loading
+- core/etl.py - CSV/Excel ingestion pipeline; 54-field validation and deduplication
+- core/analytics.py - Risk scoring engine (Nelson Rules, CUSUM, sparse/dense detection logic)
+- core/forecasting.py - Fast 4-month forecast for dashboard (Track A: lightweight ensemble)
+- core/engine/models.py - ML model implementations (Prophet, SARIMAX, CatBoost, LSTM)
+- core/engine/trainer.py - Deep simulation engine (Track B: model competition with Optuna)
+- core/engine/allocator.py - Sub-category claim allocation logic with extinction detection
+
+### UI Pages (pages/)
+- pages/1_데이터_업로드.py - Data upload and ingestion interface
+- pages/2_매출수량_관리.py - Sales volume management and tracking
+- pages/3_플랜트_분석.py - Deep diagnostic analysis with pivot tables and risk scoring
+- pages/4_예측_시뮬레이션.py - ML forecasting lab with model competition and allocation
+
+### Data Storage (data/)
+- data/hub/ - Parquet partitioned claims (year=YYYY/month=MM/*.parquet)
+- data/sales/ - Sales volume data (Parquet format)
+- data/models/ - Trained ML models (pickled)
+- data/series/ - Time-series JSON snapshots for caching
+
+### Documentation (docs/)
+- docs/README.md - System overview and user guide
+- docs/project_master.md - Technical master specification
+- docs/copilot_instruction.md - AI assistant development guidelines
+- docs/refactor_spec.md - Refactoring requirements and patterns
+- docs/milestone.md - Development roadmap and milestones
+
+### Testing & Utilities
+- test_*.py - Pytest test suites (5 files: analytics, etl, forecasting, storage, trainer)
+- scripts/ - Utility scripts for data ops and maintenance
+
+## Tech Stack
+
+### Languages & Runtime
+- Python 3.10+ (UTF-8-sig encoding for Korean support)
+
+### Web Framework
+- Streamlit 1.31.1 (multi-page dashboard)
+- Plotly (interactive visualizations)
+
+### Data Processing
+- Pandas 2.1.4 (data manipulation)
+- PyArrow 14.0.1 (Parquet columnar storage with Hive partitioning)
+- NumPy 1.24.3 (numerical computing)
+
+### Machine Learning (Track B - Simulation)
+- CatBoost 1.2.1 (gradient boosting)
+- PyTorch 2.1.1 (LSTM deep learning)
+- LightGBM (via AutoML)
+- Optuna 3.14.0 (hyperparameter optimization)
+- scikit-learn 1.3.2 (ML utilities)
+
+### Statistics (Track A - Operational)
+- Statsmodels 0.14.0 (SARIMAX time-series)
+- SciPy (Poisson/Negative Binomial distributions)
+- Prophet (Facebook's forecasting library)
+
+### Development Tools
+- pytest 7.4.3 (testing framework)
+- black 23.12.1 (code formatting)
+- flake8 6.1.0 (linting)
+
+## Critical Constraints
+
+### Data Schema
+- System ONLY processes 54 fixed columns (TARGET_54_COLS in config.py)
+- Primary key: 상담번호 (case number); deduplication keeps latest record
+- Partitioning: Hive-style year=YYYY/month=MM/ for efficient time-range queries
+
+### Filtering Modes
+- 인입 (Inflow): 사업부문 in [식품, B2B식품] AND 불만원인 is not null
+- 실적 (Performance): Same + 불만원인 in [제조불만, 구매불만, 고객불만족]
+- Custom: User-selected business units and reasons
+
+### Risk Thresholds
+- Red (🔴): Score ≥ 80 (Danger)
+- Yellow (🟡): Score ≥ 50 (Caution)
+- Green (🟢): Score < 50 (Normal)
+
+### Architecture Rules
+- Track A (Operational): Lightweight ensemble (NumPy, Statsmodels ONLY)
+- Track B (Simulation): Heavy ML allowed (CatBoost, PyTorch, Optuna)
+- Single Source of Truth: All pages use core.storage.load_and_filter_data()
+- Zero-filling: Missing months filled with 0 (not NaN) for trend detection
+- Zero-trend guard: Recent 6 months all zero → predict 0 (no training)
