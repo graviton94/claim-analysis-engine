@@ -1,8 +1,28 @@
-# ARCHITECTURE
+# Claim Analysis Engine - Architecture
 
 ## Overview
 
-This document describes the architectural patterns, data flow, and design constraints of the Hybrid Claim Analysis System. The system follows a dual-track architecture separating operational real-time analytics (Track A) from experimental simulation (Track B).
+The Claim Analysis Engine is a **hybrid intelligence platform** combining real-time operational monitoring (Track A) with deep analytical forecasting (Track B). The system follows a dual-track architecture separating operational real-time analytics from experimental simulation, serving as a quality control tower for food manufacturers to detect anomalies, score risks, and predict future claim volumes.
+
+### Dual-Track Design Philosophy
+
+**Track A (Operational):**
+- Purpose: Real-time dashboard with instant feedback
+- Stack: NumPy, Statsmodels (lightweight only)
+- Engine: ForecastEngine (forecasting.py)
+- Models: Run-rate, STL decomposition, LightGBM AutoML
+- Latency: <3 seconds for 4-month forecast
+- Constraint: Must exclude incomplete current month to prevent data leakage
+
+**Track B (Simulation):**
+- Purpose: Deep analysis with ML model competition
+- Stack: CatBoost, PyTorch, Optuna (heavy ML/DL allowed)
+- Engine: SimulationEngine (trainer.py)
+- Models: Prophet, SARIMAX, CatBoost, LSTM
+- Latency: 30-120 seconds for backtesting and ensemble
+- Focus: Precision over speed, dynamic model competition
+
+---
 
 ## Data Flow
 
@@ -15,11 +35,17 @@ Raw Files (CSV/Excel)
     ↓
 [core/etl.py] extract_54_fields() - Enforces 54 mandatory columns
     ↓
-[core/etl.py] validate_data() - Data quality checks
+[core/etl.py] validate_and_clean_data()
+    ├─ Parse multi-format dates (YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD)
+    ├─ Validate 54-field schema (TARGET_54_COLS)
+    ├─ Calculate derived fields (Lag_Days, Lag_Valid)
+    ├─ Deduplicate by 상담번호 (keep='last')
+    └─ Filter null case numbers
     ↓
-[core/storage.py] save_partitioned() - Write to Parquet with partitioning
-    ↓
-data/hub/접수년={YYYY}/접수월={MM}/*.parquet
+[core/storage.py] save_to_parquet_partitioned()
+    ├─ Partition by 접수년, 접수월
+    ├─ Write to data/hub/year=YYYY/month=MM/*.parquet
+    └─ Append mode (deduplication handled in loading)
 ```
 
 **Key Rules:**
@@ -34,40 +60,52 @@ data/hub/접수년={YYYY}/접수월={MM}/*.parquet
 Parquet Dataset (data/hub/접수년=*/접수월=*/)
     ↓
 [core/storage.py] load_and_filter_data() - Unified loader with filters
-    ↓ (Apply business logic filters)
-    ├─ Business Units: ['식품', 'B2B식품']
-    ├─ Performance Reasons: ['제조불만', '고객불만족', '구매불만']
-    └─ Time Range: date_from, date_to
     ↓
-Filtered DataFrame → Ready for analytics/forecasting
+PyArrow Dataset (lazy loading)
+    ├─ Read partitioned Parquet (year/month filter)
+    ├─ Apply mode-based business logic
+    │   ├─ "인입" (Inflow): 사업부문=['식품','B2B식품'] AND 불만원인 not null
+    │   ├─ "실적" (Performance): + 불만원인 in ['제조불만','구매불만','고객불만족']
+    │   ├─ "원본" (Raw): No filtering
+    │   └─ "커스텀" (Custom): User-selected filters
+    ├─ Deduplicate by 상담번호
+    └─ Return Pandas DataFrame
 ```
 
 **Critical Constraint:**
 - **ALL pages and modules MUST use `load_and_filter_data()`** for data consistency
-- Direct file access bypasses validation and filtering logic
+- Direct file access bypasses validation and filtering logic (prohibited)
 
 ### 3. Risk Analysis Pipeline (Data → Scoring → Classification)
 
 ```
-Filtered Claim Data
+Loaded Data
     ↓
-[core/analytics.py] prepare_risk_data() - Zero-filling and aggregation
+[core/analytics.py] prepare_risk_data(data, groupby_cols)
+    ├─ Group by Plant/Grade/Category
+    ├─ Aggregate by month (count claims)
+    ├─ Zero-fill missing months (critical for anomaly detection)
+    └─ Return time-series with complete monthly index
     ↓
-Time Series with Complete Month Coverage (missing months filled with 0)
+[core/analytics.py] calculate_advanced_risk_score(series)
+    ├─ Regime Detection: mean < 1.0 → Sparse, else Dense
+    ├─ Sparse Logic:
+    │   ├─ Poisson test (P-value < 0.05 → spike)
+    │   ├─ Negative Binomial test (overdispersion)
+    │   └─ Critical grade multiplier (1.2x - 1.5x)
+    ├─ Dense Logic:
+    │   ├─ STL decomposition (trend + seasonality + residual)
+    │   ├─ Z-score with rolling statistics
+    │   ├─ CUSUM for mean shift detection
+    │   └─ Nelson Rules (SPC patterns)
+    ├─ Velocity calculation (recent change rate)
+    ├─ Volatility adjustment (CV-based)
+    └─ Final Score: Components weighted and combined (0-100 scale)
     ↓
-[core/analytics.py] RiskScoringEngine - Multi-factor scoring
-    ├─ Statistical Tests: Nelson Rules (3σ deviation, bias, trend)
-    ├─ CUSUM Algorithm: Cumulative sum control chart
-    ├─ Momentum Analysis: Short-term velocity detection
-    ├─ Grade Weighting: '위험'=1.5x, '중대'=1.2x, '일반'=1.0x
-    └─ Volatility Adjustment: CV-based dampening
-    ↓
-Risk Score (0-100) + Diagnosis Message
-    ↓
-Color Classification:
-    - 🔴 Red (≥80): Critical attention required
-    - 🟡 Yellow (≥50): Warning level
-    - 🟢 Green (<50): Normal
+Risk Scoring Thresholds
+    ├─ Red (🔴): Score ≥ 80 (Critical attention required)
+    ├─ Yellow (🟡): Score ≥ 50 (Warning level)
+    └─ Green (🟢): Score < 50 (Normal)
 ```
 
 **Guard Rails:**
@@ -80,22 +118,26 @@ Color Classification:
 #### Track A (Operational - Lightweight)
 
 ```
-Historical Time Series (excluding incomplete current month)
+Historical Time-Series (excluding incomplete current month)
     ↓
-[core/forecasting.py] ForecastEngine
-    ↓
-Zero-Trend Guard: Check if recent 6 months are silent
-    ├─ YES → Force forecast = 0 (extinction signal)
-    └─ NO → Proceed to ensemble
-    ↓
-3-Way Ensemble:
-    ├─ Run-rate Method: Current month velocity × remaining days
-    ├─ MoM Pattern: Month-over-Month historical average
-    └─ SARIMA: Seasonal AutoRegressive Integrated Moving Average
-    ↓
-Weighted Combination (Early month favors history, late month favors run-rate)
-    ↓
-3-Month Rolling Forecast
+[core/forecasting.py] ForecastEngine.generate_forecast()
+    ├─ Pre-checks:
+    │   ├─ Recent 6 months all zero? → Return [0,0,0,0]
+    │   ├─ Less than 3 months data? → Use simple average
+    │   └─ Current month incomplete? → Calculate progress ratio
+    ├─ Ensemble Models:
+    │   ├─ Run-rate: (current_actual / progress) with smoothing
+    │   ├─ STL: Robust seasonal decomposition
+    │   └─ LightGBM: Lag features + Optuna auto-tuning
+    ├─ Dynamic Weighting:
+    │   ├─ Early month (progress < 0.3): Favor STL (historical pattern)
+    │   ├─ Late month (progress > 0.7): Favor Run-rate (actual trend)
+    │   └─ Mid-month: Balanced blend
+    ├─ Post-processing:
+    │   ├─ Round to integers
+    │   ├─ Clip negatives to 0
+    │   └─ Apply zero-trend guard
+    └─ Return 4-month predictions
 ```
 
 **Technology Constraint:**
@@ -107,30 +149,29 @@ Weighted Combination (Early month favors history, late month favors run-rate)
 ```
 Complete Historical Data
     ↓
-[core/engine/trainer.py] SimulationEngine
+[core/engine/trainer.py] SimulationEngine.run_competition()
+    ├─ Dead Signal Check: Recent 12 months mostly zero OR last 6 months all zero
+    │   ├─ YES → Return zero forecast (extinction signal)
+    │   └─ NO → Proceed to model competition
+    ├─ Backtesting Setup:
+    │   ├─ Train period: All data except last 3 months
+    │   └─ Test period: Last 3 months (for MAE calculation)
+    ├─ Model Competition:
+    │   ├─ Prophet (Facebook): Additive seasonality + trend
+    │   ├─ SARIMAX (Statsmodels): ARIMA with seasonality
+    │   └─ AutoML (LightGBM): Optuna-tuned gradient boosting
+    ├─ Performance Metrics:
+    │   ├─ Calculate MAE for each model
+    │   ├─ Inverse weight: 1/MAE (better model gets higher weight)
+    │   └─ Normalize weights to sum to 1.0
+    ├─ Ensemble:
+    │   └─ Weighted average of model predictions
     ↓
-Dead Signal Check: Recent 12 months mostly zero OR last 6 months all zero
-    ├─ YES → Return zero forecast
-    └─ NO → Proceed to model competition
-    ↓
-Validation Phase:
-    ├─ Split: Hide last 3 months as test set
-    ├─ Train 3 Models:
-    │   ├─ Prophet (Facebook's time series model)
-    │   ├─ LightGBM + Optuna (auto-tuned gradient boosting)
-    │   └─ SARIMAX (statistical baseline)
-    └─ Calculate MAE (Mean Absolute Error) for each
-    ↓
-Weight Calculation: w_i = (1/MAE_i) / Σ(1/MAE_j)
-    ↓
-Final Phase:
-    ├─ Retrain all models on full historical data
-    ├─ Generate predictions for future periods
-    └─ Apply weighted ensemble
-    ↓
-Weighted Forecast by Model Performance
-    ↓
-[core/engine/allocator.py] Top-down allocation across categories
+[core/engine/allocator.py] allocate_to_subcategories()
+    ├─ Historical proportion calculation
+    ├─ Extinction detection (category died out)
+    ├─ Time-weighted distribution (recent months weighted higher)
+    └─ Return sub-category level forecasts
 ```
 
 **Technology Constraint:**
@@ -163,416 +204,407 @@ Streamlit Multi-Page App:
   - Blue: `#006ECD` (Information)
   - Gray: `#2f3339` (Neutral)
 - All visualizations use Plotly for interactivity
+- Deep linking via query params: `?plant=X&grade=Y&category=Z&mode=M`
+
+---
 
 ## Design Patterns
 
 ### 1. Repository Pattern (Data Access Layer)
-
 **Implementation:** `core/storage.py`
-
-```python
-# Centralized data access - All reads go through this layer
-def load_and_filter_data(
-    date_from, 
-    date_to, 
-    business_units=['식품', 'B2B식품'],
-    performance_filter=True
-) -> pd.DataFrame
-```
-
-**Benefits:**
+- Abstracts Parquet storage implementation
+- Provides unified interface: `load_and_filter_data()`, `save_to_parquet_partitioned()`
+- Hides PyArrow Dataset complexity from business logic
 - Single source of truth for data retrieval
 - Encapsulates partitioning logic
-- Enforces consistent filtering across all modules
 
-### 2. Strategy Pattern (Risk Scoring)
-
-**Implementation:** `core/analytics.py`
-
-```python
-class RiskScoringEngine:
-    def score(self) -> int:
-        # Different strategies based on data characteristics
-        if self.is_critical:
-            return self._critical_grade_scoring()
-        if self.is_sparse:
-            return self._rare_event_scoring()
-        return self._standard_scoring()
-```
-
-**Benefits:**
-- Different scoring strategies for different data patterns
+### 2. Strategy Pattern (Filtering & Risk Scoring)
+**Implementation:** Filtering modes (Inflow/Performance/Custom), Risk scoring strategies
+- Same interface, different filtering logic
+- Selected at runtime via `mode` parameter
+- Encapsulated in `load_and_filter_data()`
+- Different scoring strategies for sparse vs dense data patterns
 - Extensible to new risk factors
-- Maintains consistent interface
 
-### 3. Facade Pattern (Forecasting Engine)
-
-**Implementation:** `core/forecasting.py`
-
+### 3. Template Method
+**Implementation:** `core/engine/models.py::BaseModel`
 ```python
-class ForecastEngine:
-    def get_ensemble_forecast(self) -> Dict:
-        # Hides complexity of 3-model ensemble
-        # Returns unified prediction
+class BaseModel(ABC):
+    @abstractmethod
+    def fit(self, train_data): pass
+
+    @abstractmethod
+    def predict(self, periods): pass
 ```
+- Enforces consistent interface for all ML models
+- Prophet, SARIMAX, CatBoost, LSTM all extend BaseModel
 
-**Benefits:**
-- Simplifies complex multi-model coordination
+### 4. Ensemble Pattern
+**Implementation:** Both Track A and Track B
+- Multiple models make independent predictions
+- Dynamic weighting via backtesting (inverse MAE)
+- Combined via weighted average
+- Reduces overfitting and improves robustness
+
+### 5. Facade Pattern
+**Implementation:** `ForecastEngine`, `SimulationEngine`
+- Simplifies complex multi-model orchestration
+- Hides ensemble logic from UI layer
+- Single method call: `generate_forecast()`, `run_competition()`
 - Provides clean API for dashboard consumption
-- Encapsulates ensemble logic
 
-### 4. Configuration Object Pattern
+### 6. Lazy Loading Pattern
+**Implementation:** PyArrow Dataset
+- Partitioned Parquet not loaded until filtered
+- Reduces memory footprint for large datasets
+- Optimized for time-range queries (year/month partitions)
 
+### 7. Configuration Object Pattern
 **Implementation:** `core/config.py`
-
 ```python
 # Central configuration as constants
 TARGET_54_COLS = [...]  # Exactly 54 field names
 DATA_HUB_PATH = "data/hub"
 PARTITION_COLS = ["접수년", "접수월"]
 ```
-
-**Benefits:**
 - Single source of truth for configuration
 - Prevents magic numbers/strings in code
 - Validates configuration at module load (assert len == 54)
 
-### 5. Dataclass Configuration (Immutable Config)
+---
 
-**Implementation:** `core/analytics.py`
+## Critical Constraints
 
+### Data Integrity Rules (SACRED)
+
+1. **54-Field Schema (Immutable)**
+   - Location: `core/config.py::TARGET_54_COLS`
+   - Rule: System ONLY processes these exact columns (Korean names)
+   - Enforcement: `assert len(TARGET_54_COLS) == 54`
+   - Behavior:
+     - Missing columns → filled with NaN
+     - Extra columns → dropped silently
+     - Validation: `core/etl.py::validate_and_clean_data()`
+   - **Violations:** ❌ Adding/removing fields, ❌ Renaming fields, ❌ Bypassing extract_54_fields()
+
+2. **Primary Key: 상담번호 (Case Number)**
+   - Rule: Must be non-null and unique
+   - Deduplication: `keep='last'` (newest record wins)
+   - Enforcement: Both in ETL and loading phases
+
+3. **Date Parsing (Multi-Format)**
+   - Supported: YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD
+   - Derived fields:
+     - `Lag_Days = 접수일자 - 제조일자`
+     - `Lag_Valid = True if Lag_Days ≥ 0`
+
+4. **Partitioning Strategy**
+   - Format: Hive-style `year=YYYY/month=MM/`
+   - Keys: 접수년, 접수월
+   - Purpose: Efficient time-range filtering with PyArrow
+   - Physical layout: `data/hub/접수년=2024/접수월=11/*.parquet`
+   - **Violations:** ❌ Saving without partitioning, ❌ Changing partition columns, ❌ Direct file writes
+
+### Business Logic Rules
+
+1. **Filtering Modes**
+   - **인입 (Inflow):**
+     - `사업부문 in ['식품', 'B2B식품']`
+     - `불만원인 is not null`
+   - **실적 (Performance):**
+     - Same as Inflow +
+     - `불만원인 in ['제조불만', '구매불만', '고객불만족']`
+   - **원본 (Raw):** No filtering
+   - **커스텀 (Custom):** User-selected business units and reasons
+
+2. **Risk Thresholds (FIXED - Non-negotiable)**
+   - Red (🔴 Danger): Score ≥ 80
+   - Yellow (🟡 Caution): Score ≥ 50
+   - Green (🟢 Normal): Score < 50
+   - **Violations:** ❌ Changing thresholds without approval, ❌ Different thresholds in modules, ❌ Softening detection
+
+3. **Critical Grades (Weighted)**
+   - Grades: `['중대', '위험', '사고']`
+   - Multiplier: '위험'=1.5x, '중대'=1.2x, '일반'=1.0x
+   - Standard: `'일반'` → no multiplier
+
+4. **Zero-Filling Logic (Mandatory)**
+   - Rule: Historical data MUST be reindexed with monthly frequency
+   - Missing months → filled with 0 (NOT NaN)
+   - Purpose: Detect "0 → spike" anomaly patterns
+   - Implementation: `core/analytics.py::prepare_risk_data()`
+   - **Violations:** ❌ Dropping missing months, ❌ Using NaN, ❌ Forward-filling counts
+
+5. **Forecasting Guards**
+   - **Dead Signal Guard:**
+     - Condition: Recent 6 months all zero
+     - Action: Return [0, 0, 0, 0] (skip training, extinction signal)
+   - **Minimum Data Guard:**
+     - Condition: Less than 3 months
+     - Action: Use simple average (no model training)
+   - **Partial Month Handling:**
+     - Current month incomplete → calculate progress ratio
+     - Adjust run-rate: `(current_actual / progress_ratio)`
+
+### Code Quality Rules
+
+1. **Single Source of Truth**
+   - Data Loading: `core.storage.load_and_filter_data()` (ALL pages use this)
+   - Risk Preparation: `core.analytics.prepare_risk_data()` (zero-filling)
+   - Risk Scoring: `core.analytics.calculate_advanced_risk_score()`
+   - Prohibition: No duplicate filtering logic in UI layer
+
+2. **Session State Isolation**
+   - Page 3 (Analysis): Keys without suffix (`target_plant`, `search_mode`)
+   - Page 4 (Forecast): Keys with `_sim` suffix (`sim_plant_select`, `sim_search_mode`)
+   - Purpose: Prevent cross-page state pollution
+
+3. **Color System (Consistency)**
+   - Red: `#EF151E`
+   - Yellow: `#FF9700`
+   - Blue: `#006ECD`
+   - Gray: `#2f3339`
+   - Usage: All charts and UI elements
+   - **Violations:** ❌ Arbitrary colors, ❌ Inconsistent indicators, ❌ Red/green confusion
+
+4. **Deep Linking (Query Params)**
+   - Format: `?plant=X&grade=Y&category=Z&mode=M`
+   - Purpose: Enable drill-down navigation from dashboard cards
+   - Implementation: `st.query_params` in Streamlit
+
+5. **Error Handling (Graceful Degradation)**
+   - Show warnings, not crashes
+   - Use `.copy()` to avoid Pandas `SettingWithCopyWarning`
+   - Validate data existence before processing
+
+### Track Separation Rules (NO Cross-Contamination)
+
+1. **Track A (Operational) - Strict Constraints**
+   - ✅ Allowed: NumPy, Statsmodels, Pandas, scikit-learn (basic)
+   - ❌ Prohibited: CatBoost, PyTorch, Optuna, Prophet
+   - Purpose: Fast response time (<3 seconds)
+   - Files: `core/forecasting.py`, `app.py`
+   - **Violations:** ❌ Importing optuna in forecasting.py, ❌ Using CatBoost in app.py
+
+2. **Track B (Simulation) - Heavy ML Allowed**
+   - ✅ Allowed: CatBoost, PyTorch, Optuna, Prophet, all Track A libs
+   - Purpose: Deep analysis with accuracy priority
+   - Latency: 30-120 seconds acceptable
+   - Files: `core/engine/trainer.py`, `core/engine/models.py`, `pages/4_*.py`
+
+3. **Data Leakage Prevention**
+   - Rule: NEVER train on current incomplete month
+   - Enforcement: Filter training data to exclude current month
+   - Backtesting: Use rolling window (hide last N months)
+   - **Violations:** ❌ Training on partial month, ❌ Using future info, ❌ No train/test split
+
+4. **Sparse Data Handling (Statistical Distribution Selection)**
+   - Condition: `mean < 1.0`
+   - Distribution: Use Poisson or Negative Binomial (NOT Normal)
+   - Risk scoring: Rare event logic (P-value tests)
+   - **Violations:** ❌ Always using Poisson, ❌ Ignoring overdispersion, ❌ Normal for counts
+
+---
+
+## Key Algorithms
+
+### 1. Risk Scoring Algorithm
+**Location:** `core/analytics.py::calculate_advanced_risk_score()`
+
+**Regime Detection:**
 ```python
-@dataclass
-class RiskConfig:
-    MIN_DATA_POINTS: int = 3
-    THRESHOLD_RED: int = 80
-    CUSUM_SLACK_STD: float = 0.5
-    # ... all parameters documented and typed
-```
-
-**Benefits:**
-- Type-safe configuration
-- Self-documenting parameters
-- Easy to test with different configs
-
-## Constraints
-
-### 1. Data Integrity Rules (SACRED)
-
-**Enforcement:** `core/config.py`, `core/etl.py`
-
-```python
-# MUST maintain exactly 54 fields
-assert len(TARGET_54_COLS) == 54
-
-# Field names MUST be in Korean as per specification
-TARGET_54_COLS = ["접수년", "접수월", "접수일", ...]
-```
-
-**Violations:**
-- ❌ Adding/removing fields without updating TARGET_54_COLS
-- ❌ Renaming fields in data pipeline
-- ❌ Bypassing extract_54_fields() validation
-
-### 2. Partitioning Discipline
-
-**Enforcement:** `core/storage.py`
-
-```python
-# All saves MUST use partitioning
-save_partitioned(df, partition_cols=["접수년", "접수월"])
-
-# Physical layout: data/hub/접수년=2024/접수월=11/*.parquet
-```
-
-**Violations:**
-- ❌ Saving data without partitioning
-- ❌ Changing partition columns without migration
-- ❌ Direct file writes to data/hub/
-
-### 3. Track Separation (NO Cross-Contamination)
-
-**Enforcement:** Code review, import checks
-
-```python
-# Track A (app.py, forecasting.py)
-✅ Allowed: numpy, statsmodels, pandas
-❌ Forbidden: catboost, prophet, optuna, torch
-
-# Track B (trainer.py, simulation pages)
-✅ Allowed: All ML/DL libraries
-✅ Use case: Offline experiments, simulation
-```
-
-**Violations:**
-- ❌ Importing optuna in forecasting.py
-- ❌ Using CatBoost in app.py
-- ❌ Heavy ML in real-time dashboard
-
-### 4. Data Leakage Prevention
-
-**Enforcement:** `core/forecasting.py`, `core/engine/trainer.py`
-
-```python
-# MUST exclude incomplete current month from training
-current_month_start = datetime.now().replace(day=1)
-train_ts = monthly_ts[monthly_ts.index < current_month_start]
-```
-
-**Violations:**
-- ❌ Training on partial month data
-- ❌ Using future information in historical analysis
-- ❌ Forecasting without proper train/test split
-
-### 5. Risk Scoring Thresholds (FIXED)
-
-**Enforcement:** `core/analytics.py`
-
-```python
-# Non-negotiable thresholds
-THRESHOLD_RED = 80    # 🔴 Critical
-THRESHOLD_YELLOW = 50 # 🟡 Warning
-
-# Grade multipliers
-WEIGHT_GRADE = {
-    '위험': 1.5,   # Risk
-    '중대': 1.2,   # Major
-    '일반': 1.0,   # Normal
-}
-```
-
-**Violations:**
-- ❌ Changing thresholds without stakeholder approval
-- ❌ Different thresholds in different modules
-- ❌ Softening risk detection for convenience
-
-### 6. Zero-Filling for Sparse Data
-
-**Enforcement:** `core/analytics.py`, `core/forecasting.py`
-
-```python
-# Missing months MUST be filled with 0 (not NaN)
-full_idx = pd.date_range(start=min_date, end=max_date, freq='MS')
-series_filled = series.reindex(full_idx, fill_value=0)
-```
-
-**Violations:**
-- ❌ Dropping missing months
-- ❌ Using NaN instead of 0 for sparse events
-- ❌ Forward-filling claim counts (incorrect assumption)
-
-### 7. Statistical Distribution Selection
-
-**Enforcement:** `core/analytics.py`
-
-```python
-# Sparse data (mean < 1.0) MUST use Negative Binomial
-if mean_count < 1.0:
-    use_negative_binomial()
+if mean < 1.0:
+    regime = "Sparse"
+    distribution = Poisson / Negative Binomial
 else:
-    use_poisson()
+    regime = "Dense"
+    distribution = Normal (Z-score)
 ```
 
-**Violations:**
-- ❌ Always using Poisson regardless of sparsity
-- ❌ Ignoring overdispersion in rare events
-- ❌ Normal distribution for count data
+**Sparse Regime:**
+- Poisson test: Is recent spike statistically significant?
+- Negative Binomial: Overdispersion check (variance > mean)
+- Critical grade multiplier: 1.2x - 1.5x for severe cases
 
-### 8. UI Color Consistency
+**Dense Regime:**
+- STL decomposition: Separate trend, seasonality, residual
+- Z-score: (value - rolling_mean) / rolling_std
+- CUSUM: Cumulative sum for mean shift detection
+- Nelson Rules: 8 SPC patterns (runs, consecutive increases, etc.)
 
-**Enforcement:** `app.py`, page files
+**Velocity Component:**
+- Recent change rate: `(latest - avg_recent) / avg_recent`
+- Captures sudden acceleration or deceleration
 
+**Volatility Adjustment:**
+- CV (Coefficient of Variation): `std / mean`
+- High CV → reduce score (normal for volatile series)
+
+**Final Score:**
 ```python
-# Standardized color palette - DO NOT DEVIATE
-COLOR_RED = "#EF151E"     # Critical/Danger
-COLOR_YELLOW = "#FF9700"  # Warning
-COLOR_BLUE = "#006ECD"    # Info
-COLOR_GRAY = "#2f3339"    # Neutral
+score = weighted_sum([
+    anomaly_score,
+    velocity_score,
+    volatility_penalty,
+    critical_grade_bonus
+]) * 100
 ```
 
-**Violations:**
-- ❌ Using arbitrary colors
-- ❌ Inconsistent severity indicators
-- ❌ Red/green confusion (accessibility issue)
+### 2. Ensemble Forecasting (Track A)
+**Location:** `core/forecasting.py::ForecastEngine`
 
-### 9. NO Raw SQL / NO Direct DB Access
+**Models:**
+1. **Run-rate:**
+   ```python
+   run_rate = (current_actual / progress_ratio)
+   smoothed = 0.7 * run_rate + 0.3 * recent_average
+   ```
 
-**Enforcement:** Architecture design
+2. **STL (Seasonal-Trend-Loess):**
+   ```python
+   decomposition = STL(series, seasonal=13).fit()
+   forecast = trend_forecast + seasonal_component
+   ```
 
-- All data is file-based (Parquet)
-- No database dependencies
-- Query logic via Pandas/PyArrow APIs
+3. **LightGBM AutoML:**
+   ```python
+   features = [lag1, lag2, lag3, month, trend]
+   model = LGBMRegressor()
+   Optuna.tune(model, cv=3)
+   ```
 
-**Rationale:**
-- Simplicity and portability
-- Version control friendly
-- Reduced infrastructure dependencies
-
-### 10. Functional > Object-Oriented (Karpathy Principle)
-
-**Enforcement:** Code review
-
+**Dynamic Weighting:**
 ```python
-# ✅ Preferred: Simple functions
-def calculate_risk(series: pd.Series) -> int:
-    return score
+progress = current_day / total_days_in_month
 
-# ❌ Avoid: Unnecessary classes
-class RiskCalculator:
-    def __init__(self, series):
-        self.series = series
-    def calculate(self):
-        return score
+if progress < 0.3:
+    weights = [0.2, 0.6, 0.2]  # Favor STL (historical pattern)
+elif progress > 0.7:
+    weights = [0.6, 0.2, 0.2]  # Favor Run-rate (actual trend)
+else:
+    weights = [0.4, 0.3, 0.3]  # Balanced blend
+
+forecast = sum(w * pred for w, pred in zip(weights, predictions))
 ```
 
-**Exceptions:**
-- Engine classes (ForecastEngine, SimulationEngine) - manage complex state
-- Config dataclasses - type safety and validation
+### 3. Model Competition (Track B)
+**Location:** `core/engine/trainer.py::SimulationEngine`
 
-## Technology Stack Constraints
-
-### Production Dependencies (Track A)
-
-```
-streamlit      # UI framework
-pandas         # Data manipulation  
-numpy          # Numerical computing
-pyarrow        # Parquet I/O
-statsmodels    # SARIMA only
-plotly         # Visualization
-```
-
-### Experimental Dependencies (Track B)
-
-```
-catboost       # Gradient boosting
-prophet        # FB time series
-optuna         # Hyperparameter tuning
-torch          # Deep learning
-lightgbm       # Gradient boosting
-scikit-learn   # ML utilities
-```
-
-### Development Only
-
-```
-pytest         # Testing
-black          # Formatting
-flake8         # Linting
-```
-
-**Constraint:** Track A MUST NOT import Track B dependencies
-
-## Security & Safety
-
-### 1. No Hardcoded Secrets
-
-- Configuration uses environment-agnostic paths
-- No API keys or credentials in code
-- Sensitive data stays in local data/ directory (gitignored)
-
-### 2. Input Validation
-
-**Enforcement:** `core/etl.py`
-
+**Backtesting:**
 ```python
-# All user uploads go through validation
-def validate_data(df: pd.DataFrame) -> bool:
-    # Check for required fields
-    # Verify data types
-    # Detect anomalies
+train_end = len(series) - 3
+train_data = series[:train_end]
+test_data = series[train_end:]
+
+for model in [Prophet, SARIMAX, AutoML]:
+    model.fit(train_data)
+    predictions = model.predict(len(test_data))
+    mae = mean_absolute_error(test_data, predictions)
+    weights[model] = 1 / mae
+
+weights = normalize(weights)  # Sum to 1.0
 ```
 
-### 3. Error Handling
-
-- Graceful degradation when models unavailable
-- Fallback to simpler methods if ML fails
-- User-friendly error messages (no stack traces in UI)
-
-### 4. Dependency Pinning
-
-**Enforcement:** `requirements.txt`
-
+**Ensemble:**
+```python
+final_prediction = sum(
+    weight * model.predict(horizon)
+    for model, weight in zip(models, weights)
+)
 ```
-# Exact versions pinned to avoid breaking changes
-pandas==2.1.4  # Not pandas>=2.0
+
+### 4. Sub-Category Allocation
+**Location:** `core/engine/allocator.py`
+
+**Historical Proportion:**
+```python
+proportions = recent_months.groupby('subcategory').sum() / total
+time_weights = [0.1, 0.2, 0.3, 0.4]  # Recent months weighted higher
+weighted_prop = sum(w * prop for w, prop in zip(weights, proportions))
 ```
+
+**Extinction Detection:**
+```python
+if subcategory_count_last_6_months == 0:
+    allocate[subcategory] = 0  # Don't predict dead categories
+```
+
+**Allocation:**
+```python
+for subcategory, proportion in weighted_prop.items():
+    allocated[subcategory] = total_forecast * proportion
+```
+
+---
+
+## System Dependencies
+
+### Critical Library Versions
+- **Streamlit 1.31.1:** Multi-page app framework
+- **PyArrow 14.0.1:** Parquet partitioning (breaking changes in 15.x)
+- **Pandas 2.1.4:** DataFrame operations
+- **CatBoost 1.2.1:** Gradient boosting (Track B)
+- **PyTorch 2.1.1:** LSTM models (Track B)
+- **Statsmodels 0.14.0:** SARIMAX time-series
+- **Optuna 3.14.0:** Hyperparameter tuning
+
+### Python Version
+- Minimum: 3.10
+- Reason: Match-case syntax, type hints (PEP 604)
+
+---
 
 ## Performance Considerations
 
-### 1. Lazy Loading
+### Memory Management
+- **Lazy Loading:** PyArrow Dataset reads only filtered partitions
+- **Partitioning:** Year/month reduces scan size by ~95%
+- **Session Cache:** `@st.cache_data` for expensive computations
 
-- Parquet partitioning enables selective reads
-- Only load date ranges needed for analysis
-- PyArrow filters pushed down to file scan
+### Compute Optimization
+- **Track A:** Single-threaded NumPy (fast enough for dashboard)
+- **Track B:** Multi-core via Optuna (n_jobs=-1)
+- **Batch Processing:** Forecast multiple categories in parallel
 
-### 2. Caching Strategy
+### Storage Efficiency
+- **Parquet Compression:** Snappy codec (~70% size reduction)
+- **Schema Evolution:** Add columns without rewriting old files
+- **Deduplication:** At load time (not storage time) for append efficiency
 
-```python
-# Streamlit caching for expensive operations
-@st.cache_data
-def load_and_filter_data(...):
-    # Expensive I/O and filtering
-```
+---
 
-### 3. Incremental Updates
+## Security & Data Privacy
 
-- Monthly partitions allow incremental data addition
-- No need to reprocess entire history
-- New month = new partition folder
+### No External Data Transmission
+- All ML training and inference runs locally
+- No telemetry or cloud API calls
+- Streamlit runs on localhost by default
 
-## Testing Strategy
+### Data Sanitization
+- Null case numbers rejected at ETL
+- Invalid dates handled gracefully
+- No SQL injection risk (no database)
 
-### Unit Tests
+### Access Control
+- Relies on network-level security (no built-in auth)
+- Intended for internal corporate network deployment
 
-```
-test_forecast.py          # Forecasting logic
-test_ensemble.py          # Ensemble methods
-test_mom_calculation.py   # Month-over-month calculations
-test_runrate_ensemble.py  # Run-rate algorithm
-```
-
-### Integration Tests
-
-```
-scripts/run_phase1_verification.py
-scripts/run_phase1_5_verification.py
-```
-
-### Validation Scripts
-
-```
-verify_mom_actual.py      # MoM accuracy validation
-check_duplication.py      # Data quality checks
-```
-
-## Deployment & Execution
-
-### Local Development
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-### Production Constraints
-
-- No external database required
-- All state in file system
-- Horizontal scaling not required (single-user dashboard)
+---
 
 ## Future Extension Points
 
-### Extensible Components
+### Pluggable Model Registry
+- Add new models by extending `BaseModel` class
+- Auto-discovery via registry pattern
 
-1. **Risk Scoring:** New statistical tests can be added to RiskScoringEngine
-2. **Forecasting Models:** Additional models in Track B without changing interface
-3. **Allocation Logic:** Custom top-down allocation strategies
-4. **Data Sources:** ETL module can support new formats
+### Multi-Tenant Support
+- Partition by company/plant in storage layer
+- Add tenant filter to `load_and_filter_data()`
 
-### Non-Extensible (Stable Interfaces)
+### Real-Time Streaming
+- Replace batch loading with PyArrow Flight
+- Incremental updates instead of full scans
 
-1. **54-Field Schema:** Core data contract, changes require migration
-2. **Partition Strategy:** Year/Month partitioning is foundational
-3. **Track A/B Separation:** Architectural principle, not negotiable
-4. **Risk Thresholds:** Business rule, requires approval to change
+### Advanced Alerts
+- Email/Slack integration for red-threshold breaches
+- Configurable alert rules per plant/category

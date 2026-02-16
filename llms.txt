@@ -1,96 +1,143 @@
-# PROJECT SUMMARY
-This repository implements a Hybrid Claim Analysis System for real-time food safety risk monitoring and forecasting. The system operates on two tracks: Track A (Operational) provides lightweight real-time dashboards using statistical methods, while Track B (Simulation) uses advanced ML/DL models for precise future predictions. The system manages 54 standardized claim fields stored in partitioned Parquet format and applies advanced risk scoring using Nelson Rules, CUSUM, and statistical distributions.
+# Claim Analysis Engine - AI Context Map
 
-# FILE MAP
+## Project Summary
+A hybrid intelligence platform for food safety quality control that combines real-time operational monitoring with ML-powered risk prediction. The system operates on two tracks: Track A (Operational) provides lightweight real-time dashboards using statistical methods (<3s latency), while Track B (Simulation) uses advanced ML/DL models for precise future predictions (30-120s). The system manages 54 standardized claim fields stored in partitioned Parquet format and applies advanced risk scoring using Nelson Rules, CUSUM, and statistical distributions.
 
-## Root
-app.py - Main dashboard control tower with KPI metrics, risk radar, and trend visualization
-requirements.txt - Python dependencies including Streamlit, Pandas, CatBoost, and Prophet
+## File Map
 
-## Core Modules (core/)
-core/__init__.py - Package initialization
-core/config.py - Central configuration defining 54 target claim fields and system constants
-core/storage.py - Parquet partitioning I/O and unified data loader with filtering capabilities
-core/etl.py - Extract-Transform-Load module for data validation and 54-field extraction
-core/analytics.py - Advanced risk scoring engine using Nelson Rules, CUSUM, and statistical methods
-core/forecasting.py - Track A lightweight forecasting engine using ensemble methods (Run-rate + MoM + SARIMA)
+### Root
+- app.py - Main dashboard control tower with KPI metrics, risk radar, trend visualization, and drill-down navigation
+- requirements.txt - Python dependencies (Streamlit, PyArrow, CatBoost, PyTorch, Optuna, Statsmodels)
 
-## Engine Modules (core/engine/)
-core/engine/__init__.py - Engine package initialization
-core/engine/trainer.py - Track B simulation engine for ML/DL model training with Optuna optimization
-core/engine/models.py - Model definitions and utilities for simulation experiments
-core/engine/allocator.py - Top-down allocation logic for distributing predictions across categories
+### Core Modules (core/)
+- core/__init__.py - Package initialization
+- core/config.py - Central configuration defining 54 target claim fields (TARGET_54_COLS) and system constants
+- core/storage.py - Parquet partitioning I/O layer; unified data loader (load_and_filter_data) with PyArrow Dataset lazy loading
+- core/etl.py - Extract-Transform-Load module for CSV/Excel ingestion, 54-field validation and deduplication
+- core/analytics.py - Advanced risk scoring engine (Nelson Rules, CUSUM, sparse/dense detection, zero-filling logic)
+- core/forecasting.py - Track A lightweight forecasting engine using ensemble methods (Run-rate + STL + LightGBM AutoML)
 
-## Pages (Streamlit Multi-Page App)
-pages/1_데이터_업로드.py - Data upload interface for CSV/Excel claim files
-pages/2_매출수량_관리.py - Sales volume management and historical data tracking
-pages/3_플랜트_분석.py - Deep dive plant-level analysis and diagnosis
-pages/4_예측_시뮬레이션.py - Future simulation and forecasting interface with model comparison
+### Engine Modules (core/engine/)
+- core/engine/__init__.py - Engine package initialization
+- core/engine/trainer.py - Track B simulation engine for ML/DL model training with Optuna optimization and model competition
+- core/engine/models.py - ML model implementations (Prophet, SARIMAX, CatBoost, LSTM) extending BaseModel interface
+- core/engine/allocator.py - Top-down allocation logic for distributing predictions across sub-categories with extinction detection
 
-## Scripts
-scripts/run_phase1_verification.py - Phase 1 verification and testing script
-scripts/run_phase1_5_verification.py - Phase 1.5 verification script
-scripts/generate_series_and_report.py - Time series generation and reporting utility
-scripts/patch_app_trend.py - App trend patching utility
+### UI Pages (Streamlit Multi-Page App)
+- pages/1_데이터_업로드.py - Data upload and ingestion interface for CSV/Excel claim files
+- pages/2_매출수량_관리.py - Sales volume management and historical data tracking
+- pages/3_플랜트_분석.py - Deep dive plant-level analysis with pivot tables, Lag analysis, and risk scoring
+- pages/4_예측_시뮬레이션.py - ML forecasting lab with model competition, weighted ensemble, and sub-category allocation
 
-## Documentation
-docs/project_master.md - Project master documentation with architecture and status
-docs/README.md - Documentation index
-docs/copilot_instruction.md - Development guidelines for AI assistants
-docs/refactor_spec.md - Refactoring specifications
-docs/milestone.md - Project milestones and progress tracking
+### Scripts & Utilities
+- scripts/run_phase1_verification.py - Phase 1 verification and testing script
+- scripts/run_phase1_5_verification.py - Phase 1.5 verification script
+- scripts/generate_series_and_report.py - Time series generation and reporting utility
+- scripts/patch_app_trend.py - App trend patching utility
 
-## Configuration
-.github/copilot-instructions.md - GitHub Copilot configuration with Karpathy Guidelines
-.gitignore - Git ignore patterns for data, models, and Python artifacts
+### Documentation (docs/)
+- docs/project_master.md - Project master documentation with architecture and status
+- docs/README.md - System overview and user guide
+- docs/copilot_instruction.md - AI assistant development guidelines
+- docs/refactor_spec.md - Refactoring requirements and patterns
+- docs/milestone.md - Development roadmap and milestones
 
-## Data Storage (Not in Repository)
-data/hub/ - Partitioned Parquet storage organized by 접수년/접수월 (YYYY/MM)
-data/sales/ - Sales history data in Parquet format
-data/models/ - Trained ML/DL model artifacts
-data/series/ - Time series data for analysis
+### Configuration
+- .github/copilot-instructions.md - GitHub Copilot configuration with Karpathy Guidelines and PROJECT CONTEXT
+- .gitignore - Git ignore patterns for data, models, and Python artifacts
 
-## Test Files
-test_forecast.py - Forecasting engine unit tests
-test_ensemble.py - Ensemble method validation tests
-test_mom_calculation.py - Month-over-month calculation tests
-test_runrate_ensemble.py - Run-rate ensemble tests
+### Data Storage (data/ - Not in Repository)
+- data/hub/ - Parquet partitioned claims storage organized by year=YYYY/month=MM/*.parquet
+- data/sales/ - Sales volume data in Parquet format
+- data/models/ - Trained ML/DL model artifacts (pickled)
+- data/series/ - Time-series JSON snapshots for caching
 
-# TECH STACK
+### Test Files
+- test_forecast.py - Forecasting engine unit tests
+- test_ensemble.py - Ensemble method validation tests
+- test_mom_calculation.py - Month-over-month calculation tests
+- test_runrate_ensemble.py - Run-rate ensemble tests
+- test_analytics.py - Risk scoring and analytics tests
+- test_etl.py - ETL pipeline tests
+- test_storage.py - Storage and loading tests
+- test_trainer.py - Simulation engine tests
 
-## Languages
-Python 3.10+ - Primary development language
+## Tech Stack
 
-## Web Framework
-Streamlit 1.31.1 - Interactive dashboard and multi-page web application
+### Languages & Runtime
+- Python 3.10+ (UTF-8-sig encoding for Korean support, match-case syntax, type hints PEP 604)
 
-## Data Processing
-Pandas 2.1.4 - Data manipulation and analysis
-NumPy 1.24.3 - Numerical computing
-PyArrow 14.0.1 - Parquet file format and columnar data processing
-Openpyxl 3.1.2 - Excel file handling
+### Web Framework
+- Streamlit 1.31.1 - Interactive dashboard and multi-page web application
+- Plotly - Interactive charts, visualizations, and graphs
+- Matplotlib 3.8.2 - Statistical plotting
 
-## Visualization
-Plotly - Interactive charts and graphs
-Matplotlib 3.8.2 - Statistical plotting
+### Data Processing
+- Pandas 2.1.4 - Data manipulation and analysis
+- NumPy 1.24.3 - Numerical computing
+- PyArrow 14.0.1 - Parquet columnar storage with Hive partitioning (breaking changes in 15.x)
+- Openpyxl 3.1.2 - Excel file handling
 
-## Machine Learning & Statistics (Track B)
-CatBoost 1.2.1 - Gradient boosting for tabular data
-Prophet - Time series forecasting
-Statsmodels 0.14.0 - Statistical modeling and SARIMAX
-Optuna 3.14.0 - Hyperparameter optimization framework
-Scikit-learn 1.3.2 - Machine learning utilities and metrics
-LightGBM - Gradient boosting framework (via dependencies)
+### Machine Learning (Track B - Simulation)
+- CatBoost 1.2.1 - Gradient boosting for tabular data
+- PyTorch 2.1.1 - Neural network training and LSTM models
+- LightGBM - Gradient boosting framework (via AutoML)
+- Optuna 3.14.0 - Hyperparameter optimization framework
+- scikit-learn 1.3.2 - ML utilities and metrics
 
-## Deep Learning (Track B)
-PyTorch 2.1.1 - Neural network training and inference
+### Statistics (Track A - Operational)
+- Statsmodels 0.14.0 - SARIMAX time-series modeling
+- SciPy - Statistical distributions (Poisson, Negative Binomial)
+- Prophet - Facebook's forecasting library (optional)
 
-## Utilities
-python-dateutil 2.8.2 - Date manipulation and relative deltas
-Joblib 1.3.2 - Model serialization and parallel processing
-Requests 2.31.0 - HTTP library
+### Utilities
+- python-dateutil 2.8.2 - Date manipulation and relative deltas
+- Joblib 1.3.2 - Model serialization and parallel processing
+- Requests 2.31.0 - HTTP library
 
-## Development Tools
-Pytest 7.4.3 - Testing framework
-Black 23.12.1 - Code formatter
-Flake8 6.1.0 - Linting and style checker
+### Development Tools
+- pytest 7.4.3 - Testing framework
+- black 23.12.1 - Code formatting
+- flake8 6.1.0 - Linting and style checker
+
+## Critical Constraints
+
+### Data Schema (Immutable)
+- System ONLY processes 54 fixed columns defined in core/config.py::TARGET_54_COLS
+- Missing columns → filled with NaN; extra columns → dropped silently
+- Primary key: 상담번호 (case number); deduplication keeps latest record (keep='last')
+- Partitioning: Hive-style year=YYYY/month=MM/ for efficient time-range queries
+- Each row represents exactly one claim incident (1행 = 1건)
+
+### Filtering Modes
+- **인입 (Inflow):** 사업부문 in ['식품', 'B2B식품'] AND 불만원인 is not null
+- **실적 (Performance):** Same as Inflow + 불만원인 in ['제조불만', '구매불만', '고객불만족']
+- **원본 (Raw):** No filtering (all data)
+- **커스텀 (Custom):** User-selected business units and reasons
+
+### Risk Thresholds
+- **Red (🔴 Critical):** Score ≥ 80 (Danger - immediate attention required)
+- **Yellow (🟡 Warning):** Score ≥ 50 (Caution level)
+- **Green (🟢 Normal):** Score < 50 (Safe)
+- **Special Rule:** Accident grade (사고) always scores 100 (immediate escalation)
+
+### Architecture Rules (Track Separation)
+- **Track A (Operational):** Lightweight ensemble using ONLY NumPy, Statsmodels, Pandas, scikit-learn (basic). Prohibited: CatBoost, PyTorch, Optuna, Prophet. Purpose: Fast response <3 seconds
+- **Track B (Simulation):** Heavy ML allowed (CatBoost, PyTorch, Optuna, Prophet + all Track A libs). Purpose: Deep analysis with accuracy priority. Latency: 30-120 seconds acceptable
+- **Single Source of Truth:** All pages MUST use core.storage.load_and_filter_data() for data consistency
+- **Zero-filling:** Missing months filled with 0 (NOT NaN) for trend detection. Critical for "0 → spike" anomaly patterns
+- **Zero-trend guard:** Recent 6 months all zero → predict 0 (skip training, extinction signal)
+- **Data Leakage Prevention:** NEVER train on current incomplete month. Filter training data to exclude current month
+
+### Business Logic Guards
+- Minimum 3 data points required for statistical tests
+- Partial month data applies special velocity checks
+- Critical grades weighted: '위험'=1.5x, '중대'=1.2x, '일반'=1.0x
+- Sparse data (mean < 1.0): Use Poisson/Negative Binomial (NOT Normal distribution)
+- Dense data: STL decomposition + Z-score + CUSUM
+
+### Code Quality Rules
+- Session State Isolation: Page 3 keys without suffix, Page 4 keys with `_sim` suffix (prevent cross-page pollution)
+- Color System: Red=#EF151E, Yellow=#FF9700, Blue=#006ECD, Gray=#2f3339 (consistent across all UI)
+- Deep Linking: Query params format `?plant=X&grade=Y&category=Z&mode=M` for drill-down navigation
+- Error Handling: Show warnings not crashes; use .copy() to avoid SettingWithCopyWarning
