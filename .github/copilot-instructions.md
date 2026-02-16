@@ -1,3 +1,11 @@
+# PROJECT CONTEXT
+> Rule: Read llms.txt and ARCHITECTURE.md before answering.
+
+## Navigation
+- Map: llms.txt
+- Logic: ARCHITECTURE.md
+- History: .github/adr/
+
 # MISSION: KARPATHY_CORE_GLOBAL
 
 # SYSTEM_ROLE: SENIOR_PRINCIPAL_ENGINEER

@@ -1,0 +1,96 @@
+# PROJECT SUMMARY
+This repository implements a Hybrid Claim Analysis System for real-time food safety risk monitoring and forecasting. The system operates on two tracks: Track A (Operational) provides lightweight real-time dashboards using statistical methods, while Track B (Simulation) uses advanced ML/DL models for precise future predictions. The system manages 54 standardized claim fields stored in partitioned Parquet format and applies advanced risk scoring using Nelson Rules, CUSUM, and statistical distributions.
+
+# FILE MAP
+
+## Root
+app.py - Main dashboard control tower with KPI metrics, risk radar, and trend visualization
+requirements.txt - Python dependencies including Streamlit, Pandas, CatBoost, and Prophet
+
+## Core Modules (core/)
+core/__init__.py - Package initialization
+core/config.py - Central configuration defining 54 target claim fields and system constants
+core/storage.py - Parquet partitioning I/O and unified data loader with filtering capabilities
+core/etl.py - Extract-Transform-Load module for data validation and 54-field extraction
+core/analytics.py - Advanced risk scoring engine using Nelson Rules, CUSUM, and statistical methods
+core/forecasting.py - Track A lightweight forecasting engine using ensemble methods (Run-rate + MoM + SARIMA)
+
+## Engine Modules (core/engine/)
+core/engine/__init__.py - Engine package initialization
+core/engine/trainer.py - Track B simulation engine for ML/DL model training with Optuna optimization
+core/engine/models.py - Model definitions and utilities for simulation experiments
+core/engine/allocator.py - Top-down allocation logic for distributing predictions across categories
+
+## Pages (Streamlit Multi-Page App)
+pages/1_데이터_업로드.py - Data upload interface for CSV/Excel claim files
+pages/2_매출수량_관리.py - Sales volume management and historical data tracking
+pages/3_플랜트_분석.py - Deep dive plant-level analysis and diagnosis
+pages/4_예측_시뮬레이션.py - Future simulation and forecasting interface with model comparison
+
+## Scripts
+scripts/run_phase1_verification.py - Phase 1 verification and testing script
+scripts/run_phase1_5_verification.py - Phase 1.5 verification script
+scripts/generate_series_and_report.py - Time series generation and reporting utility
+scripts/patch_app_trend.py - App trend patching utility
+
+## Documentation
+docs/project_master.md - Project master documentation with architecture and status
+docs/README.md - Documentation index
+docs/copilot_instruction.md - Development guidelines for AI assistants
+docs/refactor_spec.md - Refactoring specifications
+docs/milestone.md - Project milestones and progress tracking
+
+## Configuration
+.github/copilot-instructions.md - GitHub Copilot configuration with Karpathy Guidelines
+.gitignore - Git ignore patterns for data, models, and Python artifacts
+
+## Data Storage (Not in Repository)
+data/hub/ - Partitioned Parquet storage organized by 접수년/접수월 (YYYY/MM)
+data/sales/ - Sales history data in Parquet format
+data/models/ - Trained ML/DL model artifacts
+data/series/ - Time series data for analysis
+
+## Test Files
+test_forecast.py - Forecasting engine unit tests
+test_ensemble.py - Ensemble method validation tests
+test_mom_calculation.py - Month-over-month calculation tests
+test_runrate_ensemble.py - Run-rate ensemble tests
+
+# TECH STACK
+
+## Languages
+Python 3.10+ - Primary development language
+
+## Web Framework
+Streamlit 1.31.1 - Interactive dashboard and multi-page web application
+
+## Data Processing
+Pandas 2.1.4 - Data manipulation and analysis
+NumPy 1.24.3 - Numerical computing
+PyArrow 14.0.1 - Parquet file format and columnar data processing
+Openpyxl 3.1.2 - Excel file handling
+
+## Visualization
+Plotly - Interactive charts and graphs
+Matplotlib 3.8.2 - Statistical plotting
+
+## Machine Learning & Statistics (Track B)
+CatBoost 1.2.1 - Gradient boosting for tabular data
+Prophet - Time series forecasting
+Statsmodels 0.14.0 - Statistical modeling and SARIMAX
+Optuna 3.14.0 - Hyperparameter optimization framework
+Scikit-learn 1.3.2 - Machine learning utilities and metrics
+LightGBM - Gradient boosting framework (via dependencies)
+
+## Deep Learning (Track B)
+PyTorch 2.1.1 - Neural network training and inference
+
+## Utilities
+python-dateutil 2.8.2 - Date manipulation and relative deltas
+Joblib 1.3.2 - Model serialization and parallel processing
+Requests 2.31.0 - HTTP library
+
+## Development Tools
+Pytest 7.4.3 - Testing framework
+Black 23.12.1 - Code formatter
+Flake8 6.1.0 - Linting and style checker
